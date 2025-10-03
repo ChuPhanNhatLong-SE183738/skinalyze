@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -7,6 +8,18 @@ async function bootstrap() {
 
   // Set global API prefix
   app.setGlobalPrefix('api/v1');
+
+  // Swagger configuration
+  const config = new DocumentBuilder()
+    .setTitle('Skinalyze API')
+    .setDescription('The Skinalyze API documentation')
+    .setVersion('1.0')
+    .addTag('Products')
+    .addTag('Users')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
 
   app.useGlobalPipes(
     new ValidationPipe({
