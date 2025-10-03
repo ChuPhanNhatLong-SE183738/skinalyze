@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 
 export enum UserRole {
@@ -39,15 +40,15 @@ export class User {
   @Column({ nullable: true })
   phone: string;
 
-  @Column('simple-array', { nullable: true })
-  address: string[];
-
   @Column({
     type: 'enum',
     enum: UserRole,
     default: UserRole.CUSTOMER,
   })
   role: UserRole;
+  // Relationship: One user has many addresses
+  @OneToMany('Address', 'user')
+  addresses: any[];
 
   @CreateDateColumn()
   createdAt: Date;

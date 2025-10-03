@@ -6,17 +6,20 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { AddressService } from '../address/address.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { User } from '../users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
+import { ResponseHelper } from '../utils/responses';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly addressService: AddressService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -48,7 +51,7 @@ export class AuthService {
       role: user.role,
     };
 
-    return {
+    return ResponseHelper.success('Login successful', {
       access_token: this.jwtService.sign(payload),
       user: {
         userId: fullUser.userId,
@@ -57,7 +60,7 @@ export class AuthService {
         phone: fullUser.phone,
         dob: fullUser.dob,
         photoUrl: fullUser.photoUrl,
-        address: fullUser.address,
+        addresses: fullUser.addresses || [],
         balance: fullUser.balance,
         role: fullUser.role,
         isActive: fullUser.isActive,
@@ -65,7 +68,7 @@ export class AuthService {
         createdAt: fullUser.createdAt,
         updatedAt: fullUser.updatedAt,
       },
-    };
+    });
   }
 
   async register(registerDto: RegisterDto) {
@@ -92,10 +95,22 @@ export class AuthService {
       phone: registerDto.phone,
       dob: registerDto.dob,
       photoUrl: registerDto.photoUrl,
-      address: registerDto.address,
     };
 
     const user = await this.usersService.create(userData);
+
+    // Create address for the user
+    const addressData = {
+      userId: user.userId,
+      street: registerDto.street,
+      streetLine1: registerDto.streetLine1,
+      streetLine2: registerDto.streetLine2,
+      wardOrSubDistrict: registerDto.wardOrSubDistrict,
+      district: registerDto.district,
+      city: registerDto.city,
+    };
+
+    const address = await this.addressService.create(addressData);
 
     // Generate JWT token
     const payload = {
@@ -104,7 +119,7 @@ export class AuthService {
       role: user.role,
     };
 
-    return {
+    return ResponseHelper.created('User registered successfully', {
       access_token: this.jwtService.sign(payload),
       user: {
         userId: user.userId,
@@ -113,7 +128,7 @@ export class AuthService {
         phone: user.phone,
         dob: user.dob,
         photoUrl: user.photoUrl,
-        address: user.address,
+        addresses: [address],
         balance: user.balance,
         role: user.role,
         isActive: user.isActive,
@@ -121,7 +136,7 @@ export class AuthService {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
-    };
+    });
   }
 
   async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
@@ -149,13 +164,13 @@ export class AuthService {
       password: hashedNewPassword,
     });
 
-    return { message: 'Password changed successfully' };
+    return ResponseHelper.success('Password changed successfully');
   }
 
   async getProfile(userId: string) {
     const user = await this.usersService.findOne(userId);
     const { password, ...profile } = user;
-    return profile;
+    return ResponseHelper.success('Profile retrieved successfully', profile);
   }
 
   async updateProfile(userId: string, updateData: Partial<User>) {
@@ -168,16 +183,17 @@ export class AuthService {
       ...safeUpdateData
     } = updateData;
 
-    return await this.usersService.update(userId, safeUpdateData);
+    const updatedUser = await this.usersService.update(userId, safeUpdateData);
+    return ResponseHelper.success('Profile updated successfully', updatedUser);
   }
 
   async verifyEmail(userId: string) {
     await this.usersService.update(userId, { isVerified: true });
-    return { message: 'Email verified successfully' };
+    return ResponseHelper.success('Email verified successfully');
   }
 
   async deactivateAccount(userId: string) {
     await this.usersService.update(userId, { isActive: false });
-    return { message: 'Account deactivated successfully' };
+    return ResponseHelper.success('Account deactivated successfully');
   }
 }
