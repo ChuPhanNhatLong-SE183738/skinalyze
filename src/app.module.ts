@@ -9,6 +9,8 @@ import { Product } from './products/entities/product.entity';
 import { Address } from './address/entities/address.entity';
 import { ProductsModule } from './products/products.module';
 import { AddressModule } from './address/address.module';
+import { CategoriesModule } from './categories/categories.module';
+import { Category } from './categories/entities/category.entity';
 
 @Module({
   imports: [
@@ -19,7 +21,7 @@ import { AddressModule } from './address/address.module';
       username: process.env.DB_USERNAME || 'root',
       password: process.env.DB_PASSWORD || 'Naruto1234@',
       database: process.env.DB_DATABASE || 'skinalyze',
-      entities: [User, Product, Address],
+      entities: [User, Product, Address, Category],
       synchronize: process.env.NODE_ENV !== 'production', // Set to false in production
       logging: process.env.NODE_ENV === 'development',
     }),
@@ -27,6 +29,7 @@ import { AddressModule } from './address/address.module';
     AuthModule,
     ProductsModule,
     AddressModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

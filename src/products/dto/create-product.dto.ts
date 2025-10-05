@@ -17,7 +17,7 @@ export class CreateProductDto {
 
   @IsArray()
   @IsString({ each: true })
-  category: string[];
+  categoryIds: string[];
 
   @IsString()
   @IsNotEmpty()
