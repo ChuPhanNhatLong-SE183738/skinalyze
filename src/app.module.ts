@@ -20,6 +20,7 @@ import { InventoryModule } from './inventory/inventory.module';
 import { StockMovement } from './stock-movement/entities/stock-movement.entity';
 import { StockMovementItem } from './stock-movement/entities/stock-movement-item.entity';
 import { ShopInventory } from './inventory/entities/inventory.entity';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ShopInventory } from './inventory/entities/inventory.entity';
     BatchesModule,
     StockMovementModule,
     InventoryModule,
+    CartModule,
   ],
   controllers: [AppController],
   providers: [AppService],
