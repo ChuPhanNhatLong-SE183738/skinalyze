@@ -16,6 +16,10 @@ async function bootstrap() {
     .setVersion('1.0')
     .addTag('Products')
     .addTag('Users')
+    .addTag('Categories')
+    .addTag('Batches')
+    .addTag('Stock Movement')
+    .addTag('Inventory')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
@@ -29,6 +33,6 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ? parseInt(process.env.PORT) : 3000);
 }
 bootstrap();

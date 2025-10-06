@@ -26,8 +26,8 @@ export class Product {
   @Column({ type: 'varchar', length: 100 })
   brand: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  sellingPrice: string;
+  @Column({ type: 'int' })
+  sellingPrice: number;
 
   @Column({ type: 'simple-array' })
   productImages: string[];

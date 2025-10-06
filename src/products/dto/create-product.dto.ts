@@ -23,9 +23,10 @@ export class CreateProductDto {
   @IsNotEmpty()
   brand: string;
 
-  @IsString()
-  @IsNotEmpty()
-  sellingPrice: string;
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  sellingPrice: number;
 
   @IsArray()
   @IsString({ each: true })
