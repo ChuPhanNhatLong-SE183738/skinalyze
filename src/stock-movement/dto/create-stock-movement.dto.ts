@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { 
-  IsString, 
-  IsNotEmpty, 
-  IsNumber, 
-  IsEnum, 
-  IsOptional, 
-  Min, 
-  IsArray, 
-  ValidateNested, 
-  ArrayMinSize 
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsEnum,
+  IsOptional,
+  Min,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MovementType } from '../entities/stock-movement.entity';
@@ -35,39 +35,49 @@ export class CreateStockMovementDto {
   @IsEnum(MovementType)
   movementType: MovementType;
 
-  @ApiProperty({ 
-    example: 'SHOP001', 
-    description: 'Source shop ID (required for TRANSFER/EXPORT, null for IMPORT)',
-    required: false 
+  @ApiProperty({
+    example: 'SHOP001',
+    description:
+      'Source shop ID (required for TRANSFER/EXPORT, null for IMPORT)',
+    required: false,
   })
   @IsOptional()
   @IsString()
   fromShopId?: string;
 
-  @ApiProperty({ 
-    example: 'SHOP002', 
-    description: 'Destination shop ID (required for IMPORT/TRANSFER, null for EXPORT)',
-    required: false 
+  @ApiProperty({
+    example: 'SHOP002',
+    description:
+      'Destination shop ID (required for IMPORT/TRANSFER, null for EXPORT)',
+    required: false,
   })
   @IsOptional()
   @IsString()
   toShopId?: string;
 
-  @ApiProperty({ 
-    example: 'Restocking main store', 
-    description: 'Reason for movement' 
+  @ApiProperty({
+    example: '123 Nguyen Hue, Quan 1, Ho Chi Minh',
+    description: 'Shop address',
+  })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
+  @ApiProperty({
+    example: 'Restocking main store',
+    description: 'Reason for movement',
   })
   @IsString()
   @IsNotEmpty()
   reason: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     type: [StockMovementItemDto],
     description: 'List of products and batches to move',
     example: [
       { productId: 'prod-1', batchId: 'batch-1', quantity: 50 },
-      { productId: 'prod-2', batchId: 'batch-2', quantity: 30 }
-    ]
+      { productId: 'prod-2', batchId: 'batch-2', quantity: 30 },
+    ],
   })
   @IsArray()
   @ArrayMinSize(1)

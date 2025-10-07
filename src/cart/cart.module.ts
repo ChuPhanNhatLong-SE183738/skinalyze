@@ -4,6 +4,8 @@ import { redisStore } from 'cache-manager-ioredis-yet';
 import { CartService } from './cart.service';
 import { CartController } from './cart.controller';
 import { ProductsModule } from '../products/products.module';
+import { InventoryModule } from '../inventory/inventory.module';
+import { AddressModule } from '../address/address.module';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { ProductsModule } from '../products/products.module';
       }),
     }),
     ProductsModule,
+    InventoryModule,
+    AddressModule,
   ],
   controllers: [CartController],
   providers: [CartService],

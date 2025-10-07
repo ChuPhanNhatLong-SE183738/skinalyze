@@ -47,6 +47,9 @@ export class StockMovement {
   @Column({ nullable: true })
   sourceShopId: string;
 
+  @Column({ type: 'text', nullable: true })
+  address: string;
+
   @Column({ nullable: true })
   destinationShopId: string;
 

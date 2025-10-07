@@ -188,7 +188,7 @@ export class BatchesService {
 
     if (batchItem.stockRemain < quantity) {
       throw new BadRequestException(
-        `Insufficient stock in batch. Available: ${batchItem.stockRemain}, Requested: ${quantity}`,
+        `Insufficient stock in batch skibidi. Available: ${batchItem.stockRemain}, Requested: ${quantity}`,
       );
     }
 

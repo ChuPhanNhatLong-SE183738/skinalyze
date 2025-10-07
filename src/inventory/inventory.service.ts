@@ -129,38 +129,24 @@ export class InventoryService {
     shopId: string,
     productId: string,
     quantity: number,
-    useFIFO: boolean = true,
   ): Promise<{
     success: boolean;
     reservations: { batchId: string; quantity: number; expiryDate?: Date }[];
   }> {
-    let inventories: ShopInventory[];
-
-    if (useFIFO) {
-      // FIFO: Get batches sorted by expiry date (oldest first)
-      inventories = await this.inventoryRepository
-        .createQueryBuilder('inventory')
-        .leftJoinAndSelect('inventory.batch', 'batch')
-        .leftJoin(
-          'batch_items',
-          'batchItem',
-          'batchItem.batchId = inventory.batchId AND batchItem.productId = inventory.productId',
-        )
-        .where('inventory.shopId = :shopId', { shopId })
-        .andWhere('inventory.productId = :productId', { productId })
-        .andWhere('inventory.currentStock > inventory.reservedStock')
-        .orderBy('batchItem.expiryDate', 'ASC') // ← FIFO by expiry date
-        .getMany();
-    } else {
-      // LIFO or random selection
-      inventories = await this.inventoryRepository.find({
-        where: {
-          shopId,
-          productId,
-        },
-        relations: ['batch'],
-      });
-    }
+    // FEFO: First Expire First Out - Lấy batch gần hết hạn trước
+    const inventories = await this.inventoryRepository
+      .createQueryBuilder('inventory')
+      .leftJoinAndSelect('inventory.batch', 'batch')
+      .leftJoin(
+        'batch_items',
+        'batchItem',
+        'batchItem.batchId = inventory.batchId AND batchItem.productId = inventory.productId',
+      )
+      .where('inventory.shopId = :shopId', { shopId })
+      .andWhere('inventory.productId = :productId', { productId })
+      .andWhere('inventory.currentStock > inventory.reservedStock')
+      .orderBy('batchItem.expiryDate', 'ASC')
+      .getMany();
 
     // Calculate total available
     const totalAvailable = inventories.reduce(
@@ -182,7 +168,7 @@ export class InventoryService {
     }[] = [];
     let remainingQuantity = quantity;
 
-    // Reserve from batches in FIFO order
+    // Reserve từ batches (gần hết hạn trước)
     for (const inventory of inventories) {
       if (remainingQuantity <= 0) break;
 
@@ -347,5 +333,61 @@ export class InventoryService {
     }
 
     return await query.getRawOne();
+  }
+
+  /**
+   * Tìm tất cả shops có sản phẩm này + đủ số lượng available
+   * @param productId Product ID
+   * @param quantity Số lượng cần
+   * @returns Danh sách shops có đủ hàng
+   */
+  async findAvailableShops(
+    productId: string,
+    quantity: number,
+  ): Promise<{ shopId: string; availableStock: number }[]> {
+    const results = await this.inventoryRepository
+      .createQueryBuilder('inventory')
+      .select('inventory.shopId', 'shopId')
+      .addSelect(
+        'SUM(inventory.currentStock - inventory.reservedStock)',
+        'availableStock',
+      )
+      .where('inventory.productId = :productId', { productId })
+      .andWhere('(inventory.currentStock - inventory.reservedStock) > 0')
+      .groupBy('inventory.shopId')
+      .having(
+        'SUM(inventory.currentStock - inventory.reservedStock) >= :quantity',
+        {
+          quantity,
+        },
+      )
+      .getRawMany();
+
+    return results;
+  }
+
+  /**
+   * 🔥 Tìm tất cả INVENTORY (kho) có sản phẩm này + đủ số lượng available
+   * @param productId Product ID
+   * @param quantity Số lượng cần
+   * @returns Danh sách inventory records có đủ hàng (có address)
+   */
+  async findAvailableInventories(
+    productId: string,
+    quantity: number,
+  ): Promise<ShopInventory[]> {
+    // Query inventory có available stock >= quantity
+    const inventories = await this.inventoryRepository
+      .createQueryBuilder('inventory')
+      .where('inventory.productId = :productId', { productId })
+      .andWhere(
+        '(inventory.currentStock - inventory.reservedStock) >= :quantity',
+        {
+          quantity,
+        },
+      )
+      .getMany();
+
+    return inventories;
   }
 }

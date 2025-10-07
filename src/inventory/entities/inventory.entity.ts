@@ -25,6 +25,9 @@ export class ShopInventory {
   @Column()
   productId: string;
 
+  @Column()
+  address: string;
+
   @Column({ nullable: true })
   batchId: string;
 

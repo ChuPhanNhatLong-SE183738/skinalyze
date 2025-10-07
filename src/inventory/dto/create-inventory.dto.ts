@@ -19,6 +19,14 @@ export class ReserveStockDto {
   @IsNotEmpty()
   shopId: string;
 
+  @ApiProperty({
+    example: '123 Nguyen Hue, Quan 1, Ho Chi Minh',
+    description: 'Shop address',
+  })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
   @ApiProperty({ example: 'prod-001', description: 'Product ID' })
   @IsString()
   @IsNotEmpty()
@@ -29,11 +37,11 @@ export class ReserveStockDto {
   @IsPositive()
   quantity: number;
 
-  @ApiProperty({ 
-    example: true, 
-    required: false, 
+  @ApiProperty({
+    example: true,
+    required: false,
     default: true,
-    description: 'Use FIFO strategy (default: true)'
+    description: 'Use FIFO strategy (default: true)',
   })
   @IsBoolean()
   @IsOptional()
@@ -45,6 +53,14 @@ export class ReleaseReservationDto {
   @IsString()
   @IsNotEmpty()
   shopId: string;
+
+  @ApiProperty({
+    example: '123 Nguyen Hue, Quan 1, Ho Chi Minh',
+    description: 'Shop address',
+  })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
 
   @ApiProperty({ example: 'prod-001' })
   @IsString()
@@ -68,6 +84,14 @@ export class ConfirmSaleDto {
   @IsNotEmpty()
   shopId: string;
 
+  @ApiProperty({
+    example: '123 Nguyen Hue, Quan 1, Ho Chi Minh',
+    description: 'Shop address',
+  })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
   @ApiProperty({ example: 'prod-001' })
   @IsString()
   @IsNotEmpty()
@@ -90,6 +114,14 @@ export class SaleItemDto {
   @IsNotEmpty()
   productId: string;
 
+  @ApiProperty({
+    example: '123 Nguyen Hue, Quan 1, Ho Chi Minh',
+    description: 'Shop address',
+  })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
   @ApiProperty({ example: 'batch-001' })
   @IsString()
   @IsNotEmpty()
@@ -107,6 +139,14 @@ export class ConfirmMultipleSalesDto {
   @IsNotEmpty()
   shopId: string;
 
+  @ApiProperty({
+    example: '123 Nguyen Hue, Quan 1, Ho Chi Minh',
+    description: 'Shop address',
+  })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
   @ApiProperty({ type: [SaleItemDto] })
   @IsArray()
   @ValidateNested({ each: true })
@@ -120,6 +160,14 @@ export class AdjustStockDto {
   @IsNotEmpty()
   shopId: string;
 
+  @ApiProperty({
+    example: '123 Nguyen Hue, Quan 1, Ho Chi Minh',
+    description: 'Shop address',
+  })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
+
   @ApiProperty({ example: 'prod-001' })
   @IsString()
   @IsNotEmpty()
@@ -130,9 +178,9 @@ export class AdjustStockDto {
   @IsNotEmpty()
   batchId: string;
 
-  @ApiProperty({ 
-    example: -5, 
-    description: 'Positive to add, negative to subtract' 
+  @ApiProperty({
+    example: -5,
+    description: 'Positive to add, negative to subtract',
   })
   @IsNumber()
   quantity: number;
@@ -175,6 +223,14 @@ export class CreateInventoryDto {
   @IsString()
   @IsNotEmpty()
   shopId: string;
+
+  @ApiProperty({
+    example: '123 Nguyen Hue, Quan 1, Ho Chi Minh',
+    description: 'Shop address',
+  })
+  @IsString()
+  @IsNotEmpty()
+  address: string;
 
   @ApiProperty({ description: 'Product ID' })
   @IsString()

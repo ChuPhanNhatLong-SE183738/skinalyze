@@ -41,6 +41,7 @@ export class StockMovementService {
       movementId: uuidv4(),
       movementType: createDto.movementType,
       sourceShopId: createDto.fromShopId,
+      address: createDto.address,
       destinationShopId: createDto.toShopId,
       batchId: createDto.items[0]?.batchId, // For IMPORT type reference
       reason: createDto.reason,
@@ -72,6 +73,10 @@ export class StockMovementService {
 
     if (movement.status !== MovementStatus.PENDING) {
       throw new BadRequestException('Movement is not in pending status');
+    }
+
+    if (!movement.address) {
+      throw new BadRequestException('Address is required to approve movement');
     }
 
     // Execute the actual stock movement
@@ -296,7 +301,7 @@ export class StockMovementService {
 
       if (batchItem.stockRemain < item.quantity) {
         throw new BadRequestException(
-          `Insufficient stock in batch. Available: ${batchItem.stockRemain}, Requested: ${item.quantity}`,
+          `Insufficient stock in batch skibidi2. Available: ${batchItem.stockRemain}, Requested: ${item.quantity}`,
         );
       }
 
@@ -309,6 +314,7 @@ export class StockMovementService {
         item.productId,
         item.batchId,
         item.quantity,
+        movement.address,
       );
     }
   }
@@ -348,6 +354,7 @@ export class StockMovementService {
         item.productId,
         item.batchId,
         item.quantity,
+        movement.address,
       );
     }
   }
@@ -372,6 +379,7 @@ export class StockMovementService {
     productId: string,
     batchId: string,
     quantity: number,
+    address?: string,
   ): Promise<void> {
     const existingInventory = await this.shopInventoryRepository.findOne({
       where: { shopId, productId, batchId },
@@ -381,11 +389,20 @@ export class StockMovementService {
       existingInventory.currentStock += quantity;
       await this.shopInventoryRepository.save(existingInventory);
     } else {
+      // Get address from existing inventory of the same shop if not provided
+      if (!address) {
+        const sampleInventory = await this.shopInventoryRepository.findOne({
+          where: { shopId },
+        });
+        address = sampleInventory?.address || 'Unknown Address';
+      }
+
       const newInventory = this.shopInventoryRepository.create({
         inventoryId: uuidv4(),
         shopId,
         productId,
         batchId,
+        address,
         currentStock: quantity,
         reservedStock: 0,
       });

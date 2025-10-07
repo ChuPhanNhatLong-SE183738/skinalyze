@@ -23,15 +23,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
-
-// Import DTOs
-import {
-  ReserveStockDto,
-  ReleaseReservationDto,
-  ConfirmSaleDto,
-  ConfirmMultipleSalesDto,
-  AdjustStockDto,
-} from './dto/create-inventory.dto';
+import { ResponseHelper } from '../utils/responses';
+import { ReserveStockDto } from './dto/reserve-stock.dto';
+import { ReleaseReservationDto } from './dto/release-reservation.dto';
+import { ConfirmSaleDto } from './dto/confirm-sale.dto';
 
 @ApiTags('Inventory')
 @ApiBearerAuth()
@@ -53,9 +48,9 @@ export class InventoryController {
 
   @Get('shop/:shopId/product/:productId/batches')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get all batches for a product (FIFO order)',
-    description: 'Returns batches sorted by expiry date (oldest first)'
+    description: 'Returns batches sorted by expiry date (oldest first)',
   })
   @ApiParam({ name: 'shopId' })
   @ApiParam({ name: 'productId' })
@@ -80,9 +75,9 @@ export class InventoryController {
     @Query('batchId') batchId?: string,
   ) {
     const available = await this.inventoryService.getAvailableStock(
-      shopId, 
-      productId, 
-      batchId
+      shopId,
+      productId,
+      batchId,
     );
     return { available };
   }
@@ -143,77 +138,78 @@ export class InventoryController {
   // ===== POST ENDPOINTS =====
 
   @Post('reserve')
-  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @Roles(UserRole.CUSTOMER, UserRole.STAFF, UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Reserve stock (FIFO by default)' })
+  @ApiOperation({
+    summary: 'Reserve stock khi thêm vào giỏ',
+    description: 'Tự động lấy batch gần hết hạn trước (FEFO)',
+  })
   @ApiBody({ type: ReserveStockDto })
-  @ApiResponse({ status: 200, description: 'Stock reserved successfully' })
-  @ApiResponse({ status: 400, description: 'Insufficient stock' })
-  reserveStock(@Body() dto: ReserveStockDto) {
-    return this.inventoryService.reserveStock(
+  @ApiResponse({
+    status: 200,
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Đã reserve 80 sản phẩm',
+        data: {
+          success: true,
+          reservations: [
+            { batchId: 'BATCH-2024-12', quantity: 50 },
+            { batchId: 'BATCH-2025-01', quantity: 30 },
+          ],
+        },
+      },
+    },
+  })
+  async reserveStock(@Body() dto: ReserveStockDto) {
+    const result = await this.inventoryService.reserveStock(
       dto.shopId,
       dto.productId,
       dto.quantity,
-      dto.useFIFO ?? true,
+    );
+
+    if (!result.success) {
+      return ResponseHelper.badRequest('Không đủ hàng trong kho');
+    }
+
+    return ResponseHelper.success(
+      `Đã reserve ${dto.quantity} sản phẩm`,
+      result,
     );
   }
 
   @Post('release-reservation')
-  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @Roles(UserRole.CUSTOMER, UserRole.STAFF, UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Release stock reservation' })
+  @ApiOperation({ summary: 'Release reservation khi xóa khỏi giỏ' })
   @ApiBody({ type: ReleaseReservationDto })
-  @ApiResponse({ status: 200, description: 'Reservation released' })
-  releaseReservation(@Body() dto: ReleaseReservationDto) {
-    return this.inventoryService.releaseReservation(
+  @ApiResponse({ status: 200, description: 'Released' })
+  async releaseReservation(@Body() dto: ReleaseReservationDto) {
+    await this.inventoryService.releaseReservation(
       dto.shopId,
       dto.productId,
       dto.batchId,
       dto.quantity,
     );
+    return ResponseHelper.success('Đã release reservation');
   }
 
   @Post('confirm-sale')
-  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Confirm sale (single batch)' })
+  @ApiOperation({
+    summary: 'Confirm sale khi đặt hàng',
+    description: 'Giảm currentStock và reservedStock',
+  })
   @ApiBody({ type: ConfirmSaleDto })
   @ApiResponse({ status: 200, description: 'Sale confirmed' })
-  confirmSale(@Body() dto: ConfirmSaleDto) {
-    return this.inventoryService.confirmSale(
+  async confirmSale(@Body() dto: ConfirmSaleDto) {
+    await this.inventoryService.confirmSale(
       dto.shopId,
       dto.productId,
       dto.batchId,
       dto.quantity,
     );
-  }
-
-  @Post('confirm-sales')
-  @Roles(UserRole.ADMIN, UserRole.STAFF)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Confirm multiple sales (FIFO orders)' })
-  @ApiBody({ type: ConfirmMultipleSalesDto })
-  @ApiResponse({ status: 200, description: 'Multiple sales confirmed' })
-  async confirmMultipleSales(@Body() dto: ConfirmMultipleSalesDto) {
-    await this.inventoryService.confirmMultipleSales(dto.shopId, dto.sales);
-    return {
-      success: true,
-      confirmedSales: dto.sales,
-    };
-  }
-
-  @Post('adjust')
-  @Roles(UserRole.ADMIN)
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Manually adjust stock (Admin only)' })
-  @ApiBody({ type: AdjustStockDto })
-  @ApiResponse({ status: 200, description: 'Stock adjusted' })
-  adjustStock(@Body() dto: AdjustStockDto) {
-    return this.inventoryService.adjustStockByBatch(
-      dto.shopId,
-      dto.productId,
-      dto.batchId,
-      dto.quantity,
-    );
+    return ResponseHelper.success('Đã xác nhận bán hàng');
   }
 }
