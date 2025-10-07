@@ -129,35 +129,60 @@ export class InventoryService {
     shopId: string,
     productId: string,
     quantity: number,
-    preferOldestBatch: boolean = true,
+    useFIFO: boolean = true,
   ): Promise<{
     success: boolean;
-    reservations: { batchId: string; quantity: number }[];
+    reservations: { batchId: string; quantity: number; expiryDate?: Date }[];
   }> {
-    const inventories = await this.inventoryRepository
-      .createQueryBuilder('inventory')
-      .leftJoinAndSelect('inventory.batch', 'batch')
-      .where('inventory.shopId = :shopId', { shopId })
-      .andWhere('inventory.productId = :productId', { productId })
-      .andWhere('inventory.currentStock > inventory.reservedStock')
-      .orderBy(
-        preferOldestBatch ? 'batch.createdAt' : 'inventory.updatedAt',
-        'ASC',
-      )
-      .getMany();
+    let inventories: ShopInventory[];
 
+    if (useFIFO) {
+      // FIFO: Get batches sorted by expiry date (oldest first)
+      inventories = await this.inventoryRepository
+        .createQueryBuilder('inventory')
+        .leftJoinAndSelect('inventory.batch', 'batch')
+        .leftJoin(
+          'batch_items',
+          'batchItem',
+          'batchItem.batchId = inventory.batchId AND batchItem.productId = inventory.productId',
+        )
+        .where('inventory.shopId = :shopId', { shopId })
+        .andWhere('inventory.productId = :productId', { productId })
+        .andWhere('inventory.currentStock > inventory.reservedStock')
+        .orderBy('batchItem.expiryDate', 'ASC') // ← FIFO by expiry date
+        .getMany();
+    } else {
+      // LIFO or random selection
+      inventories = await this.inventoryRepository.find({
+        where: {
+          shopId,
+          productId,
+        },
+        relations: ['batch'],
+      });
+    }
+
+    // Calculate total available
     const totalAvailable = inventories.reduce(
       (sum, inv) => sum + (inv.currentStock - inv.reservedStock),
       0,
     );
 
     if (totalAvailable < quantity) {
-      return { success: false, reservations: [] };
+      return {
+        success: false,
+        reservations: [],
+      };
     }
 
-    const reservations: { batchId: string; quantity: number }[] = [];
+    const reservations: {
+      batchId: string;
+      quantity: number;
+      expiryDate?: Date;
+    }[] = [];
     let remainingQuantity = quantity;
 
+    // Reserve from batches in FIFO order
     for (const inventory of inventories) {
       if (remainingQuantity <= 0) break;
 
@@ -168,9 +193,16 @@ export class InventoryService {
         inventory.reservedStock += toReserve;
         await this.inventoryRepository.save(inventory);
 
+        // Get expiry date from batch_items
+        const batchItem = await this.getBatchItemInfo(
+          inventory.batchId,
+          inventory.productId,
+        );
+
         reservations.push({
           batchId: inventory.batchId,
           quantity: toReserve,
+          expiryDate: batchItem?.expiryDate,
         });
 
         remainingQuantity -= toReserve;
@@ -178,6 +210,21 @@ export class InventoryService {
     }
 
     return { success: true, reservations };
+  }
+
+  // Helper method to get batch item details
+  private async getBatchItemInfo(
+    batchId: string,
+    productId: string,
+  ): Promise<{ expiryDate: Date; importPrice: number } | null> {
+    const result = await this.inventoryRepository.manager.query(
+      `SELECT expiryDate, importPrice 
+     FROM batch_items 
+     WHERE batchId = ? AND productId = ?`,
+      [batchId, productId],
+    );
+
+    return result[0] || null;
   }
 
   async releaseReservation(
@@ -225,6 +272,20 @@ export class InventoryService {
     inventory.currentStock -= quantity;
     inventory.reservedStock -= quantity;
     await this.inventoryRepository.save(inventory);
+  }
+
+  async confirmMultipleSales(
+    shopId: string,
+    sales: Array<{ productId: string; batchId: string; quantity: number }>,
+  ): Promise<void> {
+    for (const sale of sales) {
+      await this.confirmSale(
+        shopId,
+        sale.productId,
+        sale.batchId,
+        sale.quantity,
+      );
+    }
   }
 
   async getLowStockAlerts(
