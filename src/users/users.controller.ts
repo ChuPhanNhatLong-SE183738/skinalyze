@@ -8,7 +8,14 @@ import {
   Delete,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -31,7 +38,10 @@ export class UsersController {
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
@@ -40,7 +50,10 @@ export class UsersController {
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   @ApiOperation({ summary: 'Get all users (Admin/Staff only)' })
   @ApiResponse({ status: 200, description: 'Returns all users' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin/Staff access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin/Staff access required',
+  })
   findAll() {
     return this.usersService.findAll();
   }
@@ -58,7 +71,10 @@ export class UsersController {
   @ApiOperation({ summary: 'Get user by ID (Admin/Staff only)' })
   @ApiParam({ name: 'id', type: String, description: 'User UUID' })
   @ApiResponse({ status: 200, description: 'Returns the user' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin/Staff access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin/Staff access required',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
@@ -79,7 +95,10 @@ export class UsersController {
   @ApiParam({ name: 'id', type: String, description: 'User UUID' })
   @ApiBody({ type: UpdateUserDto })
   @ApiResponse({ status: 200, description: 'User updated successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
@@ -90,7 +109,10 @@ export class UsersController {
   @ApiOperation({ summary: 'Delete user by ID (Admin only)' })
   @ApiParam({ name: 'id', type: String, description: 'User UUID' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);

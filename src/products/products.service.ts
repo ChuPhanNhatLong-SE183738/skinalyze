@@ -17,8 +17,10 @@ export class ProductsService {
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
     const { categoryIds, ...productData } = createProductDto;
-    const categories = await this.categoryRepository.findBy({ categoryId: In(categoryIds) });
-    
+    const categories = await this.categoryRepository.findBy({
+      categoryId: In(categoryIds),
+    });
+
     const product = this.productRepository.create({
       ...productData,
       categories,
@@ -31,9 +33,9 @@ export class ProductsService {
   }
 
   async findOne(id: string): Promise<Product> {
-    const product = await this.productRepository.findOne({ 
+    const product = await this.productRepository.findOne({
       where: { productId: id },
-      relations: ['categories']
+      relations: ['categories'],
     });
     if (!product) {
       throw new NotFoundException(`Product with ID ${id} not found`);
@@ -41,7 +43,10 @@ export class ProductsService {
     return product;
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto): Promise<Product> {
+  async update(
+    id: string,
+    updateProductDto: UpdateProductDto,
+  ): Promise<Product> {
     const product = await this.findOne(id);
     Object.assign(product, updateProductDto);
     return await this.productRepository.save(product);
@@ -67,8 +72,12 @@ export class ProductsService {
   async searchProducts(query: string): Promise<Product[]> {
     return await this.productRepository
       .createQueryBuilder('product')
-      .where('LOWER(product.productName) LIKE LOWER(:query)', { query: `%${query}%` })
-      .orWhere('LOWER(product.productDescription) LIKE LOWER(:query)', { query: `%${query}%` })
+      .where('LOWER(product.productName) LIKE LOWER(:query)', {
+        query: `%${query}%`,
+      })
+      .orWhere('LOWER(product.productDescription) LIKE LOWER(:query)', {
+        query: `%${query}%`,
+      })
       .getMany();
   }
 }

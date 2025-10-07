@@ -8,7 +8,10 @@ export class CreateCategoryDto {
   @MaxLength(100)
   categoryName: string;
 
-  @ApiProperty({ example: 'Skincare serums for various skin concerns', description: 'Category description' })
+  @ApiProperty({
+    example: 'Skincare serums for various skin concerns',
+    description: 'Category description',
+  })
   @IsString()
   @IsNotEmpty()
   categoryDescription: string;

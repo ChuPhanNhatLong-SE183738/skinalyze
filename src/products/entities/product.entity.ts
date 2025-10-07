@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { Category } from '../../categories/entities/category.entity';
 
 @Entity('products')
@@ -19,7 +27,10 @@ export class Product {
   @JoinTable({
     name: 'product_categories',
     joinColumn: { name: 'productId', referencedColumnName: 'productId' },
-    inverseJoinColumn: { name: 'categoryId', referencedColumnName: 'categoryId' }
+    inverseJoinColumn: {
+      name: 'categoryId',
+      referencedColumnName: 'categoryId',
+    },
   })
   categories: Category[];
 
@@ -41,7 +52,13 @@ export class Product {
   @Column({ type: 'json', nullable: true })
   reviews: any[];
 
-  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 0 })
+  @Column({
+    type: 'decimal',
+    precision: 5,
+    scale: 2,
+    nullable: true,
+    default: 0,
+  })
   salePercentage: number;
 
   @CreateDateColumn()
