@@ -1,0 +1,47 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+  OneToMany,
+  JoinColumn,
+} from 'typeorm';
+import { User } from '../../users/entities/user.entity';
+import { SkinAnalysis } from '../../skin-analysis/entities/skin-analysis.entity';
+
+@Entity('customers')
+export class Customer {
+  @PrimaryGeneratedColumn('uuid')
+  customerId: string;
+
+  // Foreign key reference to User
+  @OneToOne(() => User)
+  @JoinColumn({ name: 'userId' })
+  user: User;
+
+  @Column({ type: 'uuid' })
+  userId: string;
+
+  @Column({ type: 'int', default: 0 })
+  aiUsageAmount: number;
+
+  // One-to-Many relationship with Skin Analysis
+  @OneToMany(() => SkinAnalysis, (analysis) => analysis.customer)
+  skinAnalyses: SkinAnalysis[];
+
+  // Array of analysis IDs (deprecated - use skinAnalyses relation instead)
+  @Column({ type: 'json', nullable: true })
+  analysisId: string[];
+
+  // Purchase history (will link to orders/transactions later)
+  @Column({ type: 'json', nullable: true })
+  purchaseHistory: any[];
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+}

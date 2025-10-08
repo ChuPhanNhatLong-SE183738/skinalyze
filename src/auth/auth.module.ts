@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { AddressModule } from '../address/address.module';
+import { CustomersModule } from '../customers/customers.module';
+import { DermatologistsModule } from '../dermatologists/dermatologists.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 
@@ -13,6 +15,8 @@ import { LocalStrategy } from './strategies/local.strategy';
   imports: [
     UsersModule,
     AddressModule,
+    CustomersModule,
+    DermatologistsModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

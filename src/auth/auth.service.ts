@@ -7,10 +7,12 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { AddressService } from '../address/address.service';
+import { CustomersService } from '../customers/customers.service';
+import { DermatologistsService } from '../dermatologists/dermatologists.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
-import { User } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import { ResponseHelper } from '../utils/responses';
 
@@ -20,6 +22,8 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly addressService: AddressService,
+    private readonly customersService: CustomersService,
+    private readonly dermatologistsService: DermatologistsService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -95,6 +99,7 @@ export class AuthService {
       phone: registerDto.phone,
       dob: registerDto.dob,
       photoUrl: registerDto.photoUrl,
+      role: registerDto.role || UserRole.CUSTOMER, // Default to CUSTOMER if not provided
     };
 
     const user = await this.usersService.create(userData);
@@ -111,6 +116,22 @@ export class AuthService {
     };
 
     const address = await this.addressService.create(addressData);
+
+    // Auto-create Customer or Dermatologist based on role
+    if (user.role === UserRole.CUSTOMER) {
+      await this.customersService.create({
+        userId: user.userId,
+        aiUsageAmount: 0,
+        analysisId: [],
+        purchaseHistory: [],
+      });
+    } else if (user.role === UserRole.DERMATOLOGIST) {
+      await this.dermatologistsService.create({
+        userId: user.userId,
+        yearsOfExp: 0,
+        specializations: [],
+      });
+    }
 
     // Generate JWT token
     const payload = {

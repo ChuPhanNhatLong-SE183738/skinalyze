@@ -7,6 +7,8 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { User } from './users/entities/user.entity';
 import { Dermatologist } from './dermatologists/entities/dermatologist.entity';
+import { Customer } from './customers/entities/customer.entity';
+import { SkinAnalysis } from './skin-analysis/entities/skin-analysis.entity';
 import { Product } from './products/entities/product.entity';
 import { Address } from './address/entities/address.entity';
 import { ProductsModule } from './products/products.module';
@@ -22,6 +24,15 @@ import { StockMovement } from './stock-movement/entities/stock-movement.entity';
 import { StockMovementItem } from './stock-movement/entities/stock-movement-item.entity';
 import { ShopInventory } from './inventory/entities/inventory.entity';
 import { CartModule } from './cart/cart.module';
+import { CustomersModule } from './customers/customers.module';
+import { SkinAnalysisModule } from './skin-analysis/skin-analysis.module';
+import { OrdersModule } from './orders/orders.module';
+import { Order } from './orders/entities/order.entity';
+import { OrderItem } from './orders/entities/order-item.entity';
+import { TransactionsModule } from './transactions/transactions.module';
+import { Transaction } from './transactions/entities/transaction.entity';
+import { ShippingLogsModule } from './shipping-logs/shipping-logs.module';
+import { ShippingLog } from './shipping-logs/entities/shipping-log.entity';
 import { DermatologistsController } from './dermatologists/dermatologists.controller';
 import { DermatologistsModule } from './dermatologists/dermatologists.module';
 
@@ -38,7 +49,24 @@ import { DermatologistsModule } from './dermatologists/dermatologists.module';
       username: process.env.DB_USERNAME || 'root',
       password: process.env.DB_PASSWORD || 'Naruto1234@',
       database: process.env.DB_DATABASE || 'skinalyze',
-      entities: [User, Product, Address, Category, Dermatologist],
+      entities: [
+        User,
+        Product,
+        Address,
+        Category,
+        Customer,
+        Dermatologist,
+        SkinAnalysis,
+        Batch,
+        BatchItem,
+        ShopInventory,
+        StockMovement,
+        StockMovementItem,
+        Order,
+        OrderItem,
+        Transaction,
+        ShippingLog,
+      ],
       synchronize: process.env.NODE_ENV !== 'production', // Set to false in production
       logging: process.env.NODE_ENV === 'development',
     }),
@@ -51,6 +79,11 @@ import { DermatologistsModule } from './dermatologists/dermatologists.module';
     StockMovementModule,
     InventoryModule,
     CartModule,
+    CustomersModule,
+    SkinAnalysisModule,
+    OrdersModule,
+    TransactionsModule,
+    ShippingLogsModule,
     DermatologistsModule,
   ],
   controllers: [AppController, DermatologistsController],

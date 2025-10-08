@@ -5,8 +5,10 @@ import {
   IsOptional,
   IsDateString,
   IsUrl,
+  IsEnum,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { UserRole } from '../../users/entities/user.entity';
 
 export class RegisterDto {
   @ApiProperty({
@@ -31,6 +33,17 @@ export class RegisterDto {
   })
   @IsString()
   fullName: string;
+
+  @ApiProperty({
+    description: 'User role',
+    enum: UserRole,
+    example: UserRole.CUSTOMER,
+    required: false,
+    default: UserRole.CUSTOMER,
+  })
+  @IsOptional()
+  @IsEnum(UserRole)
+  role?: UserRole;
 
   @ApiProperty({
     description: 'User phone number (optional)',
