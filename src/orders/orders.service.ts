@@ -234,4 +234,11 @@ export class OrdersService {
     // 8. Trả về order với relations
     return this.findOne(savedOrder.orderId);
   }
+
+  /**
+   * Get customer by userId (helper method for controller)
+   */
+  async getCustomerByUserId(userId: string) {
+    return await this.customersService.findByUserId(userId);
+  }
 }

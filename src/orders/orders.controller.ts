@@ -21,6 +21,9 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { CheckoutCartDto } from './dto/checkout-cart.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
 import { ResponseHelper } from '../utils/responses';
 
 @ApiTags('orders')
@@ -29,7 +32,8 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post('checkout')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CUSTOMER)
   @ApiBearerAuth()
   @ApiOperation({ summary: '🛒 Checkout cart - Convert cart items to order' })
   async checkout(@Req() req, @Body() checkoutDto: CheckoutCartDto) {
@@ -43,19 +47,39 @@ export class OrdersController {
     );
   }
 
-  @Post()
-  @UseGuards(JwtAuthGuard)
+  @Get('my-orders')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CUSTOMER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new order' })
+  @ApiOperation({ summary: 'Get my orders (Customer only)' })
+  async getMyOrders(@Req() req) {
+    const userId = req.user.userId;
+    // Get customer from userId
+    const customer = await this.ordersService.getCustomerByUserId(userId);
+    if (!customer) {
+      return ResponseHelper.notFound('Customer not found');
+    }
+    const orders = await this.ordersService.findByCustomerId(
+      customer.customerId,
+    );
+    return ResponseHelper.success('Your orders retrieved successfully', orders);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new order (Staff/Admin only)' })
   async create(@Body() createDto: CreateOrderDto) {
     const order = await this.ordersService.create(createDto);
     return ResponseHelper.success('Order created successfully', order);
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all orders' })
+  @ApiOperation({ summary: 'Get all orders (Staff/Admin only)' })
   @ApiQuery({ name: 'customerId', required: false })
   async findAll(@Query('customerId') customerId?: string) {
     const orders = customerId
@@ -74,27 +98,30 @@ export class OrdersController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update an order' })
+  @ApiOperation({ summary: 'Update an order (Staff/Admin only)' })
   async update(@Param('id') id: string, @Body() updateDto: UpdateOrderDto) {
     const order = await this.ordersService.update(id, updateDto);
     return ResponseHelper.success('Order updated successfully', order);
   }
 
   @Post(':id/cancel')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Cancel an order' })
+  @ApiOperation({ summary: 'Cancel an order (Staff/Admin only)' })
   async cancel(@Param('id') id: string, @Body('reason') reason?: string) {
     const order = await this.ordersService.cancelOrder(id, reason);
     return ResponseHelper.success('Order cancelled successfully', order);
   }
 
   @Post(':id/confirm')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Confirm an order' })
+  @ApiOperation({ summary: 'Confirm an order (Staff/Admin only)' })
   async confirm(
     @Param('id') id: string,
     @Body('processedBy') processedBy: string,
@@ -104,9 +131,10 @@ export class OrdersController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete an order' })
+  @ApiOperation({ summary: 'Delete an order (Admin only)' })
   async remove(@Param('id') id: string) {
     await this.ordersService.remove(id);
     return ResponseHelper.success('Order deleted successfully');
