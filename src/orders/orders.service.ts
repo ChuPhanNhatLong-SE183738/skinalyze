@@ -130,7 +130,7 @@ export class OrdersService {
       throw new BadRequestException('Cannot cancel delivered order');
     }
 
-    order.status = 'CANCELLED' as any;
+    order.status = 'REJECTED' as any;
     if (reason) {
       order.rejectionReason = reason;
     }
