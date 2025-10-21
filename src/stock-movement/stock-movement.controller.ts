@@ -111,7 +111,11 @@ export class StockMovementController {
     @Query('batchId') batchId?: string,
     @Query('shopId') shopId?: string,
   ) {
-    return this.stockMovementService.getMovementHistory(productId, batchId, shopId);
+    return this.stockMovementService.getMovementHistory(
+      productId,
+      batchId,
+      shopId,
+    );
   }
 
   @Get(':id')
