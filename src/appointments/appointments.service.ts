@@ -51,23 +51,6 @@ export class AppointmentsService {
       );
     }
 
-    const transactionAmount = Number(transaction.totalAmount ?? 0);
-    if (transactionAmount < createDto.price) {
-      throw new BadRequestException(
-        'Transaction amount is insufficient to cover the appointment price',
-      );
-    }
-
-    const transactionAlreadyUsed = await this.appointmentRepository.findOne({
-      where: { transactionId: createDto.transactionId },
-    });
-
-    if (transactionAlreadyUsed) {
-      throw new BadRequestException(
-        'This transaction has already been associated with an appointment',
-      );
-    }
-
     const overlapping = await this.appointmentRepository
       .createQueryBuilder('appointment')
       .where('appointment.dermatologistId = :dermatologistId', {
@@ -92,8 +75,39 @@ export class AppointmentsService {
       appointmentStatus: AppointmentStatus.PENDING,
     });
 
-    const saved = await this.appointmentRepository.save(appointment);
-    return this.findOne(saved.appointmentId);
+    let savedAppointment: Appointment | undefined;
+    let slotReserved = false;
+
+    try {
+      await this.dermatologistsService.markSlotAsOccupied(
+        createDto.dermatologistId,
+        createDto.startTime,
+        createDto.endTime,
+      );
+      slotReserved = true;
+
+      savedAppointment = await this.appointmentRepository.save(appointment);
+    } catch (error) {
+      if (savedAppointment?.appointmentId) {
+        await this.appointmentRepository.delete(savedAppointment.appointmentId);
+      }
+
+      if (slotReserved) {
+        try {
+          await this.dermatologistsService.markSlotAsAvailable(
+            createDto.dermatologistId,
+            createDto.startTime,
+            createDto.endTime,
+          );
+        } catch {
+          // swallow release errors to preserve original exception context
+        }
+      }
+
+      throw error;
+    }
+
+    return this.findOne(savedAppointment.appointmentId);
   }
 
   async findAll(): Promise<Appointment[]> {
