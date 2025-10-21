@@ -61,4 +61,10 @@ export class User {
 
   @Column({ default: false })
   isVerified: boolean;
+
+  @Column({ nullable: true })
+  emailVerificationToken: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  emailVerificationTokenExpiry: Date;
 }

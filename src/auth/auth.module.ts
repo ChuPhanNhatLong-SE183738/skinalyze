@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { AddressModule } from '../address/address.module';
 import { CustomersModule } from '../customers/customers.module';
 import { DermatologistsModule } from '../dermatologists/dermatologists.module';
+import { EmailModule } from '../email/email.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 
@@ -17,6 +18,7 @@ import { LocalStrategy } from './strategies/local.strategy';
     AddressModule,
     CustomersModule,
     DermatologistsModule,
+    EmailModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

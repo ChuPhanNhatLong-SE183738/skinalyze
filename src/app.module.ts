@@ -35,6 +35,7 @@ import { ShippingLogsModule } from './shipping-logs/shipping-logs.module';
 import { ShippingLog } from './shipping-logs/entities/shipping-log.entity';
 import { DermatologistsController } from './dermatologists/dermatologists.controller';
 import { DermatologistsModule } from './dermatologists/dermatologists.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -85,6 +86,7 @@ import { DermatologistsModule } from './dermatologists/dermatologists.module';
     TransactionsModule,
     ShippingLogsModule,
     DermatologistsModule,
+    EmailModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

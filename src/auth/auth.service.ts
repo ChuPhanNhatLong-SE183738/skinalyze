@@ -9,11 +9,13 @@ import { UsersService } from '../users/users.service';
 import { AddressService } from '../address/address.service';
 import { CustomersService } from '../customers/customers.service';
 import { DermatologistsService } from '../dermatologists/dermatologists.service';
+import { EmailService } from '../email/email.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { User, UserRole } from '../users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
+import { v4 as uuidv4 } from 'uuid';
 import { ResponseHelper } from '../utils/responses';
 
 @Injectable()
@@ -24,6 +26,7 @@ export class AuthService {
     private readonly addressService: AddressService,
     private readonly customersService: CustomersService,
     private readonly dermatologistsService: DermatologistsService,
+    private readonly emailService: EmailService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -104,6 +107,30 @@ export class AuthService {
 
     const user = await this.usersService.create(userData);
 
+    // Generate email verification token
+    const emailVerificationToken = uuidv4();
+    const emailVerificationTokenExpiry = new Date();
+    emailVerificationTokenExpiry.setHours(
+      emailVerificationTokenExpiry.getHours() + 24,
+    ); // Token hết hạn sau 24 giờ
+
+    // Save token to user
+    await this.usersService.update(user.userId, {
+      emailVerificationToken,
+      emailVerificationTokenExpiry,
+    });
+
+    // Send verification email
+    try {
+      await this.emailService.sendVerificationEmail(
+        user.email,
+        emailVerificationToken,
+      );
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      // Không throw error, vẫn cho phép đăng ký thành công
+    }
+
     // Create address for the user
     const addressData = {
       userId: user.userId,
@@ -157,7 +184,78 @@ export class AuthService {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },
+      message:
+        'Vui lòng kiểm tra email để xác thực tài khoản. Link xác thực có hiệu lực trong 24 giờ.',
     });
+  }
+
+  async verifyEmail(token: string) {
+    // Find user with this token
+    const users = await this.usersService.findAll();
+    const user = users.find(
+      (u) =>
+        u.emailVerificationToken === token &&
+        u.emailVerificationTokenExpiry &&
+        new Date(u.emailVerificationTokenExpiry) > new Date(),
+    );
+
+    if (!user) {
+      throw new BadRequestException(
+        'Token xác thực không hợp lệ hoặc đã hết hạn',
+      );
+    }
+
+    // Update user as verified
+    await this.usersService.update(user.userId, {
+      isVerified: true,
+      emailVerificationToken: undefined,
+      emailVerificationTokenExpiry: undefined,
+    });
+
+    // Send welcome email
+    try {
+      await this.emailService.sendWelcomeEmail(user.email, user.fullName);
+    } catch (error) {
+      console.error('Failed to send welcome email:', error);
+    }
+
+    return ResponseHelper.success(
+      'Email đã được xác thực thành công! Chào mừng bạn đến với Skinalyze.',
+    );
+  }
+
+  async resendVerificationEmail(email: string) {
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user) {
+      throw new BadRequestException('Không tìm thấy người dùng');
+    }
+
+    if (user.isVerified) {
+      throw new BadRequestException('Email đã được xác thực');
+    }
+
+    // Generate new token
+    const emailVerificationToken = uuidv4();
+    const emailVerificationTokenExpiry = new Date();
+    emailVerificationTokenExpiry.setHours(
+      emailVerificationTokenExpiry.getHours() + 24,
+    );
+
+    await this.usersService.update(user.userId, {
+      emailVerificationToken,
+      emailVerificationTokenExpiry,
+    });
+
+    // Send email
+    await this.emailService.sendVerificationEmail(
+      user.email,
+      emailVerificationToken,
+    );
+
+    return ResponseHelper.success(
+      'Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư.',
+    );
   }
 
   async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
@@ -206,11 +304,6 @@ export class AuthService {
 
     const updatedUser = await this.usersService.update(userId, safeUpdateData);
     return ResponseHelper.success('Profile updated successfully', updatedUser);
-  }
-
-  async verifyEmail(userId: string) {
-    await this.usersService.update(userId, { isVerified: true });
-    return ResponseHelper.success('Email verified successfully');
   }
 
   async deactivateAccount(userId: string) {

@@ -466,11 +466,14 @@ export class AuthController {
       },
     },
   })
-  async verifyEmail(@GetUser() user: User) {
-    return this.authService.verifyEmail(user.userId);
+  async updateProfileEndpoint(
+    @GetUser() user: User,
+    @Body() updateData: Partial<User>,
+  ) {
+    return this.authService.updateProfile(user.userId, updateData);
   }
 
-  @Post('deactivate')
+  @Post('change-password')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
@@ -554,5 +557,71 @@ export class AuthController {
     return ResponseHelper.success(
       'Admin access granted - implement user list here',
     );
+  }
+
+  @Get('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify email address',
+    description:
+      'Verify user email using token sent via email. Token is valid for 24 hours.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Email verified successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message:
+          'Email đã được xác thực thành công! Chào mừng bạn đến với Skinalyze.',
+        timestamp: '2025-10-21T10:30:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid or expired token',
+    schema: {
+      example: {
+        statusCode: 400,
+        message: 'Token xác thực không hợp lệ hoặc đã hết hạn',
+        timestamp: '2025-10-21T10:30:00.000Z',
+      },
+    },
+  })
+  async verifyEmail(@Body('token') token: string) {
+    return this.authService.verifyEmail(token);
+  }
+
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Resend verification email',
+    description: 'Request a new email verification link to be sent.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Verification email sent',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư.',
+        timestamp: '2025-10-21T10:30:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email already verified or user not found',
+    schema: {
+      example: {
+        statusCode: 400,
+        message: 'Email đã được xác thực',
+        timestamp: '2025-10-21T10:30:00.000Z',
+      },
+    },
+  })
+  async resendVerification(@Body('email') email: string) {
+    return this.authService.resendVerificationEmail(email);
   }
 }
