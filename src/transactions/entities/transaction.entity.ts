@@ -32,6 +32,9 @@ export class Transaction {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalAmount: number;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  paymentMethod: string;
+
   // One-to-One relationship with Order
   @OneToOne(() => Order, (order) => order.transaction)
   order: Order;

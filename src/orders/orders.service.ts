@@ -10,11 +10,12 @@ import { OrderItem } from './entities/order-item.entity';
 import { Transaction } from '../transactions/entities/transaction.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import { CheckoutCartDto } from './dto/checkout-cart.dto';
+import { CheckoutCartDto, PaymentMethod } from './dto/checkout-cart.dto';
 import { TransactionStatus } from '../transactions/entities/transaction.entity';
 import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CustomersService } from '../customers/customers.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class OrdersService {
@@ -28,6 +29,7 @@ export class OrdersService {
     private readonly cartService: CartService,
     private readonly inventoryService: InventoryService,
     private readonly customersService: CustomersService,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(createDto: CreateOrderDto): Promise<Order> {
@@ -160,6 +162,7 @@ export class OrdersService {
 
   /**
    * 🛒 CHECKOUT CART - Chuyển cart items thành order
+   * 💰 Support thanh toán bằng wallet (balance)
    */
   async checkoutCart(
     userId: string,
@@ -186,24 +189,53 @@ export class OrdersService {
       0,
     );
 
-    // 3. Tạo transaction
+    // 4. 💰 XỬ LÝ THANH TOÁN BẰNG WALLET
+    const paymentMethod = checkoutDto.paymentMethod || PaymentMethod.COD;
+    const useWallet =
+      checkoutDto.useWallet || paymentMethod === PaymentMethod.WALLET;
+
+    if (useWallet) {
+      // Lấy user để check balance
+      const user = await this.usersService.findOne(userId);
+      const userBalance = parseFloat(user.balance.toString());
+
+      // Check đủ tiền không
+      if (userBalance < totalAmount) {
+        throw new BadRequestException(
+          `Số dư không đủ. Cần ${totalAmount.toLocaleString('vi-VN')} VND, hiện có ${userBalance.toLocaleString('vi-VN')} VND. Vui lòng nạp thêm tiền.`,
+        );
+      }
+
+      // Trừ tiền từ balance
+      const newBalance = userBalance - totalAmount;
+      await this.usersService.update(userId, { balance: newBalance });
+
+      console.log(
+        `✅ Paid by wallet: ${totalAmount} VND. New balance: ${newBalance} VND`,
+      );
+    }
+
+    // 5. Tạo transaction
     const transaction = this.transactionRepository.create({
       totalAmount,
-      status: TransactionStatus.PENDING,
+      status: useWallet
+        ? TransactionStatus.COMPLETED
+        : TransactionStatus.PENDING,
+      paymentMethod: paymentMethod,
     });
     const savedTransaction = await this.transactionRepository.save(transaction);
 
-    // 4. Tạo order
+    // 6. Tạo order
     const order = this.orderRepository.create({
       customerId: customer.customerId,
       transactionId: savedTransaction.transactionId,
       shippingAddress: checkoutDto.shippingAddress,
       notes: checkoutDto.notes,
-      status: 'PENDING' as any,
+      status: useWallet ? ('CONFIRMED' as any) : ('PENDING' as any), // Auto confirm nếu đã trả tiền
     });
     const savedOrder = await this.orderRepository.save(order);
 
-    // 5. Tạo order items từ cart items
+    // 7. Tạo order items từ cart items
     const orderItems = cart.items.map((cartItem) =>
       this.orderItemRepository.create({
         orderId: savedOrder.orderId,
@@ -214,7 +246,7 @@ export class OrdersService {
     );
     await this.orderItemRepository.save(orderItems);
 
-    // 6. Confirm sale trong inventory (chuyển reserve → sold)
+    // 8. Confirm sale trong inventory (chuyển reserve → sold)
     for (const cartItem of cart.items) {
       if (cartItem.reservations) {
         for (const reservation of cartItem.reservations) {
@@ -228,10 +260,10 @@ export class OrdersService {
       }
     }
 
-    // 7. Xóa cart sau khi checkout thành công
+    // 9. Xóa cart sau khi checkout thành công
     await this.cartService.clearCart(userId);
 
-    // 8. Trả về order với relations
+    // 10. Trả về order với relations
     return this.findOne(savedOrder.orderId);
   }
 

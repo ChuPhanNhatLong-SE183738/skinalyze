@@ -8,6 +8,7 @@ import { Transaction } from '../transactions/entities/transaction.entity';
 import { CartModule } from '../cart/cart.module';
 import { InventoryModule } from '../inventory/inventory.module';
 import { CustomersModule } from '../customers/customers.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { CustomersModule } from '../customers/customers.module';
     CartModule,
     InventoryModule,
     CustomersModule,
+    UsersModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

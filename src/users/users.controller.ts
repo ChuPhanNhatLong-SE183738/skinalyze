@@ -7,6 +7,9 @@ import {
   Param,
   Delete,
   UseGuards,
+  Req,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,6 +22,7 @@ import {
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { TopupBalanceDto } from './dto/topup-balance.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -116,5 +120,88 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found' })
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
+  }
+
+  @Post('topup')
+  @Roles(UserRole.CUSTOMER, UserRole.STAFF, UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Nạp tiền vào tài khoản',
+    description:
+      'User có thể nạp tiền vào balance của mình. Min: 10,000 VND, Max: 50,000,000 VND',
+  })
+  @ApiBody({ type: TopupBalanceDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Nạp tiền thành công',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Nạp tiền thành công',
+        data: {
+          userId: '550e8400-e29b-41d4-a716-446655440000',
+          email: 'user@example.com',
+          fullName: 'Nguyen Van A',
+          oldBalance: 100000,
+          topupAmount: 500000,
+          newBalance: 600000,
+          paymentMethod: 'momo',
+          note: 'Nạp tiền qua Momo',
+          timestamp: '2025-10-21T08:00:00.000Z',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid amount or account disabled',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async topupBalance(@GetUser() user: User, @Body() topupDto: TopupBalanceDto) {
+    return this.usersService.topupBalance(user.userId, topupDto);
+  }
+
+  @Get('balance')
+  @Roles(UserRole.CUSTOMER, UserRole.STAFF, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Xem số dư tài khoản',
+    description: 'Lấy thông tin số dư hiện tại của user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Thông tin số dư',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Lấy thông tin số dư thành công',
+        data: {
+          userId: '550e8400-e29b-41d4-a716-446655440000',
+          email: 'user@example.com',
+          fullName: 'Nguyen Van A',
+          balance: 600000,
+          currency: 'VND',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getBalance(@GetUser() user: User) {
+    return this.usersService.getBalance(user.userId);
+  }
+
+  @Get('topup-history')
+  @Roles(UserRole.CUSTOMER, UserRole.STAFF, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Xem lịch sử nạp tiền',
+    description:
+      'Lấy lịch sử các lần nạp tiền (cần implement transactions table để track đầy đủ)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lịch sử nạp tiền',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getTopupHistory(@GetUser() user: User) {
+    return this.usersService.getTopupHistory(user.userId);
   }
 }
