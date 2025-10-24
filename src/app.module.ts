@@ -37,6 +37,11 @@ import { DermatologistsController } from './dermatologists/dermatologists.contro
 import { DermatologistsModule } from './dermatologists/dermatologists.module';
 import { EmailModule } from './email/email.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { TreatmentRoadmapsModule } from './treatment-roadmaps/treatment-roadmaps.module';
+import { RoadmapDetailsModule } from './roadmap-details/roadmap-details.module';
+import { TreatmentRoadmap } from './treatment-roadmaps/entities/treatment-roadmap.entity';
+import { RoadmapDetail } from './roadmap-details/entities/roadmap-detail.entity';
+import { Appointment } from './appointments/entities/appointment.entity';
 
 @Module({
   imports: [
@@ -68,6 +73,9 @@ import { AppointmentsModule } from './appointments/appointments.module';
         OrderItem,
         Transaction,
         ShippingLog,
+        Appointment,
+        TreatmentRoadmap,
+        RoadmapDetail,
       ],
       synchronize: process.env.NODE_ENV !== 'production', // Set to false in production
       logging: process.env.NODE_ENV === 'development',
@@ -89,6 +97,8 @@ import { AppointmentsModule } from './appointments/appointments.module';
     DermatologistsModule,
     EmailModule,
     AppointmentsModule,
+    TreatmentRoadmapsModule,
+    RoadmapDetailsModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

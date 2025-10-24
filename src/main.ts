@@ -2,13 +2,18 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import * as admin from 'firebase-admin';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const serviceAccount = require('../service-account-key.json');
 
   // Set global API prefix
   app.setGlobalPrefix('api/v1');
 
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
   // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('Skinalyze API')
