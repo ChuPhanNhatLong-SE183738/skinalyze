@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { SkinAnalysis } from '../../skin-analysis/entities/skin-analysis.entity';
+import { TreatmentRoadmap } from '../../treatment-roadmaps/entities/treatment-roadmap.entity';
 
 @Entity('customers')
 export class Customer {
@@ -23,6 +24,9 @@ export class Customer {
 
   @Column({ type: 'uuid' })
   userId: string;
+
+  @OneToMany(() => TreatmentRoadmap, (roadmap) => roadmap.customer)
+  treatmentRoadmaps: TreatmentRoadmap[];
 
   @Column({ type: 'int', default: 0 })
   aiUsageAmount: number;

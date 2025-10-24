@@ -1,15 +1,17 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
+import { DeviceTokensService } from './device-tokens.service';
 import { UsersController } from './users.controller';
 import { User } from './entities/user.entity';
+import { DeviceToken } from './entities/device-token.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])],
+  imports: [TypeOrmModule.forFeature([User, DeviceToken])],
   controllers: [UsersController],
-  providers: [UsersService, JwtAuthGuard, RolesGuard],
-  exports: [UsersService],
+  providers: [UsersService, DeviceTokensService, JwtAuthGuard, RolesGuard],
+  exports: [UsersService, DeviceTokensService],
 })
 export class UsersModule {}

@@ -25,10 +25,10 @@ export class Appointment {
   @Column({ type: 'uuid' })
   customerId: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   dermatologistId: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   transactionId: string;
 
   @Column({ type: 'datetime' })

@@ -9,6 +9,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { TreatmentRoadmap } from '../../treatment-roadmaps/entities/treatment-roadmap.entity';
 
 @Entity('dermatologists')
 export class Dermatologist {
@@ -22,6 +23,9 @@ export class Dermatologist {
 
   @Column({ type: 'uuid' })
   userId: string;
+
+  @OneToMany(() => TreatmentRoadmap, (roadmap) => roadmap.dermatologist)
+  treatmentRoadmaps: TreatmentRoadmap[];
 
   @Column({ type: 'json', nullable: true })
   skinAnalysisHistory: any[];

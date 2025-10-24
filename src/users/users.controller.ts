@@ -20,9 +20,11 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
+import { DeviceTokensService } from './device-tokens.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { TopupBalanceDto } from './dto/topup-balance.dto';
+import { RegisterDeviceTokenDto } from './dto/register-device-token.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -34,7 +36,10 @@ import { User, UserRole } from './entities/user.entity';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly deviceTokensService: DeviceTokensService,
+  ) {}
 
   @Post()
   @Roles(UserRole.ADMIN)
@@ -203,5 +208,66 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getTopupHistory(@GetUser() user: User) {
     return this.usersService.getTopupHistory(user.userId);
+  }
+
+  @Post('device-tokens')
+  @Roles(
+    UserRole.CUSTOMER,
+    UserRole.DERMATOLOGIST,
+    UserRole.STAFF,
+    UserRole.ADMIN,
+  )
+  @ApiOperation({
+    summary: 'Register device token for push notifications',
+    description:
+      'Register FCM token to receive push notifications on mobile/web',
+  })
+  @ApiBody({ type: RegisterDeviceTokenDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Device token registered successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async registerDeviceToken(
+    @GetUser() user: User,
+    @Body() dto: RegisterDeviceTokenDto,
+  ) {
+    const deviceToken = await this.deviceTokensService.registerToken(
+      user.userId,
+      dto,
+    );
+    return {
+      statusCode: 201,
+      message: 'Device token registered successfully',
+      data: deviceToken,
+    };
+  }
+
+  @Delete('device-tokens/:fcmToken')
+  @Roles(
+    UserRole.CUSTOMER,
+    UserRole.DERMATOLOGIST,
+    UserRole.STAFF,
+    UserRole.ADMIN,
+  )
+  @ApiOperation({
+    summary: 'Remove device token (logout from device)',
+    description: 'Remove FCM token when user logs out from a device',
+  })
+  @ApiParam({ name: 'fcmToken', description: 'FCM token to remove' })
+  @ApiResponse({
+    status: 200,
+    description: 'Device token removed successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async removeDeviceToken(
+    @GetUser() user: User,
+    @Param('fcmToken') fcmToken: string,
+  ) {
+    await this.deviceTokensService.deleteToken(user.userId, fcmToken);
+    return {
+      statusCode: 200,
+      message: 'Device token removed successfully',
+    };
   }
 }

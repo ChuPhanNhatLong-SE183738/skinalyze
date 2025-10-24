@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -37,6 +37,15 @@ import { DermatologistsController } from './dermatologists/dermatologists.contro
 import { DermatologistsModule } from './dermatologists/dermatologists.module';
 import { EmailModule } from './email/email.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { TreatmentRoadmapsModule } from './treatment-roadmaps/treatment-roadmaps.module';
+import { RoadmapDetailsModule } from './roadmap-details/roadmap-details.module';
+import { TreatmentRoadmap } from './treatment-roadmaps/entities/treatment-roadmap.entity';
+import { RoadmapDetail } from './roadmap-details/entities/roadmap-detail.entity';
+import { Appointment } from './appointments/entities/appointment.entity';
+import { NotificationsModule } from './notifications/notifications.module';
+import { Notification } from './notifications/entities/notification.entity';
+import { FirebaseModule } from './firebase/firebase.module';
+import { DeviceToken } from './users/entities/device-token.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
@@ -69,6 +78,11 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
         OrderItem,
         Transaction,
         ShippingLog,
+        Appointment,
+        TreatmentRoadmap,
+        RoadmapDetail,
+        Notification,
+        DeviceToken,
       ],
       synchronize: process.env.NODE_ENV !== 'production', // Set to false in production
       logging: process.env.NODE_ENV === 'development',
@@ -90,6 +104,10 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     DermatologistsModule,
     EmailModule,
     AppointmentsModule,
+    TreatmentRoadmapsModule,
+    RoadmapDetailsModule,
+    NotificationsModule,
+    FirebaseModule,
     SubscriptionsModule,
   ],
   controllers: [AppController, DermatologistsController],
