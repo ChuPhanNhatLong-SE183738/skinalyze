@@ -115,8 +115,12 @@ export class NotificationsController {
     UserRole.ADMIN,
   )
   @ApiOperation({ summary: 'Mark notifications as read' })
-  async markAsRead(@Body() markAsReadDto: MarkAsReadDto) {
-    await this.notificationsService.markAsRead(markAsReadDto.notificationIds);
+  async markAsRead(@Body() markAsReadDto: MarkAsReadDto, @Req() req: any) {
+    const userId = req.user.userId;
+    await this.notificationsService.markAsRead(
+      markAsReadDto.notificationIds,
+      userId,
+    );
     return ResponseHelper.success('Notifications marked as read');
   }
 

@@ -11,6 +11,14 @@ async function bootstrap() {
   // Set global API prefix
   app.setGlobalPrefix('api/v1');
 
+  // Enable CORS for HTTP and WebSocket
+  app.enableCors({
+    origin: true, // Allow all origins in development
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
@@ -38,6 +46,17 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(process.env.PORT ? parseInt(process.env.PORT) : 3000);
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+  const ipAddress = process.env.IP_ADDRESS || 'localhost';
+
+  await app.listen(port, '0.0.0.0'); // Listen on all interfaces
+
+  console.log(`\n🚀 Server is running on:`);
+  console.log(`   - Local:   http://localhost:${port}`);
+  console.log(`   - Network: http://${ipAddress}:${port}`);
+  console.log(`\n🔌 WebSocket is available at:`);
+  console.log(`   - Local:   ws://localhost:${port}/notifications`);
+  console.log(`   - Network: ws://${ipAddress}:${port}/notifications`);
+  console.log(`\n📚 API Documentation: http://${ipAddress}:${port}/api/docs\n`);
 }
 bootstrap();

@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -9,6 +15,7 @@ import {
 } from './entities/notification.entity';
 import { FirebaseService } from '../firebase/firebase.service';
 import { DeviceTokensService } from '../users/device-tokens.service';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationsService {
@@ -19,6 +26,8 @@ export class NotificationsService {
     private notificationRepository: Repository<Notification>,
     private firebaseService: FirebaseService,
     private deviceTokensService: DeviceTokensService,
+    @Inject(forwardRef(() => NotificationsGateway))
+    private notificationsGateway: NotificationsGateway,
   ) {}
 
   async create(
@@ -30,8 +39,23 @@ export class NotificationsService {
     const savedNotification =
       await this.notificationRepository.save(notification);
 
-    // Send push notification
+    // Send push notification via FCM
     await this.sendPushNotification(savedNotification);
+
+    // Send realtime notification via WebSocket
+    if (savedNotification.userId) {
+      this.notificationsGateway.sendToUser(
+        savedNotification.userId,
+        savedNotification,
+      );
+
+      // Update unread count
+      const unreadCount = await this.getUnreadCount(savedNotification.userId);
+      this.notificationsGateway.updateUnreadCount(
+        savedNotification.userId,
+        unreadCount,
+      );
+    }
 
     return savedNotification;
   }
@@ -45,9 +69,26 @@ export class NotificationsService {
     const savedNotifications =
       await this.notificationRepository.save(notifications);
 
-    // Send push notifications for each
+    // Send push notifications and WebSocket for each
     for (const notification of savedNotifications) {
       await this.sendPushNotification(notification);
+
+      // Send realtime via WebSocket
+      if (notification.userId) {
+        this.notificationsGateway.sendToUser(notification.userId, notification);
+      }
+    }
+
+    // Update unread counts for affected users
+    const uniqueUserIds = [
+      ...new Set(
+        savedNotifications.filter((n) => n.userId).map((n) => n.userId),
+      ),
+    ];
+
+    for (const userId of uniqueUserIds) {
+      const unreadCount = await this.getUnreadCount(userId);
+      this.notificationsGateway.updateUnreadCount(userId, unreadCount);
     }
 
     return savedNotifications;
@@ -147,11 +188,20 @@ export class NotificationsService {
     });
   }
 
-  async markAsRead(notificationIds: string[]): Promise<void> {
+  async markAsRead(notificationIds: string[], userId?: string): Promise<void> {
     await this.notificationRepository.update(
       { notificationId: In(notificationIds) },
       { isRead: true, readAt: new Date() },
     );
+
+    // Notify via WebSocket
+    if (userId) {
+      this.notificationsGateway.notifyMarkedAsRead(userId, notificationIds);
+
+      // Update unread count
+      const unreadCount = await this.getUnreadCount(userId);
+      this.notificationsGateway.updateUnreadCount(userId, unreadCount);
+    }
   }
 
   async markAllAsRead(userId: string): Promise<void> {
@@ -159,6 +209,9 @@ export class NotificationsService {
       { userId, isRead: false },
       { isRead: true, readAt: new Date() },
     );
+
+    // Update unread count via WebSocket
+    this.notificationsGateway.updateUnreadCount(userId, 0);
   }
 
   async deleteNotification(
