@@ -4,6 +4,7 @@
 /build
 /service-account-key.json
 
+/database
 # Logs
 logs
 *.log

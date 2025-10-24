@@ -42,6 +42,10 @@ import { RoadmapDetailsModule } from './roadmap-details/roadmap-details.module';
 import { TreatmentRoadmap } from './treatment-roadmaps/entities/treatment-roadmap.entity';
 import { RoadmapDetail } from './roadmap-details/entities/roadmap-detail.entity';
 import { Appointment } from './appointments/entities/appointment.entity';
+import { NotificationsModule } from './notifications/notifications.module';
+import { Notification } from './notifications/entities/notification.entity';
+import { FirebaseModule } from './firebase/firebase.module';
+import { DeviceToken } from './users/entities/device-token.entity';
 
 @Module({
   imports: [
@@ -76,6 +80,8 @@ import { Appointment } from './appointments/entities/appointment.entity';
         Appointment,
         TreatmentRoadmap,
         RoadmapDetail,
+        Notification,
+        DeviceToken,
       ],
       synchronize: process.env.NODE_ENV !== 'production', // Set to false in production
       logging: process.env.NODE_ENV === 'development',
@@ -99,6 +105,8 @@ import { Appointment } from './appointments/entities/appointment.entity';
     AppointmentsModule,
     TreatmentRoadmapsModule,
     RoadmapDetailsModule,
+    NotificationsModule,
+    FirebaseModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],
