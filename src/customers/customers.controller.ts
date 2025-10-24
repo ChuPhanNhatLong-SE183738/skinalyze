@@ -14,6 +14,8 @@ import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ResponseHelper } from '../utils/responses';
+import { User } from 'src/users/entities/user.entity';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
 
 @ApiTags('customers')
 @Controller('customers')
@@ -102,5 +104,20 @@ export class CustomersController {
       analysisId,
     );
     return ResponseHelper.success('Analysis added', customer);
+  }
+
+  @Post('subscribe/:subscriptionId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Register a customer for a subscription plan' })
+  async subscribeToPlan(
+    @Param('subscriptionId') subscriptionId: string,
+    @GetUser() user: User,
+  ) {
+    const customer = await this.customersService.subscribeToPlan(
+      user.userId,
+      subscriptionId,
+    );
+    return ResponseHelper.success('Subscription registered', customer);
   }
 }

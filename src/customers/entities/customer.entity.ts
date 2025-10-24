@@ -31,6 +31,18 @@ export class Customer {
   @Column({ type: 'int', default: 0 })
   aiUsageAmount: number;
 
+  @Column({ type: 'timestamp', nullable: true })
+  startDate: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  endDate: Date | null;
+
+  @Column({ type: 'int', default: 0 })
+  sessionRemaining: number;
+
+  @Column({ type: 'json', nullable: true })
+  subscriptionId: string[] | null;
+
   // One-to-Many relationship with Skin Analysis
   @OneToMany(() => SkinAnalysis, (analysis) => analysis.customer)
   skinAnalyses: SkinAnalysis[];
