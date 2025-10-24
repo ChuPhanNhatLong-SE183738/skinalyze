@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
+  HttpException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -42,43 +44,85 @@ export class DermatologistsService {
   async create(
     createDermatologistDto: CreateDermatologistDto,
   ): Promise<Dermatologist> {
-    const dermatologist = this.dermatologistRepository.create(
-      createDermatologistDto,
-    );
-    return await this.dermatologistRepository.save(dermatologist);
+    try {
+      const dermatologist = this.dermatologistRepository.create(
+        createDermatologistDto,
+      );
+      return await this.dermatologistRepository.save(dermatologist);
+    } catch (error) {
+      this.handleError(error, 'Failed to create dermatologist');
+    }
   }
 
   async findAll(): Promise<Dermatologist[]> {
-    return await this.dermatologistRepository.find({
-      relations: ['user'],
-    });
+    try {
+      return await this.dermatologistRepository.find({
+        relations: ['user'],
+      });
+    } catch (error) {
+      this.handleError(error, 'Failed to retrieve dermatologists');
+    }
   }
 
   async findOne(id: string): Promise<Dermatologist> {
-    const dermatologist = await this.dermatologistRepository.findOne({
-      where: { dermatologistId: id },
-      relations: ['user'],
-    });
+    try {
+      const dermatologist = await this.dermatologistRepository.findOne({
+        where: { dermatologistId: id },
+        relations: ['user'],
+      });
 
-    if (!dermatologist) {
-      throw new NotFoundException(`Dermatologist with ID ${id} not found`);
+      if (!dermatologist) {
+        throw new NotFoundException(`Dermatologist with ID ${id} not found`);
+      }
+
+      return dermatologist;
+    } catch (error) {
+      this.handleError(error, `Failed to load dermatologist ${id}`);
     }
+  }
 
-    return dermatologist;
+  async findByUserId(userId: string): Promise<Dermatologist> {
+    try {
+      const dermatologist = await this.dermatologistRepository.findOne({
+        where: { userId },
+        relations: ['user'],
+      });
+
+      if (!dermatologist) {
+        throw new NotFoundException(
+          `Dermatologist profile for user ${userId} not found`,
+        );
+      }
+
+      return dermatologist;
+    } catch (error) {
+      this.handleError(
+        error,
+        `Failed to load dermatologist for user ${userId}`,
+      );
+    }
   }
 
   async update(
     id: string,
     updateDermatologistDto: UpdateDermatologistDto,
   ): Promise<Dermatologist> {
-    const dermatologist = await this.findOne(id);
-    Object.assign(dermatologist, updateDermatologistDto);
-    return await this.dermatologistRepository.save(dermatologist);
+    try {
+      const dermatologist = await this.findOne(id);
+      Object.assign(dermatologist, updateDermatologistDto);
+      return await this.dermatologistRepository.save(dermatologist);
+    } catch (error) {
+      this.handleError(error, `Failed to update dermatologist ${id}`);
+    }
   }
 
   async remove(id: string): Promise<void> {
-    const dermatologist = await this.findOne(id);
-    await this.dermatologistRepository.remove(dermatologist);
+    try {
+      const dermatologist = await this.findOne(id);
+      await this.dermatologistRepository.remove(dermatologist);
+    } catch (error) {
+      this.handleError(error, `Failed to remove dermatologist ${id}`);
+    }
   }
 
   // Availability Management
@@ -86,51 +130,68 @@ export class DermatologistsService {
     dermatologistId: string,
     createAvailabilityDto: CreateAvailabilityDto,
   ): Promise<AvailabilityResponseDto> {
-    const dermatologist = await this.findOne(dermatologistId);
+    try {
+      const dermatologist = await this.findOne(dermatologistId);
 
-    const availabilityList = this.getAvailabilityList(dermatologist);
+      const availabilityList = this.getAvailabilityList(dermatologist);
 
-    const newAvailability: StoredAvailability = {
-      date: createAvailabilityDto.date,
-      timeSlots: createAvailabilityDto.timeSlots,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+      const newAvailability: StoredAvailability = {
+        date: createAvailabilityDto.date,
+        timeSlots: createAvailabilityDto.timeSlots,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-    if (
-      availabilityList.some(
-        (availability) => availability.date === createAvailabilityDto.date,
-      )
-    ) {
-      throw new BadRequestException(
-        `Availability for date ${createAvailabilityDto.date} already exists`,
+      if (
+        availabilityList.some(
+          (availability) => availability.date === createAvailabilityDto.date,
+        )
+      ) {
+        throw new BadRequestException(
+          `Availability for date ${createAvailabilityDto.date} already exists`,
+        );
+      }
+
+      dermatologist.availability = [...availabilityList, newAvailability];
+      await this.dermatologistRepository.save(dermatologist);
+
+      return this.toAvailabilityResponse(
+        dermatologist.dermatologistId,
+        newAvailability,
+      );
+    } catch (error) {
+      this.handleError(
+        error,
+        `Failed to create availability for dermatologist ${dermatologistId}`,
       );
     }
-
-    dermatologist.availability = [...availabilityList, newAvailability];
-    await this.dermatologistRepository.save(dermatologist);
-
-    return this.toAvailabilityResponse(
-      dermatologist.dermatologistId,
-      newAvailability,
-    );
   }
 
   async getAvailability(
     dermatologistId: string,
     date?: string,
   ): Promise<AvailabilityResponseDto[]> {
-    const dermatologist = await this.findOne(dermatologistId);
+    try {
+      const dermatologist = await this.findOne(dermatologistId);
 
-    const availabilityList = this.getAvailabilityList(dermatologist);
+      const availabilityList = this.getAvailabilityList(dermatologist);
 
-    const filtered = date
-      ? availabilityList.filter((availability) => availability.date === date)
-      : availabilityList;
+      const filtered = date
+        ? availabilityList.filter((availability) => availability.date === date)
+        : availabilityList;
 
-    return filtered.map((availability) =>
-      this.toAvailabilityResponse(dermatologist.dermatologistId, availability),
-    );
+      return filtered.map((availability) =>
+        this.toAvailabilityResponse(
+          dermatologist.dermatologistId,
+          availability,
+        ),
+      );
+    } catch (error) {
+      this.handleError(
+        error,
+        `Failed to retrieve availability for dermatologist ${dermatologistId}`,
+      );
+    }
   }
 
   async updateAvailability(
@@ -138,70 +199,84 @@ export class DermatologistsService {
     date: string,
     updateAvailabilityDto: UpdateAvailabilityDto,
   ): Promise<AvailabilityResponseDto> {
-    const dermatologist = await this.findOne(dermatologistId);
+    try {
+      const dermatologist = await this.findOne(dermatologistId);
 
-    const availabilityList = this.getAvailabilityList(dermatologist);
+      const availabilityList = this.getAvailabilityList(dermatologist);
 
-    if (availabilityList.length === 0) {
-      throw new NotFoundException(
-        `No availability found for dermatologist ${dermatologistId}`,
+      if (availabilityList.length === 0) {
+        throw new NotFoundException(
+          `No availability found for dermatologist ${dermatologistId}`,
+        );
+      }
+
+      const existingIndex = availabilityList.findIndex(
+        (availability) => availability.date === date,
+      );
+
+      if (existingIndex === -1) {
+        throw new NotFoundException(`Availability for date ${date} not found`);
+      }
+
+      const existingAvailability = availabilityList[existingIndex];
+      const updatedAvailability: StoredAvailability = {
+        ...existingAvailability,
+        date: updateAvailabilityDto.date ?? existingAvailability.date,
+        timeSlots:
+          (updateAvailabilityDto.timeSlots as StoredAvailabilitySlot[]) ??
+          existingAvailability.timeSlots,
+        createdAt: existingAvailability.createdAt,
+        updatedAt: new Date(),
+      };
+
+      const nextAvailability = [...availabilityList];
+      nextAvailability[existingIndex] = updatedAvailability;
+      dermatologist.availability = nextAvailability;
+      await this.dermatologistRepository.save(dermatologist);
+
+      return this.toAvailabilityResponse(
+        dermatologist.dermatologistId,
+        updatedAvailability,
+      );
+    } catch (error) {
+      this.handleError(
+        error,
+        `Failed to update availability for dermatologist ${dermatologistId}`,
       );
     }
-
-    const existingIndex = availabilityList.findIndex(
-      (availability) => availability.date === date,
-    );
-
-    if (existingIndex === -1) {
-      throw new NotFoundException(`Availability for date ${date} not found`);
-    }
-
-    const existingAvailability = availabilityList[existingIndex];
-    const updatedAvailability: StoredAvailability = {
-      ...existingAvailability,
-      date: updateAvailabilityDto.date ?? existingAvailability.date,
-      timeSlots:
-        (updateAvailabilityDto.timeSlots as StoredAvailabilitySlot[]) ??
-        existingAvailability.timeSlots,
-      createdAt: existingAvailability.createdAt,
-      updatedAt: new Date(),
-    };
-
-    const nextAvailability = [...availabilityList];
-    nextAvailability[existingIndex] = updatedAvailability;
-    dermatologist.availability = nextAvailability;
-    await this.dermatologistRepository.save(dermatologist);
-
-    return this.toAvailabilityResponse(
-      dermatologist.dermatologistId,
-      updatedAvailability,
-    );
   }
 
   async deleteAvailability(
     dermatologistId: string,
     date: string,
   ): Promise<void> {
-    const dermatologist = await this.findOne(dermatologistId);
+    try {
+      const dermatologist = await this.findOne(dermatologistId);
 
-    const availabilityList = this.getAvailabilityList(dermatologist);
+      const availabilityList = this.getAvailabilityList(dermatologist);
 
-    if (availabilityList.length === 0) {
-      throw new NotFoundException(
-        `No availability found for dermatologist ${dermatologistId}`,
+      if (availabilityList.length === 0) {
+        throw new NotFoundException(
+          `No availability found for dermatologist ${dermatologistId}`,
+        );
+      }
+
+      const filteredAvailability = availabilityList.filter(
+        (availability) => availability.date !== date,
+      );
+
+      if (filteredAvailability.length === availabilityList.length) {
+        throw new NotFoundException(`Availability for date ${date} not found`);
+      }
+
+      dermatologist.availability = filteredAvailability;
+      await this.dermatologistRepository.save(dermatologist);
+    } catch (error) {
+      this.handleError(
+        error,
+        `Failed to delete availability for dermatologist ${dermatologistId}`,
       );
     }
-
-    const filteredAvailability = availabilityList.filter(
-      (availability) => availability.date !== date,
-    );
-
-    if (filteredAvailability.length === availabilityList.length) {
-      throw new NotFoundException(`Availability for date ${date} not found`);
-    }
-
-    dermatologist.availability = filteredAvailability;
-    await this.dermatologistRepository.save(dermatologist);
   }
 
   async markSlotAsOccupied(
@@ -209,13 +284,17 @@ export class DermatologistsService {
     startTimeIso: string,
     endTimeIso: string,
   ): Promise<void> {
-    await this.updateSlotStatus(
-      dermatologistId,
-      startTimeIso,
-      endTimeIso,
-      AvailabilityStatus.AVAILABLE,
-      AvailabilityStatus.OCCUPIED,
-    );
+    try {
+      await this.updateSlotStatus(
+        dermatologistId,
+        startTimeIso,
+        endTimeIso,
+        AvailabilityStatus.AVAILABLE,
+        AvailabilityStatus.OCCUPIED,
+      );
+    } catch (error) {
+      this.handleError(error, 'Failed to mark dermatologist slot as occupied');
+    }
   }
 
   async markSlotAsAvailable(
@@ -223,13 +302,17 @@ export class DermatologistsService {
     startTimeIso: string,
     endTimeIso: string,
   ): Promise<void> {
-    await this.updateSlotStatus(
-      dermatologistId,
-      startTimeIso,
-      endTimeIso,
-      AvailabilityStatus.OCCUPIED,
-      AvailabilityStatus.AVAILABLE,
-    );
+    try {
+      await this.updateSlotStatus(
+        dermatologistId,
+        startTimeIso,
+        endTimeIso,
+        AvailabilityStatus.OCCUPIED,
+        AvailabilityStatus.AVAILABLE,
+      );
+    } catch (error) {
+      this.handleError(error, 'Failed to mark dermatologist slot as available');
+    }
   }
 
   // Helper method to check if dermatologist is available at specific time
@@ -238,25 +321,32 @@ export class DermatologistsService {
     date: string,
     time: string,
   ): Promise<boolean> {
-    const availabilities = await this.getAvailability(dermatologistId, date);
+    try {
+      const availabilities = await this.getAvailability(dermatologistId, date);
 
-    if (availabilities.length === 0) {
-      return false;
-    }
+      if (availabilities.length === 0) {
+        return false;
+      }
 
-    const dayAvailability = availabilities[0];
-    const requestedTime = new Date(`${date}T${time}`);
+      const dayAvailability = availabilities[0];
+      const requestedTime = new Date(`${date}T${time}`);
 
-    return dayAvailability.timeSlots.some((slot) => {
-      const startTime = new Date(`${date}T${slot.startTime.split('T')[1]}`);
-      const endTime = new Date(`${date}T${slot.endTime.split('T')[1]}`);
+      return dayAvailability.timeSlots.some((slot) => {
+        const startTime = new Date(`${date}T${slot.startTime.split('T')[1]}`);
+        const endTime = new Date(`${date}T${slot.endTime.split('T')[1]}`);
 
-      return (
-        slot.status === AvailabilityStatus.AVAILABLE &&
-        requestedTime >= startTime &&
-        requestedTime < endTime
+        return (
+          slot.status === AvailabilityStatus.AVAILABLE &&
+          requestedTime >= startTime &&
+          requestedTime < endTime
+        );
+      });
+    } catch (error) {
+      this.handleError(
+        error,
+        `Failed to check availability for dermatologist ${dermatologistId}`,
       );
-    });
+    }
   }
 
   private async findAvailabilitySlotOrThrow(
@@ -359,6 +449,14 @@ export class DermatologistsService {
       createdAt: new Date(availability.createdAt ?? new Date()),
       updatedAt: new Date(availability.updatedAt ?? new Date()),
     };
+  }
+
+  private handleError(error: unknown, message: string): never {
+    if (error instanceof HttpException) {
+      throw error;
+    }
+
+    throw new InternalServerErrorException(message);
   }
 
   private async updateSlotStatus(

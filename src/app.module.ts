@@ -37,6 +37,7 @@ import { DermatologistsController } from './dermatologists/dermatologists.contro
 import { DermatologistsModule } from './dermatologists/dermatologists.module';
 import { EmailModule } from './email/email.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { AppointmentsModule } from './appointments/appointments.module';
     DermatologistsModule,
     EmailModule,
     AppointmentsModule,
+    SubscriptionsModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],
