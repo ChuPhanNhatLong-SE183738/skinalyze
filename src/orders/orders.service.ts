@@ -248,16 +248,10 @@ export class OrdersService {
 
     // 8. Confirm sale trong inventory (chuyển reserve → sold)
     for (const cartItem of cart.items) {
-      if (cartItem.reservations) {
-        for (const reservation of cartItem.reservations) {
-          await this.inventoryService.confirmSale(
-            cartItem.shopId,
-            cartItem.productId,
-            reservation.batchId,
-            reservation.quantity,
-          );
-        }
-      }
+      await this.inventoryService.confirmSale(
+        cartItem.productId,
+        cartItem.quantity,
+      );
     }
 
     // 9. Xóa cart sau khi checkout thành công

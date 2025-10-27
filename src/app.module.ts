@@ -18,11 +18,8 @@ import { Category } from './categories/entities/category.entity';
 import { BatchesModule } from './batches/batches.module';
 import { Batch } from './batches/entities/batch.entity';
 import { BatchItem } from './batches/entities/batch-item.entity';
-import { StockMovementModule } from './stock-movement/stock-movement.module';
 import { InventoryModule } from './inventory/inventory.module';
-import { StockMovement } from './stock-movement/entities/stock-movement.entity';
-import { StockMovementItem } from './stock-movement/entities/stock-movement-item.entity';
-import { ShopInventory } from './inventory/entities/inventory.entity';
+import { Inventory } from './inventory/entities/inventory.entity';
 import { CartModule } from './cart/cart.module';
 import { CustomersModule } from './customers/customers.module';
 import { SkinAnalysisModule } from './skin-analysis/skin-analysis.module';
@@ -71,9 +68,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
         SkinAnalysis,
         Batch,
         BatchItem,
-        ShopInventory,
-        StockMovement,
-        StockMovementItem,
+        Inventory,
         Order,
         OrderItem,
         Transaction,
@@ -93,7 +88,6 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     AddressModule,
     CategoriesModule,
     BatchesModule,
-    StockMovementModule,
     InventoryModule,
     CartModule,
     CustomersModule,

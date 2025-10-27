@@ -5,93 +5,48 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ShopInventory } from './entities/inventory.entity';
-import { Batch } from '../batches/entities/batch.entity';
+import { Inventory } from './entities/inventory.entity';
 
 @Injectable()
 export class InventoryService {
   constructor(
-    @InjectRepository(ShopInventory)
-    private readonly inventoryRepository: Repository<ShopInventory>,
+    @InjectRepository(Inventory)
+    private readonly inventoryRepository: Repository<Inventory>,
   ) {}
 
-  async getShopInventory(shopId: string): Promise<ShopInventory[]> {
+  // Get all inventory
+  async getAllInventory(): Promise<Inventory[]> {
     return await this.inventoryRepository.find({
-      where: { shopId },
-      relations: ['batch'],
+      relations: ['product'],
       order: { updatedAt: 'DESC' },
     });
   }
 
-  async getProductInventoryAcrossShops(
-    productId: string,
-  ): Promise<ShopInventory[]> {
-    return await this.inventoryRepository.find({
+  // Get inventory for a specific product
+  async getProductInventory(productId: string): Promise<Inventory | null> {
+    return await this.inventoryRepository.findOne({
       where: { productId },
-      relations: ['batch'],
-      order: { shopId: 'ASC', updatedAt: 'DESC' },
+      relations: ['product'],
     });
   }
 
-  async getBatchInventoryAcrossShops(
-    batchId: string,
-  ): Promise<ShopInventory[]> {
-    return await this.inventoryRepository.find({
-      where: { batchId },
-      relations: ['batch'],
-      order: { shopId: 'ASC', updatedAt: 'DESC' },
+  // Get available stock for a product
+  async getAvailableStock(productId: string): Promise<number> {
+    const inventory = await this.inventoryRepository.findOne({
+      where: { productId },
     });
-  }
 
-  async getProductBatches(
-    shopId: string,
-    productId: string,
-  ): Promise<ShopInventory[]> {
-    return await this.inventoryRepository
-      .createQueryBuilder('inventory')
-      .leftJoinAndSelect('inventory.batch', 'batch')
-      .leftJoin(
-        'batch_items',
-        'batchItem',
-        'batchItem.batchId = inventory.batchId AND batchItem.productId = inventory.productId',
-      )
-      .where('inventory.shopId = :shopId', { shopId })
-      .andWhere('inventory.productId = :productId', { productId })
-      .andWhere('inventory.currentStock > 0')
-      .orderBy('batchItem.expiryDate', 'ASC') // FIFO
-      .getMany();
-  }
-
-  async getAvailableStock(
-    shopId: string,
-    productId: string,
-    batchId?: string,
-  ): Promise<number> {
-    const query = this.inventoryRepository
-      .createQueryBuilder('inventory')
-      .select(
-        'SUM(inventory.currentStock - inventory.reservedStock)',
-        'available',
-      )
-      .where('inventory.shopId = :shopId', { shopId })
-      .andWhere('inventory.productId = :productId', { productId });
-
-    if (batchId) {
-      query.andWhere('inventory.batchId = :batchId', { batchId });
+    if (!inventory) {
+      return 0;
     }
 
-    const result = await query.getRawOne();
-    return parseInt(result?.available || '0');
+    return Math.max(0, inventory.currentStock - inventory.reservedStock);
   }
 
-  async adjustStockByBatch(
-    shopId: string,
-    productId: string,
-    batchId: string,
-    quantity: number,
-  ): Promise<void> {
+  // Adjust stock (+ or -)
+  async adjustStock(productId: string, quantity: number): Promise<void> {
     let inventory = await this.inventoryRepository.findOne({
-      where: { shopId, productId, batchId },
+      where: { productId },
     });
 
     if (!inventory) {
@@ -101,10 +56,8 @@ export class InventoryService {
 
       // Create new inventory record
       inventory = this.inventoryRepository.create({
-        inventoryId: `INV-${Date.now()}-${Math.random()}`,
-        shopId,
         productId,
-        batchId,
+        originalPrice: 0,
         currentStock: quantity,
         reservedStock: 0,
       });
@@ -114,113 +67,67 @@ export class InventoryService {
       if (inventory.currentStock < 0) {
         throw new BadRequestException('Cannot reduce stock below zero');
       }
+    }
 
-      // Remove record if stock reaches 0
-      if (inventory.currentStock === 0 && inventory.reservedStock === 0) {
-        await this.inventoryRepository.remove(inventory);
-        return;
+    await this.inventoryRepository.save(inventory);
+  }
+
+  // Set absolute stock level
+  async setStock(
+    productId: string,
+    quantity: number,
+    originalPrice?: number,
+  ): Promise<void> {
+    let inventory = await this.inventoryRepository.findOne({
+      where: { productId },
+    });
+
+    if (!inventory) {
+      inventory = this.inventoryRepository.create({
+        productId,
+        originalPrice: originalPrice || 0,
+        currentStock: quantity,
+        reservedStock: 0,
+      });
+    } else {
+      inventory.currentStock = quantity;
+      if (originalPrice !== undefined) {
+        inventory.originalPrice = originalPrice;
       }
     }
 
     await this.inventoryRepository.save(inventory);
   }
 
+  // Reserve stock (simple version - no batch tracking)
   async reserveStock(
-    shopId: string,
     productId: string,
     quantity: number,
-  ): Promise<{
-    success: boolean;
-    reservations: { batchId: string; quantity: number; expiryDate?: Date }[];
-  }> {
-    // FEFO: First Expire First Out - Lấy batch gần hết hạn trước
-    const inventories = await this.inventoryRepository
-      .createQueryBuilder('inventory')
-      .leftJoinAndSelect('inventory.batch', 'batch')
-      .leftJoin(
-        'batch_items',
-        'batchItem',
-        'batchItem.batchId = inventory.batchId AND batchItem.productId = inventory.productId',
-      )
-      .where('inventory.shopId = :shopId', { shopId })
-      .andWhere('inventory.productId = :productId', { productId })
-      .andWhere('inventory.currentStock > inventory.reservedStock')
-      .orderBy('batchItem.expiryDate', 'ASC')
-      .getMany();
-
-    // Calculate total available
-    const totalAvailable = inventories.reduce(
-      (sum, inv) => sum + (inv.currentStock - inv.reservedStock),
-      0,
-    );
-
-    if (totalAvailable < quantity) {
-      return {
-        success: false,
-        reservations: [],
-      };
-    }
-
-    const reservations: {
-      batchId: string;
-      quantity: number;
-      expiryDate?: Date;
-    }[] = [];
-    let remainingQuantity = quantity;
-
-    // Reserve từ batches (gần hết hạn trước)
-    for (const inventory of inventories) {
-      if (remainingQuantity <= 0) break;
-
-      const availableInBatch = inventory.currentStock - inventory.reservedStock;
-      const toReserve = Math.min(remainingQuantity, availableInBatch);
-
-      if (toReserve > 0) {
-        inventory.reservedStock += toReserve;
-        await this.inventoryRepository.save(inventory);
-
-        // Get expiry date from batch_items
-        const batchItem = await this.getBatchItemInfo(
-          inventory.batchId,
-          inventory.productId,
-        );
-
-        reservations.push({
-          batchId: inventory.batchId,
-          quantity: toReserve,
-          expiryDate: batchItem?.expiryDate,
-        });
-
-        remainingQuantity -= toReserve;
-      }
-    }
-
-    return { success: true, reservations };
-  }
-
-  // Helper method to get batch item details
-  private async getBatchItemInfo(
-    batchId: string,
-    productId: string,
-  ): Promise<{ expiryDate: Date; importPrice: number } | null> {
-    const result = await this.inventoryRepository.manager.query(
-      `SELECT expiryDate, importPrice 
-     FROM batch_items 
-     WHERE batchId = ? AND productId = ?`,
-      [batchId, productId],
-    );
-
-    return result[0] || null;
-  }
-
-  async releaseReservation(
-    shopId: string,
-    productId: string,
-    batchId: string,
-    quantity: number,
-  ): Promise<void> {
+  ): Promise<{ success: boolean }> {
     const inventory = await this.inventoryRepository.findOne({
-      where: { shopId, productId, batchId },
+      where: { productId },
+    });
+
+    if (!inventory) {
+      return { success: false };
+    }
+
+    const available = inventory.currentStock - inventory.reservedStock;
+
+    if (available < quantity) {
+      return { success: false };
+    }
+
+    inventory.reservedStock += quantity;
+    await this.inventoryRepository.save(inventory);
+
+    return { success: true };
+  }
+
+  // Release reservation
+  async releaseReservation(productId: string, quantity: number): Promise<void> {
+    const inventory = await this.inventoryRepository.findOne({
+      where: { productId },
     });
 
     if (!inventory) {
@@ -235,14 +142,10 @@ export class InventoryService {
     await this.inventoryRepository.save(inventory);
   }
 
-  async confirmSale(
-    shopId: string,
-    productId: string,
-    batchId: string,
-    quantity: number,
-  ): Promise<void> {
+  // Confirm sale (reduce both current and reserved)
+  async confirmSale(productId: string, quantity: number): Promise<void> {
     const inventory = await this.inventoryRepository.findOne({
-      where: { shopId, productId, batchId },
+      where: { productId },
     });
 
     if (!inventory) {
@@ -260,134 +163,51 @@ export class InventoryService {
     await this.inventoryRepository.save(inventory);
   }
 
+  // Confirm multiple sales
   async confirmMultipleSales(
-    shopId: string,
-    sales: Array<{ productId: string; batchId: string; quantity: number }>,
+    sales: Array<{ productId: string; quantity: number }>,
   ): Promise<void> {
     for (const sale of sales) {
-      await this.confirmSale(
-        shopId,
-        sale.productId,
-        sale.batchId,
-        sale.quantity,
-      );
+      await this.confirmSale(sale.productId, sale.quantity);
     }
   }
 
-  async getLowStockAlerts(
-    shopId?: string,
-    threshold: number = 10,
-  ): Promise<ShopInventory[]> {
-    const query = this.inventoryRepository
+  // Low stock alerts
+  async getLowStockAlerts(threshold: number = 10): Promise<Inventory[]> {
+    return await this.inventoryRepository
       .createQueryBuilder('inventory')
-      .leftJoinAndSelect('inventory.batch', 'batch')
+      .leftJoinAndSelect('inventory.product', 'product')
       .where(
         '(inventory.currentStock - inventory.reservedStock) <= :threshold',
         { threshold },
-      );
-
-    if (shopId) {
-      query.andWhere('inventory.shopId = :shopId', { shopId });
-    }
-
-    return await query.getMany();
-  }
-
-  async getExpiringBatches(
-    shopId?: string,
-    daysFromNow: number = 30,
-  ): Promise<ShopInventory[]> {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + daysFromNow);
-
-    const query = this.inventoryRepository
-      .createQueryBuilder('inventory')
-      .leftJoinAndSelect('inventory.batch', 'batch')
-      .leftJoin(
-        'batch_items',
-        'batchItem',
-        'batchItem.batchId = inventory.batchId',
       )
-      .where('batchItem.expiryDate <= :futureDate', { futureDate })
-      .andWhere('inventory.currentStock > 0');
-
-    if (shopId) {
-      query.andWhere('inventory.shopId = :shopId', { shopId });
-    }
-
-    return await query.orderBy('batchItem.expiryDate', 'ASC').getMany();
+      .andWhere('(inventory.currentStock - inventory.reservedStock) >= 0')
+      .orderBy('inventory.currentStock - inventory.reservedStock', 'ASC')
+      .getMany();
   }
 
-  async getInventorySummary(shopId?: string): Promise<any> {
-    const query = this.inventoryRepository
+  // Inventory summary stats
+  async getInventorySummary(): Promise<{
+    totalProducts: number;
+    totalStock: number;
+    totalReserved: number;
+    availableStock: number;
+  }> {
+    const result = await this.inventoryRepository
       .createQueryBuilder('inventory')
       .select([
-        'COUNT(DISTINCT inventory.productId) as totalProducts',
+        'COUNT(inventory.productId) as totalProducts',
         'SUM(inventory.currentStock) as totalStock',
         'SUM(inventory.reservedStock) as totalReserved',
         'SUM(inventory.currentStock - inventory.reservedStock) as availableStock',
-      ]);
+      ])
+      .getRawOne();
 
-    if (shopId) {
-      query.where('inventory.shopId = :shopId', { shopId });
-    }
-
-    return await query.getRawOne();
-  }
-
-  /**
-   * Tìm tất cả shops có sản phẩm này + đủ số lượng available
-   * @param productId Product ID
-   * @param quantity Số lượng cần
-   * @returns Danh sách shops có đủ hàng
-   */
-  async findAvailableShops(
-    productId: string,
-    quantity: number,
-  ): Promise<{ shopId: string; availableStock: number }[]> {
-    const results = await this.inventoryRepository
-      .createQueryBuilder('inventory')
-      .select('inventory.shopId', 'shopId')
-      .addSelect(
-        'SUM(inventory.currentStock - inventory.reservedStock)',
-        'availableStock',
-      )
-      .where('inventory.productId = :productId', { productId })
-      .andWhere('(inventory.currentStock - inventory.reservedStock) > 0')
-      .groupBy('inventory.shopId')
-      .having(
-        'SUM(inventory.currentStock - inventory.reservedStock) >= :quantity',
-        {
-          quantity,
-        },
-      )
-      .getRawMany();
-
-    return results;
-  }
-
-  /**
-   * 🔥 Tìm tất cả INVENTORY (kho) có sản phẩm này + đủ số lượng available
-   * @param productId Product ID
-   * @param quantity Số lượng cần
-   * @returns Danh sách inventory records có đủ hàng (có address)
-   */
-  async findAvailableInventories(
-    productId: string,
-    quantity: number,
-  ): Promise<ShopInventory[]> {
-    // Query inventory có available stock >= quantity
-    const inventories = await this.inventoryRepository
-      .createQueryBuilder('inventory')
-      .where('inventory.productId = :productId', { productId })
-      .andWhere(
-        '(inventory.currentStock - inventory.reservedStock) >= :quantity',
-        {
-          quantity,
-        },
-      )
-      .getMany();
-
-    return inventories;
+    return {
+      totalProducts: parseInt(result?.totalProducts || '0'),
+      totalStock: parseInt(result?.totalStock || '0'),
+      totalReserved: parseInt(result?.totalReserved || '0'),
+      availableStock: parseInt(result?.availableStock || '0'),
+    };
   }
 }

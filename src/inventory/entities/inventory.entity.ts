@@ -1,6 +1,6 @@
 import {
   Entity,
-  PrimaryColumn,
+  PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
@@ -8,33 +8,28 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Batch } from '../../batches/entities/batch.entity';
+import { Product } from '../../products/entities/product.entity';
 
 @Entity('inventory')
-@Index(['shopId', 'productId', 'batchId'], { unique: true })
-@Index(['shopId'])
-@Index(['productId'])
-@Index(['batchId'])
-export class ShopInventory {
-  @PrimaryColumn()
+@Index(['productId'], { unique: true })
+export class Inventory {
+  @PrimaryGeneratedColumn('uuid')
   inventoryId: string;
-
-  @Column()
-  shopId: string;
 
   @Column()
   productId: string;
 
-  @Column()
-  address: string;
+  @ManyToOne(() => Product)
+  @JoinColumn({ name: 'productId' })
+  product: Product;
 
-  @Column({ nullable: true })
-  batchId: string;
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  originalPrice: number;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', default: 0 })
   currentStock: number;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', default: 0 })
   reservedStock: number;
 
   @CreateDateColumn()
@@ -42,8 +37,4 @@ export class ShopInventory {
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @ManyToOne(() => Batch, { onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'batchId' })
-  batch: Batch;
 }
