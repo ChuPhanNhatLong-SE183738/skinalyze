@@ -79,7 +79,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
         Notification,
         DeviceToken,
       ],
-      synchronize: false, // Disabled after initial setup - use migrations for schema changes
+      synchronize: true, // Auto-create tables - disable after first deployment
       logging: process.env.NODE_ENV === 'development',
     }),
     UsersModule,

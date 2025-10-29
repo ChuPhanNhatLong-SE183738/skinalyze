@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
 
 env:
-  DEPLOY_PATH: /opt/skinalyze
+  DEPLOY_PATH: /root/skinalyze
 
 jobs:
   deploy:
@@ -59,7 +59,7 @@ jobs:
           script_stop: true
           script: |
             echo "📁 Navigating to project directory..."
-            cd ${{ env.DEPLOY_PATH }}
+            cd /root/skinalyze
             
             echo "📥 Pulling latest code..."
             git fetch origin
@@ -69,15 +69,22 @@ jobs:
             docker --version
             docker-compose --version
             
-            echo "🛑 Stopping old containers..."
-            docker-compose -f docker-compose.prod.yml down
+            echo "� Building new app image..."
+            docker-compose -f docker-compose.prod.yml build --no-cache app
             
-            echo "🧹 Cleaning up old images..."
-            docker image prune -f
+            echo "🚀 Starting services..."
+            docker-compose -f docker-compose.prod.yml up -d
             
-            echo "🏗️ Building new images..."
-            docker-compose -f docker-compose.prod.yml build --no-cache
+            echo "⏳ Waiting for services to start..."
+            sleep 10
             
+            echo "🏥 Checking service health..."
+            docker-compose -f docker-compose.prod.yml ps
+            
+            echo "📋 Showing recent logs..."
+            docker-compose -f docker-compose.prod.yml logs --tail=50 app
+            
+            echo "✅ Deployment complete!"
             echo "🚀 Starting new containers..."
             docker-compose -f docker-compose.prod.yml up -d
             
@@ -92,21 +99,22 @@ jobs:
       - name: 🏥 Health Check
         id: health_check
         run: |
-          echo "Waiting for application to be ready..."
-          sleep 20
+          echo "⏳ Waiting for application to be ready..."
+          sleep 30
           
           # Health check với retry
-          for i in {1..5}; do
-            if ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "curl -f http://localhost/api/v1"; then
+          for i in {1..10}; do
+            if ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "curl -f -k https://api.nhatlonh.id.vn/api/v1 || curl -f http://localhost:3000/api/v1"; then
               echo "✅ Health check passed!"
               echo "health_status=success" >> $GITHUB_OUTPUT
               exit 0
             fi
-            echo "Attempt $i failed, retrying..."
+            echo "⏳ Attempt $i/10 failed, retrying in 10s..."
             sleep 10
           done
           
-          echo "❌ Health check failed!"
+          echo "⚠️ Health check timeout - checking logs..."
+          ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "cd /root/skinalyze && docker-compose -f docker-compose.prod.yml logs --tail=100 app"
           echo "health_status=failed" >> $GITHUB_OUTPUT
           exit 1
 
@@ -118,8 +126,9 @@ jobs:
           echo "deploy_time=$DEPLOY_TIME" >> $GITHUB_OUTPUT
           
           # Get container status
-          CONTAINER_STATUS=$(ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "cd ${{ env.DEPLOY_PATH }} && docker-compose -f docker-compose.prod.yml ps --format json" || echo "Failed to get status")
-          echo "container_status=$CONTAINER_STATUS" >> $GITHUB_OUTPUT
+          CONTAINER_STATUS=$(ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "cd /root/skinalyze && docker-compose -f docker-compose.prod.yml ps" || echo "Failed to get status")
+          echo "Container Status:"
+          echo "$CONTAINER_STATUS"
 
       - name: 🎉 Discord notification - Deployment succeeded
         uses: sarisia/actions-status-discord@v1
@@ -136,7 +145,10 @@ jobs:
             **Health Check:** ✅ Passed
             
             🔗 [View Commit](${{ github.event.head_commit.url }})
-            🌐 [View Application](http://${{ secrets.DO_HOST }}/api/v1/docs)
+            🌐 [API Swagger](https://api.nhatlonh.id.vn/api/v1/docs)
+            🏥 [Health Check](https://api.nhatlonh.id.vn/health)
+            
+            <@&1385529547281403966>
           color: 0x00FF00
           username: GitHub Actions Bot
           avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
@@ -156,6 +168,8 @@ jobs:
             
             🔗 [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
             📋 [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
+            <@&1385529547281403966>
           color: 0xFF0000
           username: GitHub Actions Bot
           avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
