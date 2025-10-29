@@ -79,7 +79,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
         Notification,
         DeviceToken,
       ],
-      synchronize: process.env.NODE_ENV !== 'production', // Set to false in production
+      synchronize: false, // Disabled after initial setup - use migrations for schema changes
       logging: process.env.NODE_ENV === 'development',
     }),
     UsersModule,
