@@ -1,0 +1,167 @@
+# GitHub Actions workflow for automatic deployment
+name: 🚀 Deploy to Digital Ocean
+
+on:
+  push:
+    branches:
+      - main
+      - be
+  pull_request:
+    branches:
+      - main
+      - be
+  workflow_dispatch:
+
+env:
+  DEPLOY_PATH: /opt/skinalyze
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔔 Discord notification - Deployment started
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          title: "🚀 Deployment Started"
+          description: |
+            **Branch:** `${{ github.ref_name }}`
+            **Commit:** `${{ github.event.head_commit.message }}`
+            **Author:** ${{ github.actor }}
+          color: 0xFFFF00
+          username: GitHub Actions
+          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+
+      - name: 🔐 Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 🧪 Test SSH connection
+        run: |
+          ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "echo '✅ SSH connection successful'"
+
+      - name: 🚀 Deploy to Digital Ocean
+        id: deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script_stop: true
+          script: |
+            echo "📁 Navigating to project directory..."
+            cd ${{ env.DEPLOY_PATH }}
+            
+            echo "📥 Pulling latest code..."
+            git fetch origin
+            git reset --hard origin/${{ github.ref_name }}
+            
+            echo "🔍 Checking Docker..."
+            docker --version
+            docker-compose --version
+            
+            echo "🛑 Stopping old containers..."
+            docker-compose -f docker-compose.prod.yml down
+            
+            echo "🧹 Cleaning up old images..."
+            docker image prune -f
+            
+            echo "🏗️ Building new images..."
+            docker-compose -f docker-compose.prod.yml build --no-cache
+            
+            echo "🚀 Starting new containers..."
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            echo "⏳ Waiting for services to be ready..."
+            sleep 15
+            
+            echo "🔍 Checking container status..."
+            docker-compose -f docker-compose.prod.yml ps
+            
+            echo "✅ Deployment completed!"
+
+      - name: 🏥 Health Check
+        id: health_check
+        run: |
+          echo "Waiting for application to be ready..."
+          sleep 20
+          
+          # Health check với retry
+          for i in {1..5}; do
+            if ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "curl -f http://localhost/api/v1"; then
+              echo "✅ Health check passed!"
+              echo "health_status=success" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 10
+          done
+          
+          echo "❌ Health check failed!"
+          echo "health_status=failed" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: 📊 Get deployment info
+        id: deployment_info
+        if: always()
+        run: |
+          DEPLOY_TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          echo "deploy_time=$DEPLOY_TIME" >> $GITHUB_OUTPUT
+          
+          # Get container status
+          CONTAINER_STATUS=$(ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "cd ${{ env.DEPLOY_PATH }} && docker-compose -f docker-compose.prod.yml ps --format json" || echo "Failed to get status")
+          echo "container_status=$CONTAINER_STATUS" >> $GITHUB_OUTPUT
+
+      - name: 🎉 Discord notification - Deployment succeeded
+        uses: sarisia/actions-status-discord@v1
+        if: success()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: "Success"
+          title: "✅ Deployment Successful"
+          description: |
+            **Branch:** `${{ github.ref_name }}`
+            **Commit:** `${{ github.event.head_commit.message }}`
+            **Author:** ${{ github.actor }}
+            **Deploy Time:** ${{ steps.deployment_info.outputs.deploy_time }}
+            **Health Check:** ✅ Passed
+            
+            🔗 [View Commit](${{ github.event.head_commit.url }})
+            🌐 [View Application](http://${{ secrets.DO_HOST }}/api/v1/docs)
+          color: 0x00FF00
+          username: GitHub Actions Bot
+          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+
+      - name: ❌ Discord notification - Deployment failed
+        uses: sarisia/actions-status-discord@v1
+        if: failure()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: "Failure"
+          title: "❌ Deployment Failed"
+          description: |
+            **Branch:** `${{ github.ref_name }}`
+            **Commit:** `${{ github.event.head_commit.message }}`
+            **Author:** ${{ github.actor }}
+            **Error:** Deployment or health check failed
+            
+            🔗 [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            📋 [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          color: 0xFF0000
+          username: GitHub Actions Bot
+          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+
+      - name: 📝 Get deployment logs
+        if: failure()
+        run: |
+          echo "Getting logs from failed deployment..."
+          ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "cd ${{ env.DEPLOY_PATH }} && docker-compose -f docker-compose.prod.yml logs --tail=100"
