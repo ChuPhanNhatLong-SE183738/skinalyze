@@ -145,13 +145,13 @@ jobs:
             **Health Check:** ✅ Passed
             
             🔗 [View Commit](${{ github.event.head_commit.url }})
-            🌐 [API Swagger](https://api.nhatlonh.id.vn/api/v1/docs)
+            🌐 [API Swagger](https://api.nhatlonh.id.vn/api/docs)
             🏥 [Health Check](https://api.nhatlonh.id.vn/health)
             
             <@&1385529547281403966>
           color: 0x00FF00
-          username: GitHub Actions Bot
-          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+          username: Con vk skinalyze
+          avatar_url: https://res.cloudinary.com/dh2sxkvuu/image/upload/v1761827397/tyrant_wpum0x.jpg
 
       - name: ❌ Discord notification - Deployment failed
         uses: sarisia/actions-status-discord@v1
@@ -171,8 +171,8 @@ jobs:
             
             <@&1385529547281403966>
           color: 0xFF0000
-          username: GitHub Actions Bot
-          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+          username: Con vk skinalyze
+          avatar_url: https://res.cloudinary.com/dh2sxkvuu/image/upload/v1761827397/tyrant_wpum0x.jpg
 
       - name: 📝 Get deployment logs
         if: failure()
