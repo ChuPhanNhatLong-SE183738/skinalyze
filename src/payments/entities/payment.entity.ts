@@ -94,6 +94,18 @@ export class Payment {
   @Column({ type: 'text', nullable: true })
   webhookData: string; // Lưu toàn bộ webhook data (JSON)
 
+  @Column({ type: 'text', nullable: true })
+  cartData: string; // Lưu cart data để tạo order sau khi thanh toán (JSON)
+
+  @Column({ type: 'text', nullable: true })
+  shippingAddress: string; // Địa chỉ giao hàng
+
+  @Column({ type: 'text', nullable: true })
+  orderNotes: string; // Ghi chú đơn hàng
+
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  customerId: string; // Customer ID để tạo order sau
+
   @Column({ type: 'datetime', nullable: true })
   expiredAt: Date; // Thời gian hết hạn thanh toán
 

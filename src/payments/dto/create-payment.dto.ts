@@ -1,4 +1,4 @@
-import { IsNumber, IsEnum, IsOptional, Min, IsString } from 'class-validator';
+import { IsNumber, IsEnum, IsOptional, Min, IsString, IsObject, IsArray } from 'class-validator';
 import { PaymentMethod, PaymentType } from '../entities/payment.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -20,6 +20,42 @@ export class CreatePaymentDto {
   @IsString()
   @IsOptional()
   userId?: string;
+
+  @ApiProperty({ 
+    description: 'Customer ID (for creating order after payment)',
+    example: 'customer-uuid',
+    required: false 
+  })
+  @IsString()
+  @IsOptional()
+  customerId?: string;
+
+  @ApiProperty({ 
+    description: 'Cart data (for creating order after payment)',
+    example: { items: [] },
+    required: false 
+  })
+  @IsObject()
+  @IsOptional()
+  cartData?: any;
+
+  @ApiProperty({ 
+    description: 'Shipping address',
+    example: '123 Nguyen Hue, Q1, HCMC',
+    required: false 
+  })
+  @IsString()
+  @IsOptional()
+  shippingAddress?: string;
+
+  @ApiProperty({ 
+    description: 'Order notes',
+    example: 'Giao giờ hành chính',
+    required: false 
+  })
+  @IsString()
+  @IsOptional()
+  orderNotes?: string;
 
   @ApiProperty({ 
     description: 'Payment type',

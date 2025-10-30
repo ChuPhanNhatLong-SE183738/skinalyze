@@ -19,6 +19,8 @@ import {
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
+import { ConfirmOrderDto } from './dto/confirm-order.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
 import { CheckoutCartDto } from './dto/checkout-cart.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -112,8 +114,8 @@ export class OrdersController {
   @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Cancel an order (Staff/Admin only)' })
-  async cancel(@Param('id') id: string, @Body('reason') reason?: string) {
-    const order = await this.ordersService.cancelOrder(id, reason);
+  async cancel(@Param('id') id: string, @Body() cancelDto: CancelOrderDto) {
+    const order = await this.ordersService.cancelOrder(id, cancelDto.reason);
     return ResponseHelper.success('Order cancelled successfully', order);
   }
 
@@ -124,9 +126,9 @@ export class OrdersController {
   @ApiOperation({ summary: 'Confirm an order (Staff/Admin only)' })
   async confirm(
     @Param('id') id: string,
-    @Body('processedBy') processedBy: string,
+    @Body() confirmDto: ConfirmOrderDto,
   ) {
-    const order = await this.ordersService.confirmOrder(id, processedBy);
+    const order = await this.ordersService.confirmOrder(id, confirmDto.processedBy);
     return ResponseHelper.success('Order confirmed successfully', order);
   }
 

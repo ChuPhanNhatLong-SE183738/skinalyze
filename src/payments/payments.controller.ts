@@ -41,6 +41,10 @@ export class PaymentsController {
   @ApiBody({ type: SepayWebhookDto })
   @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
   async handleSepayWebhook(@Body() webhookData: SepayWebhookDto) {
+    // Log FIRST to catch all requests
+    console.log('🚨 WEBHOOK HIT! Timestamp:', new Date().toISOString());
+    console.log('🚨 Webhook data:', JSON.stringify(webhookData, null, 2));
+    
     this.logger.log(`📥 Received SePay webhook: Transaction #${webhookData.id}`);
     
     try {

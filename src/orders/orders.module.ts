@@ -10,6 +10,7 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { CustomersModule } from '../customers/customers.module';
 import { UsersModule } from '../users/users.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PaymentsModule } from '../payments/payments.module';
     CustomersModule,
     UsersModule,
     forwardRef(() => PaymentsModule),
+    NotificationsModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

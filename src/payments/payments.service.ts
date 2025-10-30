@@ -9,6 +9,7 @@ import { TransactionsService } from '../transactions/transactions.service';
 import { TransactionStatus } from '../transactions/entities/transaction.entity';
 import { OrderStatus } from '../orders/entities/order.entity';
 import { UsersService } from '../users/users.service';
+import { CartService } from '../cart/cart.service';
 
 @Injectable()
 export class PaymentsService {
@@ -21,23 +22,28 @@ export class PaymentsService {
     private readonly ordersService: OrdersService,
     private readonly transactionsService: TransactionsService,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => CartService))
+    private readonly cartService: CartService,
   ) {}
 
   /**
    * Tạo payment mới (cho order hoặc topup)
    */
   async createPayment(createPaymentDto: CreatePaymentDto): Promise<Payment> {
-    const { orderId, userId, amount, paymentMethod, paymentType } = createPaymentDto;
+    const { orderId, userId, customerId, cartData, shippingAddress, orderNotes, amount, paymentMethod, paymentType } = createPaymentDto;
 
     // Validate based on payment type
     if (paymentType === PaymentType.ORDER) {
-      if (!orderId) {
-        throw new BadRequestException('Order ID is required for order payment');
+      // Nếu có orderId, verify order exists (cho trường hợp thanh toán order đã tạo)
+      if (orderId) {
+        const order = await this.ordersService.findOne(orderId);
+        if (!order) {
+          throw new NotFoundException(`Order #${orderId} not found`);
+        }
       }
-      // Verify order exists
-      const order = await this.ordersService.findOne(orderId);
-      if (!order) {
-        throw new NotFoundException(`Order #${orderId} not found`);
+      // Nếu không có orderId, cần có cartData để tạo order sau khi thanh toán
+      else if (!cartData || !customerId) {
+        throw new BadRequestException('Cart data and customer ID are required for order payment');
       }
     } else if (paymentType === PaymentType.TOPUP) {
       if (!userId) {
@@ -58,23 +64,30 @@ export class PaymentsService {
     }
 
     // Generate unique payment code
-    const paymentCode = this.generatePaymentCode(paymentType, orderId, userId);
+    const paymentCode = this.generatePaymentCode(paymentType, orderId, userId, customerId);
 
     // Set expiration (15 minutes for banking)
     const expiredAt = new Date();
     expiredAt.setMinutes(expiredAt.getMinutes() + 15);
 
-    const payment = this.paymentRepository.create({
+    const paymentData: any = {
       paymentCode,
       paymentType,
-      orderId,
-      userId,
       amount,
       paymentMethod,
       status: PaymentStatus.PENDING,
       expiredAt,
-    });
+    };
 
+    // Add optional fields only if they exist
+    if (orderId) paymentData.orderId = orderId;
+    if (userId) paymentData.userId = userId;
+    if (customerId) paymentData.customerId = customerId;
+    if (cartData) paymentData.cartData = JSON.stringify(cartData);
+    if (shippingAddress) paymentData.shippingAddress = shippingAddress;
+    if (orderNotes) paymentData.orderNotes = orderNotes;
+
+    const payment = this.paymentRepository.create(paymentData) as unknown as Payment;
     const savedPayment = await this.paymentRepository.save(payment);
 
     this.logger.log(
@@ -103,15 +116,59 @@ export class PaymentsService {
       return { success: false, message: 'Payment code not found' };
     }
 
-    // Tìm payment theo code
-    const payment = await this.paymentRepository.findOne({
-      where: { paymentCode },
-      relations: ['order'],
+    this.logger.log(`🔍 Extracted payment code: "${paymentCode}" (length: ${paymentCode.length})`);
+
+    // Debug: Try multiple search methods
+    this.logger.log(`🔍 Searching for payment...`);
+    
+    // Method 1: Simple findOne
+    const payment1 = await this.paymentRepository.findOne({
+      where: { paymentCode: paymentCode },
     });
+    this.logger.log(`Method 1 (exact match): ${payment1 ? 'FOUND' : 'NOT FOUND'}`);
+    
+    // Method 2: Case insensitive
+    const payment2 = await this.paymentRepository
+      .createQueryBuilder('payment')
+      .where('UPPER(payment.paymentCode) = UPPER(:code)', { code: paymentCode })
+      .getOne();
+    this.logger.log(`Method 2 (case insensitive): ${payment2 ? 'FOUND' : 'NOT FOUND'}`);
+    
+    // Method 3: LIKE search
+    const payment3 = await this.paymentRepository
+      .createQueryBuilder('payment')
+      .where('payment.paymentCode LIKE :code', { code: `%${paymentCode}%` })
+      .getOne();
+    this.logger.log(`Method 3 (LIKE): ${payment3 ? 'FOUND' : 'NOT FOUND'}`);
+    
+    // Debug: List all payments with similar prefix
+    const allPayments = await this.paymentRepository
+      .createQueryBuilder('payment')
+      .where('payment.paymentCode LIKE :prefix', { prefix: 'SKO%' })
+      .orderBy('payment.createdAt', 'DESC')
+      .limit(10)
+      .getMany();
+    this.logger.log(`📊 Recent SKO payments in DB: ${allPayments.map(p => `"${p.paymentCode}"`).join(', ')}`);
+    
+    // Use the payment found by any method
+    const payment = payment1 || payment2 || payment3;
+    
+    if (payment) {
+      // Load order relation if needed
+      const paymentWithOrder = await this.paymentRepository.findOne({
+        where: { paymentId: payment.paymentId },
+        relations: ['order'],
+      });
+      this.logger.log(`✅ Payment found! Loading with relations...`);
+    }
+    
+    this.logger.log(`🔍 Final result: ${payment ? 'FOUND' : 'NOT FOUND'}`);
 
     if (!payment) {
-      this.logger.warn(`⚠️ Payment not found: ${paymentCode}`);
-      return { success: false, message: 'Payment not found' };
+      this.logger.error(`❌ Payment not found in database: ${paymentCode}`);
+      this.logger.error(`📋 Content was: ${webhookData.content}`);
+      
+      return { success: false, message: 'Payment not found', paymentCode };
     }
 
     // Kiểm tra payment đã hoàn thành chưa
@@ -173,12 +230,51 @@ export class PaymentsService {
 
     // Process based on payment type
     if (payment.paymentType === PaymentType.ORDER) {
-      // Update order status to CONFIRMED (paid)
-      if (payment.order) {
-        await this.ordersService.update(payment.order.orderId, {
-          status: OrderStatus.PENDING,
+      let orderId = payment.orderId;
+
+      // 🆕 Nếu chưa có orderId, tạo order từ cartData
+      if (!orderId && payment.cartData && payment.customerId) {
+        try {
+          const cartData = JSON.parse(payment.cartData);
+          
+          // Tạo order với status CONFIRMED luôn (đã thanh toán)
+          const newOrder = await this.ordersService.createOrderFromPayment({
+            customerId: payment.customerId,
+            cartItems: cartData.items,
+            shippingAddress: payment.shippingAddress,
+            notes: payment.orderNotes,
+            totalAmount: amountReceived,
+          });
+
+          // Update payment với orderId mới
+          payment.orderId = newOrder.orderId;
+          await this.paymentRepository.save(payment);
+
+          orderId = newOrder.orderId;
+          
+          this.logger.log(`✅ Order created from payment: #${orderId}`);
+
+          // 🆕 Xóa cart sau khi tạo order thành công
+          if (payment.userId) {
+            try {
+              await this.cartService.clearCart(payment.userId);
+              this.logger.log(`✅ Cart cleared for user: ${payment.userId}`);
+            } catch (error) {
+              this.logger.warn(`⚠️ Failed to clear cart for user ${payment.userId}: ${error.message}`);
+              // Don't throw - order already created, just log warning
+            }
+          }
+        } catch (error) {
+          this.logger.error(`❌ Failed to create order from payment: ${error.message}`);
+          throw error;
+        }
+      }
+      // Nếu đã có orderId (trường hợp cũ), update order status
+      else if (orderId) {
+        await this.ordersService.update(orderId, {
+          status: OrderStatus.CONFIRMED,
         });
-        this.logger.log(`✅ Order #${payment.orderId} marked as PENDING`);
+        this.logger.log(`✅ Order #${orderId} marked as CONFIRMED`);
       }
 
       return {
@@ -187,7 +283,7 @@ export class PaymentsService {
         paymentType: 'order',
         paymentCode,
         amount: amountReceived,
-        orderId: payment.orderId,
+        orderId: orderId,
       };
     } else if (payment.paymentType === PaymentType.TOPUP) {
       // Add balance to user account
@@ -245,20 +341,24 @@ export class PaymentsService {
   /**
    * Generate payment code duy nhất
    * Format: 
-   * - Order: SKO{orderId}{timestamp} (SKinalyze Order)
+   * - Order: SKO{orderId|customerId}{timestamp} (SKinalyze Order)
    * - Topup: SKT{userId_short}{timestamp} (SKinalyze Topup)
    */
   private generatePaymentCode(
     paymentType: PaymentType,
     orderId?: string,
     userId?: string,
+    customerId?: string,
   ): string {
     const timestamp = Date.now().toString().slice(-6); // Lấy 6 số cuối
 
-    if (paymentType === PaymentType.ORDER && orderId) {
-      // For order, use last 8 chars of orderId (UUID)
-      const orderIdShort = orderId.replace(/-/g, '').slice(-8).toUpperCase();
-      return `SKO${orderIdShort}${timestamp}`;
+    if (paymentType === PaymentType.ORDER) {
+      // Use orderId if exists, otherwise use customerId
+      const idToUse = orderId || customerId;
+      if (idToUse) {
+        const idShort = idToUse.replace(/-/g, '').slice(-8).toUpperCase();
+        return `SKO${idShort}${timestamp}`;
+      }
     } else if (paymentType === PaymentType.TOPUP && userId) {
       // For topup, use last 8 chars of userId
       const userIdShort = userId.replace(/-/g, '').slice(-8).toUpperCase();

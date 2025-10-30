@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Inject,
   forwardRef,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -20,9 +21,13 @@ import { CustomersService } from '../customers/customers.service';
 import { UsersService } from '../users/users.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PaymentType } from '../payments/entities/payment.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
@@ -36,6 +41,7 @@ export class OrdersService {
     private readonly usersService: UsersService,
     @Inject(forwardRef(() => PaymentsService))
     private readonly paymentsService: PaymentsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(createDto: CreateOrderDto): Promise<Order> {
@@ -149,7 +155,26 @@ export class OrdersService {
       await this.transactionRepository.save(order.transaction);
     }
 
-    return await this.orderRepository.save(order);
+    const savedOrder = await this.orderRepository.save(order);
+
+    // 🔔 Gửi notification cho customer
+    if (order.customer?.user?.userId) {
+      await this.notificationsService.create({
+        userId: order.customer.user.userId,
+        type: NotificationType.ORDER,
+        title: '❌ Đơn hàng bị từ chối',
+        message: reason 
+          ? `Đơn hàng #${order.orderId.slice(0, 8)} đã bị từ chối. Lý do: ${reason}`
+          : `Đơn hàng #${order.orderId.slice(0, 8)} đã bị từ chối.`,
+        data: {
+          orderId: order.orderId,
+          status: order.status,
+          reason: reason,
+        },
+      });
+    }
+
+    return savedOrder;
   }
 
   async confirmOrder(id: string, processedBy: string): Promise<Order> {
@@ -163,7 +188,24 @@ export class OrdersService {
       await this.transactionRepository.save(order.transaction);
     }
 
-    return await this.orderRepository.save(order);
+    const savedOrder = await this.orderRepository.save(order);
+
+    // 🔔 Gửi notification cho customer
+    if (order.customer?.user?.userId) {
+      await this.notificationsService.create({
+        userId: order.customer.user.userId,
+        type: NotificationType.ORDER,
+        title: '✅ Đơn hàng đã được xác nhận',
+        message: `Đơn hàng #${order.orderId.slice(0, 8)} đã được xác nhận và đang được chuẩn bị. Chúng tôi sẽ giao hàng sớm nhất có thể!`,
+        data: {
+          orderId: order.orderId,
+          status: order.status,
+          totalAmount: order.transaction?.totalAmount,
+        },
+      });
+    }
+
+    return savedOrder;
   }
 
   /**
@@ -200,9 +242,61 @@ export class OrdersService {
     const useWallet =
       checkoutDto.useWallet || paymentMethod === PaymentMethod.WALLET;
 
+    // 🆕 NẾU LÀ BANKING: CHỈ TẠO PAYMENT, KHÔNG TẠO ORDER
+    if (paymentMethod === PaymentMethod.BANKING && !useWallet) {
+      this.logger.log(`💳 BANKING checkout - Creating payment only`);
+
+      // Tạo payment với cart data
+      const payment = await this.paymentsService.createPayment({
+        paymentType: PaymentType.ORDER,
+        customerId: customer.customerId,
+        userId: userId,
+        cartData: cart.items,
+        shippingAddress: checkoutDto.shippingAddress,
+        orderNotes: checkoutDto.notes,
+        amount: totalAmount,
+        paymentMethod: 'banking' as any,
+      });
+
+      // Generate QR code URL
+      const qrCodeUrl = `https://img.vietqr.io/image/MB-0347178790-compact2.png?amount=${totalAmount}&addInfo=${payment.paymentCode}&accountName=CHU PHAN NHAT LONG`;
+
+      // ❌ KHÔNG xóa cart (giữ lại để tạo order sau khi thanh toán)
+      // ❌ KHÔNG trừ inventory
+      // ❌ KHÔNG tạo order
+
+      return {
+        payment: {
+          paymentId: payment.paymentId,
+          paymentCode: payment.paymentCode,
+          amount: totalAmount,
+          status: payment.status,
+          expiredAt: payment.expiredAt,
+          qrCodeUrl,
+          bankingInfo: {
+            bankName: 'MBBank',
+            accountNumber: '0347178790',
+            accountName: 'CHU PHAN NHAT LONG',
+            amount: totalAmount,
+            transferContent: payment.paymentCode,
+            qrCode: qrCodeUrl,
+          },
+          instructions: [
+            '1. Quét mã QR bằng app ngân hàng',
+            '2. Hoặc chuyển khoản thủ công với thông tin trên',
+            `3. Nội dung CK: ${payment.paymentCode} (PHẢI CHÍNH XÁC)`,
+            '4. Đơn hàng sẽ tự động được tạo sau khi thanh toán',
+            '5. Thời gian xử lý: Real-time (vài giây)',
+          ],
+        },
+        message: 'Vui lòng thanh toán để hoàn tất đơn hàng. Đơn hàng sẽ được tạo sau khi chúng tôi nhận được thanh toán.',
+      };
+    }
+
+    // 📦 COD & WALLET: TẠO ORDER NGAY
     let orderStatus: any = 'PENDING';
     let transactionStatus = TransactionStatus.PENDING;
-    let paymentInfo: any = null;
+    let paymentInfo: any = null; // For storing payment info (not used for COD/WALLET in new flow)
 
     // 4a. Thanh toán bằng WALLET
     if (useWallet) {
@@ -264,59 +358,20 @@ export class OrdersService {
       );
     }
 
-    // 9. 💳 TẠO PAYMENT RECORD NẾU LÀ BANKING
-    if (paymentMethod === PaymentMethod.BANKING) {
-      const payment = await this.paymentsService.createPayment({
-        paymentType: PaymentType.ORDER,
-        orderId: savedOrder.orderId,
-        amount: totalAmount,
-        paymentMethod: 'banking' as any,
-      });
+    // 9. 💳 PAYMENT INFO (KHÔNG CẦN TẠO PAYMENT CHO BANKING NỮA - ĐÃ TẠO Ở TRÊN)
+    // COD & WALLET không cần payment info vì đã xử lý rồi
 
-      // Generate QR code URL
-      const qrCodeUrl = `https://img.vietqr.io/image/MB-0347178790-compact2.png?amount=${totalAmount}&addInfo=${payment.paymentCode}&accountName=CHU PHAN NHAT LONG`;
-
-      paymentInfo = {
-        paymentId: payment.paymentId,
-        paymentCode: payment.paymentCode,
-        amount: totalAmount,
-        status: payment.status,
-        expiredAt: payment.expiredAt,
-        qrCodeUrl,
-        bankingInfo: {
-          bankName: 'MBBank',
-          accountNumber: '0347178790',
-          accountName: 'CHU PHAN NHAT LONG',
-          amount: totalAmount,
-          content: payment.paymentCode,
-          qrCode: qrCodeUrl,
-        },
-        instructions: [
-          '1. Mở app ngân hàng và quét mã QR',
-          '2. Hoặc chuyển khoản thủ công với thông tin bên dưới',
-          `3. Nội dung chuyển khoản: ${payment.paymentCode}`,
-          '4. Hệ thống tự động xác nhận sau khi nhận tiền (thời gian thực)',
-          '5. Đơn hàng sẽ được xác nhận ngay khi thanh toán thành công',
-        ],
-      };
-
-      console.log(`💳 Payment created: ${payment.paymentCode} for order #${savedOrder.orderId}`);
-    }
-
-    // 10. Xóa cart sau khi checkout thành công
+    // 10. Xóa cart sau khi checkout thành công (CHỈ COD & WALLET)
     await this.cartService.clearCart(userId);
 
-    // 11. Trả về order với payment info
+    // 11. Trả về order (CHỈ COD & WALLET)
     const fullOrder = await this.findOne(savedOrder.orderId);
 
     return {
       order: fullOrder,
-      payment: paymentInfo,
-      message: paymentInfo 
-        ? 'Order created. Please complete payment to confirm.'
-        : useWallet 
-        ? 'Order confirmed and paid by wallet.'
-        : 'Order created successfully.',
+      message: useWallet 
+        ? 'Đơn hàng đã được tạo và thanh toán qua ví thành công.'
+        : 'Đơn hàng đã được tạo thành công. Vui lòng thanh toán khi nhận hàng (COD).',
     };
   }
 
@@ -325,5 +380,59 @@ export class OrdersService {
    */
   async getCustomerByUserId(userId: string) {
     return await this.customersService.findByUserId(userId);
+  }
+
+  /**
+   * 💳 TẠO ORDER TỪ PAYMENT (sau khi thanh toán thành công)
+   * Dùng khi payment completed → tạo order với status CONFIRMED
+   */
+  async createOrderFromPayment(data: {
+    customerId: string;
+    cartItems: any[];
+    shippingAddress: string;
+    notes?: string;
+    totalAmount: number;
+  }): Promise<Order> {
+    const { customerId, cartItems, shippingAddress, notes, totalAmount } = data;
+
+    // 1. Tạo transaction với status COMPLETED
+    const transaction = this.transactionRepository.create({
+      totalAmount,
+      status: TransactionStatus.COMPLETED,
+      paymentMethod: 'banking',
+    });
+    const savedTransaction = await this.transactionRepository.save(transaction);
+
+    // 2. Tạo order với status CONFIRMED
+    const order = this.orderRepository.create({
+      customerId,
+      transactionId: savedTransaction.transactionId,
+      shippingAddress,
+      notes,
+      status: 'CONFIRMED' as any,
+    });
+    const savedOrder = await this.orderRepository.save(order);
+
+    // 3. Tạo order items
+    const orderItems = cartItems.map((item) =>
+      this.orderItemRepository.create({
+        orderId: savedOrder.orderId,
+        productId: item.productId,
+        priceAtTime: item.price || 0,
+        quantity: item.quantity,
+      }),
+    );
+    await this.orderItemRepository.save(orderItems);
+
+    // 4. Trừ stock trực tiếp (đã thanh toán rồi, không cần reserve)
+    for (const item of cartItems) {
+      await this.inventoryService.reduceStock(item.productId, item.quantity);
+    }
+
+    this.logger.log(
+      `✅ Order created from payment: #${savedOrder.orderId} - Amount: ${totalAmount}`,
+    );
+
+    return savedOrder;
   }
 }
