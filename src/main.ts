@@ -33,6 +33,8 @@ async function bootstrap() {
     .addTag('Batches')
     .addTag('Stock Movement')
     .addTag('Inventory')
+    .addTag('Diseases')
+    .addTag('Disease Groups')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);

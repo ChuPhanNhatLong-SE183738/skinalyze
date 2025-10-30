@@ -44,6 +44,8 @@ import { Notification } from './notifications/entities/notification.entity';
 import { FirebaseModule } from './firebase/firebase.module';
 import { DeviceToken } from './users/entities/device-token.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { DiseaseGroupsModule } from './disease-groups/disease-groups.module';
+import { DiseasesModule } from './diseases/diseases.module';
 
 @Module({
   imports: [
@@ -103,6 +105,8 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     NotificationsModule,
     FirebaseModule,
     SubscriptionsModule,
+    DiseaseGroupsModule,
+    DiseasesModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],
