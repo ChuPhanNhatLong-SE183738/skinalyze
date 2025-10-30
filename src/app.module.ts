@@ -48,6 +48,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { DiseaseGroupsModule } from './disease-groups/disease-groups.module';
 import { DiseasesModule } from './diseases/diseases.module';
 import { PaymentsModule } from './payments/payments.module';
+import { GoogleMeetModule } from './google-meet/google-meet.module';
 
 @Module({
   imports: [
@@ -111,6 +112,7 @@ import { PaymentsModule } from './payments/payments.module';
     DiseaseGroupsModule,
     DiseasesModule,
     PaymentsModule,
+    GoogleMeetModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],
