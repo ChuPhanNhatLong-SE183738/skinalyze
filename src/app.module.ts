@@ -43,7 +43,9 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
 import { FirebaseModule } from './firebase/firebase.module';
 import { DeviceToken } from './users/entities/device-token.entity';
+import { Payment } from './payments/entities/payment.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -78,6 +80,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
         RoadmapDetail,
         Notification,
         DeviceToken,
+        Payment,
       ],
       synchronize: true, // Auto-create tables - disable after first deployment
       logging: process.env.NODE_ENV === 'development',
@@ -103,6 +106,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     NotificationsModule,
     FirebaseModule,
     SubscriptionsModule,
+    PaymentsModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],
