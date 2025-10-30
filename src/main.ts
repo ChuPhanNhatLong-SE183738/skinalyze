@@ -20,7 +20,10 @@ async function bootstrap() {
     credential: admin.credential.cert(serviceAccount),
   });
   
-  // Swagger configuration (BEFORE setting global prefix to exclude it)
+  // Set global API prefix (BEFORE Swagger setup so Swagger knows about it)
+  app.setGlobalPrefix('api/v1');
+
+  // Swagger configuration (AFTER setting global prefix)
   const config = new DocumentBuilder()
     .setTitle('Skinalyze API')
     .setDescription('The Skinalyze API documentation')
@@ -37,10 +40,9 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
-
-  // Set global API prefix (AFTER Swagger setup)
-  app.setGlobalPrefix('api/v1');
+  SwaggerModule.setup('api/docs', app, document, {
+    useGlobalPrefix: false, // Swagger at /api/docs, not /api/v1/api/docs
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
