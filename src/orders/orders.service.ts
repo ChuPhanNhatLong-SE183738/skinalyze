@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -16,6 +18,8 @@ import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CustomersService } from '../customers/customers.service';
 import { UsersService } from '../users/users.service';
+import { PaymentsService } from '../payments/payments.service';
+import { PaymentType } from '../payments/entities/payment.entity';
 
 @Injectable()
 export class OrdersService {
@@ -30,6 +34,8 @@ export class OrdersService {
     private readonly inventoryService: InventoryService,
     private readonly customersService: CustomersService,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => PaymentsService))
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async create(createDto: CreateOrderDto): Promise<Order> {
@@ -162,12 +168,12 @@ export class OrdersService {
 
   /**
    * 🛒 CHECKOUT CART - Chuyển cart items thành order
-   * 💰 Support thanh toán bằng wallet (balance)
+   * 💰 Support: wallet, COD, banking (SePay)
    */
   async checkoutCart(
     userId: string,
     checkoutDto: CheckoutCartDto,
-  ): Promise<Order> {
+  ): Promise<any> {
     // 1. Lấy customer từ userId
     const customer = await this.customersService.findByUserId(userId);
     if (!customer) {
@@ -189,17 +195,20 @@ export class OrdersService {
       0,
     );
 
-    // 4. 💰 XỬ LÝ THANH TOÁN BẰNG WALLET
+    // 4. 💰 XỬ LÝ PHƯƠNG THỨC THANH TOÁN
     const paymentMethod = checkoutDto.paymentMethod || PaymentMethod.COD;
     const useWallet =
       checkoutDto.useWallet || paymentMethod === PaymentMethod.WALLET;
 
+    let orderStatus: any = 'PENDING';
+    let transactionStatus = TransactionStatus.PENDING;
+    let paymentInfo: any = null;
+
+    // 4a. Thanh toán bằng WALLET
     if (useWallet) {
-      // Lấy user để check balance
       const user = await this.usersService.findOne(userId);
       const userBalance = parseFloat(user.balance.toString());
 
-      // Check đủ tiền không
       if (userBalance < totalAmount) {
         throw new BadRequestException(
           `Số dư không đủ. Cần ${totalAmount.toLocaleString('vi-VN')} VND, hiện có ${userBalance.toLocaleString('vi-VN')} VND. Vui lòng nạp thêm tiền.`,
@@ -210,6 +219,9 @@ export class OrdersService {
       const newBalance = userBalance - totalAmount;
       await this.usersService.update(userId, { balance: newBalance });
 
+      orderStatus = 'CONFIRMED';
+      transactionStatus = TransactionStatus.COMPLETED;
+
       console.log(
         `✅ Paid by wallet: ${totalAmount} VND. New balance: ${newBalance} VND`,
       );
@@ -218,9 +230,7 @@ export class OrdersService {
     // 5. Tạo transaction
     const transaction = this.transactionRepository.create({
       totalAmount,
-      status: useWallet
-        ? TransactionStatus.COMPLETED
-        : TransactionStatus.PENDING,
+      status: transactionStatus,
       paymentMethod: paymentMethod,
     });
     const savedTransaction = await this.transactionRepository.save(transaction);
@@ -231,7 +241,7 @@ export class OrdersService {
       transactionId: savedTransaction.transactionId,
       shippingAddress: checkoutDto.shippingAddress,
       notes: checkoutDto.notes,
-      status: useWallet ? ('CONFIRMED' as any) : ('PENDING' as any), // Auto confirm nếu đã trả tiền
+      status: orderStatus,
     });
     const savedOrder = await this.orderRepository.save(order);
 
@@ -254,11 +264,60 @@ export class OrdersService {
       );
     }
 
-    // 9. Xóa cart sau khi checkout thành công
+    // 9. 💳 TẠO PAYMENT RECORD NẾU LÀ BANKING
+    if (paymentMethod === PaymentMethod.BANKING) {
+      const payment = await this.paymentsService.createPayment({
+        paymentType: PaymentType.ORDER,
+        orderId: savedOrder.orderId,
+        amount: totalAmount,
+        paymentMethod: 'banking' as any,
+      });
+
+      // Generate QR code URL
+      const qrCodeUrl = `https://img.vietqr.io/image/MB-0347178790-compact2.png?amount=${totalAmount}&addInfo=${payment.paymentCode}&accountName=CHU PHAN NHAT LONG`;
+
+      paymentInfo = {
+        paymentId: payment.paymentId,
+        paymentCode: payment.paymentCode,
+        amount: totalAmount,
+        status: payment.status,
+        expiredAt: payment.expiredAt,
+        qrCodeUrl,
+        bankingInfo: {
+          bankName: 'MBBank',
+          accountNumber: '0347178790',
+          accountName: 'CHU PHAN NHAT LONG',
+          amount: totalAmount,
+          content: payment.paymentCode,
+          qrCode: qrCodeUrl,
+        },
+        instructions: [
+          '1. Mở app ngân hàng và quét mã QR',
+          '2. Hoặc chuyển khoản thủ công với thông tin bên dưới',
+          `3. Nội dung chuyển khoản: ${payment.paymentCode}`,
+          '4. Hệ thống tự động xác nhận sau khi nhận tiền (thời gian thực)',
+          '5. Đơn hàng sẽ được xác nhận ngay khi thanh toán thành công',
+        ],
+      };
+
+      console.log(`💳 Payment created: ${payment.paymentCode} for order #${savedOrder.orderId}`);
+    }
+
+    // 10. Xóa cart sau khi checkout thành công
     await this.cartService.clearCart(userId);
 
-    // 10. Trả về order với relations
-    return this.findOne(savedOrder.orderId);
+    // 11. Trả về order với payment info
+    const fullOrder = await this.findOne(savedOrder.orderId);
+
+    return {
+      order: fullOrder,
+      payment: paymentInfo,
+      message: paymentInfo 
+        ? 'Order created. Please complete payment to confirm.'
+        : useWallet 
+        ? 'Order confirmed and paid by wallet.'
+        : 'Order created successfully.',
+    };
   }
 
   /**

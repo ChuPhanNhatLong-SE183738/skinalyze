@@ -43,9 +43,14 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
 import { FirebaseModule } from './firebase/firebase.module';
 import { DeviceToken } from './users/entities/device-token.entity';
+import { Payment } from './payments/entities/payment.entity';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+<<<<<<< HEAD
 import { DiseaseGroupsModule } from './disease-groups/disease-groups.module';
 import { DiseasesModule } from './diseases/diseases.module';
+=======
+import { PaymentsModule } from './payments/payments.module';
+>>>>>>> b38265f85bfe767c620bfe5b766841c6f84c0c70
 
 @Module({
   imports: [
@@ -80,8 +85,9 @@ import { DiseasesModule } from './diseases/diseases.module';
         RoadmapDetail,
         Notification,
         DeviceToken,
+        Payment,
       ],
-      synchronize: process.env.NODE_ENV !== 'production', // Set to false in production
+      synchronize: true, // Auto-create tables - disable after first deployment
       logging: process.env.NODE_ENV === 'development',
     }),
     UsersModule,
@@ -105,8 +111,12 @@ import { DiseasesModule } from './diseases/diseases.module';
     NotificationsModule,
     FirebaseModule,
     SubscriptionsModule,
+<<<<<<< HEAD
     DiseaseGroupsModule,
     DiseasesModule,
+=======
+    PaymentsModule,
+>>>>>>> b38265f85bfe767c620bfe5b766841c6f84c0c70
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

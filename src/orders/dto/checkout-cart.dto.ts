@@ -4,6 +4,7 @@ import { IsString, IsOptional, IsEnum, IsBoolean } from 'class-validator';
 export enum PaymentMethod {
   WALLET = 'wallet', // Thanh toán bằng balance
   COD = 'cod', // Cash on delivery
+  BANKING = 'banking', // Chuyển khoản ngân hàng (SePay)
   BANK_TRANSFER = 'bank_transfer',
   MOMO = 'momo',
   ZALOPAY = 'zalopay',
@@ -16,10 +17,10 @@ export class CheckoutCartDto {
   shippingAddress: string;
 
   @ApiProperty({
-    example: 'wallet',
+    example: 'cod',
     enum: PaymentMethod,
     description:
-      'Payment method: wallet (từ balance), cod, bank_transfer, momo, zalopay, vnpay',
+      'Payment method: wallet (từ balance), cod, banking (chuyển khoản real-time), bank_transfer, momo, zalopay, vnpay',
     default: PaymentMethod.COD,
   })
   @IsOptional()
@@ -28,7 +29,7 @@ export class CheckoutCartDto {
 
   @ApiProperty({
     example: false,
-    description: 'If true, use wallet balance to pay for this order',
+    description: 'If true, use wallet balance to pay for this order (same as paymentMethod=wallet)',
     default: false,
   })
   @IsOptional()
