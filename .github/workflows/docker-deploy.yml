@@ -35,8 +35,8 @@ jobs:
             **Commit:** `${{ github.event.head_commit.message }}`
             **Author:** ${{ github.actor }}
           color: 0xFFFF00
-          username: GitHub Actions
-          avatar_url: https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png
+          username: Con vk skinalyze
+          avatar_url: https://res.cloudinary.com/dh2sxkvuu/image/upload/v1761827397/tyrant_wpum0x.jpg
 
       - name: 🔐 Setup SSH
         run: |
