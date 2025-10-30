@@ -9,43 +9,46 @@ import {
   OneToMany,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { TreatmentRoadmap } from '../../treatment-roadmaps/entities/treatment-roadmap.entity';
+import { TreatmentRoutine } from '../../treatment-routines/entities/treatment-routine.entity';
+import { Appointment } from 'src/appointments/entities/appointment.entity';
+import { SubscriptionPlan } from '../../subscription-plans/entities/subscription-plan.entity';
 
 @Entity('dermatologists')
 export class Dermatologist {
   @PrimaryGeneratedColumn('uuid')
   dermatologistId: string;
 
-  // Foreign key reference to User
-  @OneToOne(() => User)
-  @JoinColumn({ name: 'userId' })
-  user: User;
-
-  @Column({ type: 'uuid' })
-  userId: string;
-
-  @OneToMany(() => TreatmentRoadmap, (roadmap) => roadmap.dermatologist)
-  treatmentRoadmaps: TreatmentRoadmap[];
-
-  @Column({ type: 'json', nullable: true })
-  skinAnalysisHistory: any[];
-
-  @Column({ type: 'json', nullable: true })
+  @Column({
+    type: 'json',
+    nullable: true,
+  })
   purchaseHistory: any[];
 
-  @Column({ type: 'json', nullable: true })
+  @Column({
+    type: 'json',
+    nullable: true,
+  })
   availability: any[];
 
   @Column({ type: 'int', nullable: true })
   yearsOfExp: number;
-
-  // Use simple-array for string arrays
-  @Column({ type: 'simple-array', nullable: true })
-  specializations: string[];
 
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => Appointment, (appointment) => appointment.dermatologist)
+  appointments: Appointment[];
+
+  @OneToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  user: User;
+
+  @OneToMany(() => TreatmentRoutine, (routine) => routine.dermatologist)
+  treatmentRoutines: TreatmentRoutine[];
+
+  @OneToMany(() => SubscriptionPlan, (plan) => plan.dermatologist)
+  subscriptionPlans: SubscriptionPlan[];
 }

@@ -84,7 +84,7 @@ export class DermatologistsService {
   async findByUserId(userId: string): Promise<Dermatologist> {
     try {
       const dermatologist = await this.dermatologistRepository.findOne({
-        where: { userId },
+        where: { user: { userId } },
         relations: ['user'],
       });
 

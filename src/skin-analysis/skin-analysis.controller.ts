@@ -43,17 +43,11 @@ export class SkinAnalysisController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all skin analyses' })
   @ApiQuery({ name: 'customerId', required: false })
-  @ApiQuery({ name: 'skinType', required: false })
-  async findAll(
-    @Query('customerId') customerId?: string,
-    @Query('skinType') skinType?: string,
-  ) {
+  async findAll(@Query('customerId') customerId?: string) {
     let analyses;
 
     if (customerId) {
       analyses = await this.skinAnalysisService.findByCustomerId(customerId);
-    } else if (skinType) {
-      analyses = await this.skinAnalysisService.findBySkinType(skinType);
     } else {
       analyses = await this.skinAnalysisService.findAll();
     }

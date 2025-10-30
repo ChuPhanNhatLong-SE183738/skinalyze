@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsArray, IsUUID } from 'class-validator';
 
-export class CreateRoadmapDetailDto {
+export class CreateRoutineDetailDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   @IsUUID()
   @IsNotEmpty()
-  roadmapId: string;
+  routineId: string;
 
   @ApiProperty({ example: 'Giai đoạn 1: Làm sạch và cân bằng da' })
   @IsString()
@@ -29,5 +29,5 @@ export class CreateRoadmapDetailDto {
   })
   @IsArray()
   @IsUUID('4', { each: true })
-  productId: string[];
+  productIds: string[];
 }

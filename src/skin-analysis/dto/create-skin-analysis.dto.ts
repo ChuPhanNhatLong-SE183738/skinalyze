@@ -1,43 +1,65 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsUUID,
-  IsString,
-  IsUrl,
-  IsDateString,
-  IsArray,
-  IsOptional,
-} from 'class-validator';
+import { IsUUID, IsString, IsArray, IsOptional } from 'class-validator';
 
 export class CreateSkinAnalysisDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   @IsUUID()
   customerId: string;
 
-  @ApiProperty({ example: 'https://example.com/skin-images/image123.jpg' })
-  @IsUrl()
-  imageUrl: string;
+  @ApiProperty({ example: 'In-person consultation', required: false })
+  @IsOptional()
+  @IsString()
+  source?: string;
 
   @ApiProperty({
-    example: 'Oily',
-    description: 'Skin type: Oily, Dry, Combination, Normal, Sensitive',
+    example: 'Patient reports redness and itchiness on cheeks',
+    required: false,
   })
-  @IsString()
-  skinType: string;
-
-  @ApiProperty({ example: '2025-10-08T10:30:00Z', required: false })
   @IsOptional()
-  @IsDateString()
-  analysisDate?: string;
+  @IsString()
+  chiefComplaint?: string;
+
+  @ApiProperty({
+    example: 'Dry patches and occasional flaking',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  patientSymptoms?: string;
 
   @ApiProperty({
     example: [
-      '550e8400-e29b-41d4-a716-446655440001',
-      '550e8400-e29b-41d4-a716-446655440002',
+      'https://example.com/skin-images/image123.jpg',
+      'https://example.com/skin-images/image456.jpg',
     ],
     required: false,
   })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  recommendedProducts?: string[];
+  imageUrls?: string[];
+
+  @ApiProperty({ example: 'Recommend gentle moisturizer', required: false })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @ApiProperty({ example: 'Eczema', required: false })
+  @IsOptional()
+  @IsString()
+  aiDetectedDisease?: string;
+
+  @ApiProperty({ example: 'Dry skin', required: false })
+  @IsOptional()
+  @IsString()
+  aiDetectedCondition?: string;
+
+  @ApiProperty({
+    example: ['product-id-1', 'product-id-2'],
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  aiRecommendedProducts?: string[];
 }

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { SkinAnalysis } from './entities/skin-analysis.entity';
 import { CreateSkinAnalysisDto } from './dto/create-skin-analysis.dto';
 import { UpdateSkinAnalysisDto } from './dto/update-skin-analysis.dto';
+import { Customer } from '../customers/entities/customer.entity';
 
 @Injectable()
 export class SkinAnalysisService {
@@ -13,20 +14,22 @@ export class SkinAnalysisService {
   ) {}
 
   async create(createDto: CreateSkinAnalysisDto): Promise<SkinAnalysis> {
+    const { customerId, imageUrls, aiRecommendedProducts, ...rest } = createDto;
+
     const analysis = this.skinAnalysisRepository.create({
-      ...createDto,
-      analysisDate: createDto.analysisDate
-        ? new Date(createDto.analysisDate)
-        : new Date(),
-      recommendedProducts: createDto.recommendedProducts || [],
+      ...rest,
+      imageUrls: imageUrls ?? [],
+      aiRecommendedProducts: aiRecommendedProducts ?? [],
     });
+
+    analysis.customer = { customerId } as Customer;
     return await this.skinAnalysisRepository.save(analysis);
   }
 
   async findAll(): Promise<SkinAnalysis[]> {
     return await this.skinAnalysisRepository.find({
       relations: ['customer'],
-      order: { analysisDate: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -45,17 +48,9 @@ export class SkinAnalysisService {
 
   async findByCustomerId(customerId: string): Promise<SkinAnalysis[]> {
     return await this.skinAnalysisRepository.find({
-      where: { customerId },
+      where: { customer: { customerId } },
       relations: ['customer'],
-      order: { analysisDate: 'DESC' },
-    });
-  }
-
-  async findBySkinType(skinType: string): Promise<SkinAnalysis[]> {
-    return await this.skinAnalysisRepository.find({
-      where: { skinType },
-      relations: ['customer'],
-      order: { analysisDate: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -65,10 +60,6 @@ export class SkinAnalysisService {
   ): Promise<SkinAnalysis> {
     const analysis = await this.findOne(id);
     Object.assign(analysis, updateDto);
-
-    if (updateDto.analysisDate) {
-      analysis.analysisDate = new Date(updateDto.analysisDate);
-    }
 
     return await this.skinAnalysisRepository.save(analysis);
   }
@@ -82,9 +73,9 @@ export class SkinAnalysisService {
     customerId: string,
   ): Promise<SkinAnalysis | null> {
     return await this.skinAnalysisRepository.findOne({
-      where: { customerId },
+      where: { customer: { customerId } },
       relations: ['customer'],
-      order: { analysisDate: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -97,11 +88,11 @@ export class SkinAnalysisService {
       .createQueryBuilder('analysis')
       .leftJoinAndSelect('analysis.customer', 'customer')
       .where('analysis.customerId = :customerId', { customerId })
-      .andWhere('analysis.analysisDate BETWEEN :startDate AND :endDate', {
+      .andWhere('analysis.createdAt BETWEEN :startDate AND :endDate', {
         startDate,
         endDate,
       })
-      .orderBy('analysis.analysisDate', 'DESC')
+      .orderBy('analysis.createdAt', 'DESC')
       .getMany();
   }
 }

@@ -12,7 +12,7 @@ import { User } from '../../users/entities/user.entity';
 export enum NotificationType {
   ORDER = 'order',
   APPOINTMENT = 'appointment',
-  TREATMENT_ROADMAP = 'treatment_roadmap',
+  TREATMENT_Routine = 'treatment_Routine',
   PRODUCT = 'product',
   SYSTEM = 'system',
   PROMOTION = 'promotion',

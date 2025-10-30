@@ -6,23 +6,23 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Subscription } from './entities/subscription.entity';
-import { CreateSubscriptionDto } from './dto/create-subscription.dto';
+import { SubscriptionPlan } from './entities/subscription-plan.entity';
+import { CreateSubscriptionPlanDto } from './dto/create-subscription-plan.dto';
 import { DermatologistsService } from '../dermatologists/dermatologists.service';
-import { UpdateSubscriptionDto } from './dto/update-subscription.dto';
+import { UpdateSubscriptionPlanDto } from './dto/update-subscription-plan.dto';
 
 @Injectable()
-export class SubscriptionsService {
+export class SubscriptionPlansService {
   constructor(
-    @InjectRepository(Subscription)
-    private readonly subscriptionRepository: Repository<Subscription>,
+    @InjectRepository(SubscriptionPlan)
+    private readonly subscriptionRepository: Repository<SubscriptionPlan>,
     private readonly dermatologistsService: DermatologistsService,
   ) {}
 
   async createForUser(
     userId: string,
-    body: CreateSubscriptionDto,
-  ): Promise<Subscription> {
+    body: CreateSubscriptionPlanDto,
+  ): Promise<SubscriptionPlan> {
     try {
       const dermatologist =
         await this.dermatologistsService.findByUserId(userId);
@@ -31,7 +31,7 @@ export class SubscriptionsService {
       }
       const subscription = this.subscriptionRepository.create({
         ...body,
-        dermatologistId: dermatologist.dermatologistId,
+        dermatologist: dermatologist,
         isActive: body.isActive ?? true,
       });
 
@@ -41,7 +41,7 @@ export class SubscriptionsService {
     }
   }
 
-  async findAllForUser(userId: string): Promise<Subscription[]> {
+  async findAllForUser(userId: string): Promise<SubscriptionPlan[]> {
     try {
       const dermatologist =
         await this.dermatologistsService.findByUserId(userId);
@@ -49,7 +49,9 @@ export class SubscriptionsService {
         throw new NotFoundException('Dermatologist not found');
       }
       return this.subscriptionRepository.find({
-        where: { dermatologistId: dermatologist.dermatologistId },
+        where: {
+          dermatologist: { dermatologistId: dermatologist.dermatologistId },
+        },
         order: { createdAt: 'DESC' },
       });
     } catch (error) {
@@ -60,7 +62,7 @@ export class SubscriptionsService {
   async findOneForUser(
     userId: string,
     subscriptionId: string,
-  ): Promise<Subscription> {
+  ): Promise<SubscriptionPlan> {
     try {
       return await this.getOwnedSubscription(userId, subscriptionId);
     } catch (error) {
@@ -71,8 +73,8 @@ export class SubscriptionsService {
   async updateForUser(
     userId: string,
     subscriptionId: string,
-    body: UpdateSubscriptionDto,
-  ): Promise<Subscription> {
+    body: UpdateSubscriptionPlanDto,
+  ): Promise<SubscriptionPlan> {
     try {
       const subscription = await this.getOwnedSubscription(
         userId,
@@ -102,7 +104,7 @@ export class SubscriptionsService {
   private async getOwnedSubscription(
     userId: string,
     subscriptionId: string,
-  ): Promise<Subscription> {
+  ): Promise<SubscriptionPlan> {
     try {
       const dermatologist =
         await this.dermatologistsService.findByUserId(userId);
@@ -111,8 +113,8 @@ export class SubscriptionsService {
       }
       const subscription = await this.subscriptionRepository.findOne({
         where: {
-          subscriptionId,
-          dermatologistId: dermatologist.dermatologistId,
+          planId: subscriptionId,
+          dermatologist: { dermatologistId: dermatologist.dermatologistId },
         },
       });
 

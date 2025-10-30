@@ -34,16 +34,19 @@ import { DermatologistsController } from './dermatologists/dermatologists.contro
 import { DermatologistsModule } from './dermatologists/dermatologists.module';
 import { EmailModule } from './email/email.module';
 import { AppointmentsModule } from './appointments/appointments.module';
-import { TreatmentRoadmapsModule } from './treatment-roadmaps/treatment-roadmaps.module';
-import { RoadmapDetailsModule } from './roadmap-details/roadmap-details.module';
-import { TreatmentRoadmap } from './treatment-roadmaps/entities/treatment-roadmap.entity';
-import { RoadmapDetail } from './roadmap-details/entities/roadmap-detail.entity';
+import { TreatmentRoutinesModule } from './treatment-routines/treatment-routines.module';
+import { RoutineDetailsModule } from './routine-details/routine-details.module';
+import { TreatmentRoutine } from './treatment-routines/entities/treatment-routine.entity';
+import { RoutineDetail } from './routine-details/entities/routine-detail.entity';
 import { Appointment } from './appointments/entities/appointment.entity';
 import { NotificationsModule } from './notifications/notifications.module';
 import { Notification } from './notifications/entities/notification.entity';
 import { FirebaseModule } from './firebase/firebase.module';
 import { DeviceToken } from './users/entities/device-token.entity';
-import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { CustomerSubscriptionModule } from './customer-subscription/customer-subscription.module';
+import { CustomerSubscription } from './customer-subscription/entities/customer-subscription.entity';
+import { SubscriptionPlan } from './subscription-plans/entities/subscription-plan.entity';
+import { SubscriptionPlansModule } from './subscription-plans/subscription-plans.module';
 
 @Module({
   imports: [
@@ -74,10 +77,12 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
         Transaction,
         ShippingLog,
         Appointment,
-        TreatmentRoadmap,
-        RoadmapDetail,
+        TreatmentRoutine,
+        RoutineDetail,
         Notification,
         DeviceToken,
+        SubscriptionPlan,
+        CustomerSubscription,
       ],
       synchronize: process.env.NODE_ENV !== 'production', // Set to false in production
       logging: process.env.NODE_ENV === 'development',
@@ -98,11 +103,12 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     DermatologistsModule,
     EmailModule,
     AppointmentsModule,
-    TreatmentRoadmapsModule,
-    RoadmapDetailsModule,
+    TreatmentRoutinesModule,
+    RoutineDetailsModule,
     NotificationsModule,
     FirebaseModule,
-    SubscriptionsModule,
+    SubscriptionPlansModule,
+    CustomerSubscriptionModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

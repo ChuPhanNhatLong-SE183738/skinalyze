@@ -8,10 +8,14 @@ import {
   Min,
 } from 'class-validator';
 
-export class CreateSubscriptionDto {
+export class CreateSubscriptionPlanDto {
   @IsString()
   @IsNotEmpty()
-  subscriptionDescription: string;
+  planName: string;
+
+  @IsString()
+  @IsOptional()
+  planDescription?: string;
 
   @IsNumber()
   @Min(0)

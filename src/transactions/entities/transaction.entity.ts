@@ -5,9 +5,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToOne,
-  JoinColumn,
 } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
+import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
 
 export enum TransactionStatus {
   PENDING = 'PENDING',
@@ -35,13 +35,13 @@ export class Transaction {
   @Column({ type: 'varchar', length: 50, nullable: true })
   paymentMethod: string;
 
-  // One-to-One relationship with Order
-  @OneToOne(() => Order, (order) => order.transaction)
-  order: Order;
-
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  // One-to-One relationship with Order
+  @OneToOne(() => Order, (order) => order.transaction)
+  order: Order;
 }

@@ -14,29 +14,47 @@ export class SkinAnalysis {
   @PrimaryGeneratedColumn('uuid')
   analysisId: string;
 
-  // Foreign key reference to Customer (Many-to-One)
-  @ManyToOne(() => Customer, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'customerId' })
-  customer: Customer;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  source: string;
 
-  @Column({ type: 'uuid' })
-  customerId: string;
+  @Column({ type: 'text', nullable: true })
+  chiefComplaint: string;
 
-  @Column({ type: 'text' })
-  imageUrl: string;
+  @Column({ type: 'text', nullable: true })
+  patientSymptoms: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  skinType: string;
+  @Column({
+    type: 'json',
+    nullable: true,
+  })
+  imageUrls: string[];
 
-  @Column({ type: 'datetime' })
-  analysisDate: Date;
+  @Column({ type: 'text', nullable: true })
+  notes: string;
 
-  @Column({ type: 'json', nullable: true })
-  recommendedProducts: string[];
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  aiDetectedDisease: string;
+
+  @Column({ type: 'text', nullable: true })
+  aiDetectedCondition: string;
+
+  @Column({
+    type: 'json',
+    nullable: true,
+  })
+  aiRecommendedProducts: string[];
 
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @ManyToOne(() => Customer, (customer) => customer.skinAnalysis)
+  @JoinColumn({ name: 'customerId' })
+  customer: Customer;
+
+  // @ManyToOne(() => DiseaseGroup, (group) => group.skinAnalysis)
+  // @JoinColumn({ name: 'diseaseGroupId' })
+  // diseaseGroup: DiseaseGroup;
 }
