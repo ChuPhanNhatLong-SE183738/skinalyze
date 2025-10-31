@@ -41,8 +41,8 @@ export default function StaffDashboardPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-300 border-t-slate-900 rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-8 h-8 border-4 border-slate-300 border-t-green-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -52,50 +52,50 @@ export default function StaffDashboardPage() {
       <div className="p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-3xl font-bold text-slate-900">
             Dashboard
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
+          <p className="text-slate-600 mt-1">
             Welcome back, {user.fullName}
           </p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* User Info Card */}
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-slate-900">
+                <User className="w-5 h-5 text-green-600" />
                 Profile Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-500">
                   Name
                 </p>
-                <p className="font-medium text-slate-900 dark:text-slate-100">
+                <p className="font-medium text-slate-900">
                   {user.fullName}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-500">
                   Email
                 </p>
-                <p className="font-medium text-slate-900 dark:text-slate-100">
+                <p className="font-medium text-slate-900">
                   {user.email}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-500">
                   Role
                 </p>
-                <p className="font-medium text-slate-900 dark:text-slate-100 capitalize">
+                <p className="font-medium text-slate-900 capitalize">
                   {user.role}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-500">
                   Status
                 </p>
                 <div className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export default function StaffDashboardPage() {
                       user.isActive ? "bg-green-500" : "bg-red-500"
                     }`}
                   />
-                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                  <p className="font-medium text-slate-900">
                     {user.isActive ? "Active" : "Inactive"}
                   </p>
                 </div>
@@ -113,30 +113,30 @@ export default function StaffDashboardPage() {
           </Card>
 
           {/* Quick Actions Card */}
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-slate-900">
+                <Package className="w-5 h-5 text-green-600" />
                 Quick Actions
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-500">
                 Manage orders, customers, and more from the sidebar menu.
               </p>
             </CardContent>
           </Card>
 
           {/* Stats Card */}
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-slate-900">
+                <TrendingUp className="w-5 h-5 text-green-600" />
                 Overview
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-500">
                 System statistics and insights coming soon...
               </p>
             </CardContent>

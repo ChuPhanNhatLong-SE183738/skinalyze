@@ -150,9 +150,9 @@ export default function AdminOrdersPage() {
   };
 
   const formatCurrency = (amount: string) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("vi-VN", {
       style: "currency",
-      currency: "USD",
+      currency: "VND",
     }).format(parseFloat(amount));
   };
 

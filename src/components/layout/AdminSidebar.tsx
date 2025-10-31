@@ -38,6 +38,11 @@ const menuItems = [
     icon: Package,
   },
   {
+    title: "Inventory",
+    href: "/admin/inventory",
+    icon: Database,
+  },
+  {
     title: "Users",
     href: "/admin/users",
     icon: Users,
@@ -50,7 +55,7 @@ const menuItems = [
   {
     title: "Analytics",
     href: "/admin/analytics",
-    icon: Database,
+    icon: BarChart3,
   },
   {
     title: "Notifications",

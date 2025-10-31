@@ -18,7 +18,7 @@ export function StaffLayout({ children }: StaffLayoutProps) {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="flex h-screen bg-slate-50">
       <Sidebar onLogout={handleLogout} />
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>

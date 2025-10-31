@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
               <DollarSign className="w-5 h-5 opacity-75" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$45,231.89</div>
+              <div className="text-2xl font-bold">₫45,231,890</div>
               <p className="text-xs opacity-75 mt-1">
                 +20.1% from last month
               </p>

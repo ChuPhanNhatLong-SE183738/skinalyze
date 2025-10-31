@@ -10,6 +10,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  Warehouse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -29,6 +30,11 @@ const menuItems = [
     icon: Package,
   },
   {
+    title: "Inventory",
+    href: "/staff/inventory",
+    icon: Warehouse,
+  },
+  {
     title: "Customers",
     href: "/staff/customers",
     icon: Users,
@@ -44,17 +50,17 @@ export function Sidebar({ onLogout }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-screen w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+    <div className="flex h-screen w-64 flex-col border-r border-slate-200 bg-white">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-6 dark:border-slate-800">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 dark:bg-slate-100">
-          <ShieldCheck className="h-6 w-6 text-white dark:text-slate-900" />
+      <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg">
+          <ShieldCheck className="h-6 w-6 text-white" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-lg font-bold text-slate-900">
             Skinalyze
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500">
             Staff Portal
           </p>
         </div>
@@ -73,8 +79,8 @@ export function Sidebar({ onLogout }: SidebarProps) {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-100"
+                  ? "bg-gradient-to-r from-green-500/10 to-emerald-500/10 text-green-600 border border-green-200/50"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               )}
             >
               <Icon className="h-5 w-5" />
@@ -85,10 +91,10 @@ export function Sidebar({ onLogout }: SidebarProps) {
       </nav>
 
       {/* Logout Button */}
-      <div className="border-t border-slate-200 p-4 dark:border-slate-800">
+      <div className="border-t border-slate-200 p-4">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+          className="w-full justify-start gap-3 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
           onClick={onLogout}
         >
           <LogOut className="h-5 w-5" />

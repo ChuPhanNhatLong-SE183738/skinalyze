@@ -25,37 +25,37 @@ const statusConfig = {
   PENDING: {
     label: "Pending",
     icon: Clock,
-    color: "text-yellow-600 bg-yellow-50 dark:bg-yellow-950/30",
+    color: "text-yellow-600 bg-yellow-50",
   },
   CONFIRMED: {
     label: "Confirmed",
     icon: CheckCircle,
-    color: "text-blue-600 bg-blue-50 dark:bg-blue-950/30",
+    color: "text-blue-600 bg-blue-50",
   },
   PROCESSING: {
     label: "Processing",
     icon: Package,
-    color: "text-purple-600 bg-purple-50 dark:bg-purple-950/30",
+    color: "text-purple-600 bg-purple-50",
   },
   SHIPPED: {
     label: "Shipped",
     icon: Truck,
-    color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30",
+    color: "text-indigo-600 bg-indigo-50",
   },
   DELIVERED: {
     label: "Delivered",
     icon: CheckCircle,
-    color: "text-green-600 bg-green-50 dark:bg-green-950/30",
+    color: "text-green-600 bg-green-50",
   },
   CANCELLED: {
     label: "Cancelled",
     icon: XCircle,
-    color: "text-gray-600 bg-gray-50 dark:bg-gray-950/30",
+    color: "text-gray-600 bg-gray-50",
   },
   REJECTED: {
     label: "Rejected",
     icon: AlertCircle,
-    color: "text-red-600 bg-red-50 dark:bg-red-950/30",
+    color: "text-red-600 bg-red-50",
   },
 };
 
@@ -143,9 +143,9 @@ export default function StaffOrdersPage() {
   };
 
   const formatCurrency = (amount: string) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("vi-VN", {
       style: "currency",
-      currency: "USD",
+      currency: "VND",
     }).format(parseFloat(amount));
   };
 
@@ -163,7 +163,7 @@ export default function StaffOrdersPage() {
     return (
       <StaffLayout>
         <div className="flex h-full items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-slate-900" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-green-500" />
         </div>
       </StaffLayout>
     );
@@ -174,59 +174,59 @@ export default function StaffOrdersPage() {
       <div className="p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-3xl font-bold text-slate-900">
             Orders Management
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
+          <p className="text-slate-600 mt-1">
             View and manage all customer orders
           </p>
         </div>
 
         {/* Stats Cards */}
         <div className="mb-6 grid gap-6 md:grid-cols-4">
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-slate-900">
                 Total Orders
               </CardTitle>
-              <Package className="h-4 w-4 text-slate-500" />
+              <Package className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{orders.length}</div>
+              <div className="text-2xl font-bold text-slate-900">{orders.length}</div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-900">Pending</CardTitle>
               <Clock className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-slate-900">
                 {orders.filter((o) => o.status === "PENDING").length}
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-900">Confirmed</CardTitle>
               <CheckCircle className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-slate-900">
                 {orders.filter((o) => o.status === "CONFIRMED").length}
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-900">Delivered</CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-slate-900">
                 {orders.filter((o) => o.status === "DELIVERED").length}
               </div>
             </CardContent>
@@ -234,7 +234,7 @@ export default function StaffOrdersPage() {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card className="mb-6 bg-white border-slate-200">
           <CardContent className="pt-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               {/* Search */}
@@ -244,7 +244,7 @@ export default function StaffOrdersPage() {
                   placeholder="Search by order ID, customer ID, or address..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-white border-slate-300 focus:border-green-500"
                 />
               </div>
 
@@ -254,7 +254,7 @@ export default function StaffOrdersPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-green-500 focus:outline-none"
                 >
                   <option value="ALL">All Status</option>
                   <option value="PENDING">Pending</option>
@@ -271,36 +271,36 @@ export default function StaffOrdersPage() {
         </Card>
 
         {/* Orders Table */}
-        <Card>
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+                <thead className="border-b border-slate-200 bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">
                       Order ID
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">
                       Customer
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">
                       Items
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">
                       Total
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">
                       Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-600">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                <tbody className="divide-y divide-slate-200">
                   {filteredOrders.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-12 text-center">
@@ -316,18 +316,18 @@ export default function StaffOrdersPage() {
                       return (
                         <tr
                           key={order.orderId}
-                          className="hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                          className="hover:bg-slate-50 transition-colors"
                         >
-                          <td className="px-6 py-4 text-sm font-mono text-slate-900 dark:text-slate-100">
+                          <td className="px-6 py-4 text-sm font-mono text-slate-900">
                             {order.orderId.slice(0, 8)}...
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                          <td className="px-6 py-4 text-sm text-slate-600">
                             {order.customerId.slice(0, 8)}...
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                          <td className="px-6 py-4 text-sm text-slate-600">
                             {order.orderItems.length} item(s)
                           </td>
-                          <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">
+                          <td className="px-6 py-4 text-sm font-medium text-slate-900">
                             {formatCurrency(order.transaction.totalAmount)}
                           </td>
                           <td className="px-6 py-4">
@@ -340,7 +340,7 @@ export default function StaffOrdersPage() {
                               {statusConfig[order.status].label}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
+                          <td className="px-6 py-4 text-sm text-slate-600">
                             {formatDate(order.createdAt)}
                           </td>
                           <td className="px-6 py-4">
@@ -348,6 +348,7 @@ export default function StaffOrdersPage() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleViewDetails(order.orderId)}
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
                             >
                               View Details
                             </Button>

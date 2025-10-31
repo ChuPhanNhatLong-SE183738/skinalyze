@@ -227,7 +227,7 @@ export function ProductFormModal({
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="sellingPrice" className="text-slate-700">
-                Price ($) *
+                Price (₫) *
               </Label>
               <Input
                 id="sellingPrice"
