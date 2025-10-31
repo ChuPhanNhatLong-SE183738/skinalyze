@@ -16,6 +16,7 @@ import {
 import { FirebaseService } from '../firebase/firebase.service';
 import { DeviceTokensService } from '../users/device-tokens.service';
 import { NotificationsGateway } from './notifications.gateway';
+import { Customer } from '../customers/entities/customer.entity';
 
 @Injectable()
 export class NotificationsService {
@@ -24,6 +25,8 @@ export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
+    @InjectRepository(Customer)
+    private customerRepository: Repository<Customer>,
     private firebaseService: FirebaseService,
     private deviceTokensService: DeviceTokensService,
     @Inject(forwardRef(() => NotificationsGateway))
@@ -33,9 +36,28 @@ export class NotificationsService {
   async create(
     createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
-    const notification = this.notificationRepository.create(
-      createNotificationDto,
-    );
+    // Check if userId is actually a customerId and convert it
+    let actualUserId = createNotificationDto.userId;
+    
+    if (actualUserId) {
+      // Try to find customer with this ID  
+      const customer = await this.customerRepository.findOne({
+        where: { customerId: actualUserId },
+        relations: ['user'],
+      });
+      
+      // If found as customer, use the customer's user.userId
+      if (customer?.user?.userId) {
+        this.logger.log(`Converting customerId ${actualUserId} to userId ${customer.user.userId}`);
+        actualUserId = customer.user.userId;
+      }
+    }
+    
+    const notification = this.notificationRepository.create({
+      ...createNotificationDto,
+      userId: actualUserId,
+    });
+    
     const savedNotification =
       await this.notificationRepository.save(notification);
 

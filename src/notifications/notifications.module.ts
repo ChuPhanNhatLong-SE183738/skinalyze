@@ -7,10 +7,11 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
 import { Notification } from './entities/notification.entity';
 import { UsersModule } from '../users/users.module';
+import { Customer } from '../customers/entities/customer.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification]),
+    TypeOrmModule.forFeature([Notification, Customer]),
     UsersModule, // Import để có DeviceTokensService
     JwtModule.registerAsync({
       imports: [ConfigModule],

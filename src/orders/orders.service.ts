@@ -99,6 +99,7 @@ export class OrdersService {
       where: { orderId: id },
       relations: [
         'customer',
+        'customer.user',
         'transaction',
         'orderItems',
         'orderItems.product',
@@ -118,6 +119,7 @@ export class OrdersService {
       where: { customerId },
       relations: [
         'customer',
+        'customer.user',
         'transaction',
         'orderItems',
         'orderItems.product',
@@ -157,21 +159,37 @@ export class OrdersService {
 
     const savedOrder = await this.orderRepository.save(order);
 
-    // 🔔 Gửi notification cho customer
-    if (order.customer?.user?.userId) {
-      await this.notificationsService.create({
-        userId: order.customer.user.userId,
-        type: NotificationType.ORDER,
-        title: '❌ Đơn hàng bị từ chối',
-        message: reason 
-          ? `Đơn hàng #${order.orderId.slice(0, 8)} đã bị từ chối. Lý do: ${reason}`
-          : `Đơn hàng #${order.orderId.slice(0, 8)} đã bị từ chối.`,
-        data: {
-          orderId: order.orderId,
-          status: order.status,
-          reason: reason,
-        },
-      });
+    // 🔔 Gửi notification cho customer  
+    // Check if customer has valid user before sending notification
+    const userId = order.customer?.user?.userId;
+    if (userId) {
+      try {
+        // Verify user exists before creating notification
+        const userExists = await this.usersService.findOne(userId);
+        
+        if (userExists) {
+          await this.notificationsService.create({
+            userId: userId,
+            type: NotificationType.ORDER,
+            title: '❌ Đơn hàng bị từ chối',
+            message: reason 
+              ? `Đơn hàng #${order.orderId.slice(0, 8)} đã bị từ chối. Lý do: ${reason}`
+              : `Đơn hàng #${order.orderId.slice(0, 8)} đã bị từ chối.`,
+            data: {
+              orderId: order.orderId,
+              status: order.status,
+              reason: reason,
+            },
+          });
+        } else {
+          console.warn(`User ${userId} not found for order ${order.orderId}, skipping notification`);
+        }
+      } catch (error) {
+        // Log error but don't fail the order rejection
+        console.error('Failed to send rejection notification:', error.message);
+      }
+    } else {
+      console.warn(`No valid user found for order ${order.orderId}, skipping notification`);
     }
 
     return savedOrder;
@@ -191,18 +209,31 @@ export class OrdersService {
     const savedOrder = await this.orderRepository.save(order);
 
     // 🔔 Gửi notification cho customer
-    if (order.customer?.user?.userId) {
-      await this.notificationsService.create({
-        userId: order.customer.user.userId,
-        type: NotificationType.ORDER,
-        title: '✅ Đơn hàng đã được xác nhận',
-        message: `Đơn hàng #${order.orderId.slice(0, 8)} đã được xác nhận và đang được chuẩn bị. Chúng tôi sẽ giao hàng sớm nhất có thể!`,
-        data: {
-          orderId: order.orderId,
-          status: order.status,
-          totalAmount: order.transaction?.totalAmount,
-        },
-      });
+    const userId = order.customer?.user?.userId;
+    if (userId) {
+      try {
+        const userExists = await this.usersService.findOne(userId);
+        
+        if (userExists) {
+          await this.notificationsService.create({
+            userId: userId,
+            type: NotificationType.ORDER,
+            title: '✅ Đơn hàng đã được xác nhận',
+            message: `Đơn hàng #${order.orderId.slice(0, 8)} đã được xác nhận và đang được chuẩn bị. Chúng tôi sẽ giao hàng sớm nhất có thể!`,
+            data: {
+              orderId: order.orderId,
+              status: order.status,
+              totalAmount: order.transaction?.totalAmount,
+            },
+          });
+        } else {
+          console.warn(`User ${userId} not found for order ${order.orderId}, skipping notification`);
+        }
+      } catch (error) {
+        console.error('Failed to send confirmation notification:', error.message);
+      }
+    } else {
+      console.warn(`No valid user found for order ${order.orderId}, skipping notification`);
     }
 
     return savedOrder;
