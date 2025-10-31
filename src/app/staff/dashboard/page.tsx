@@ -19,20 +19,20 @@ export default function StaffDashboardPage() {
         const { authenticated, user: userData } = await authService.checkAuth();
 
         if (!authenticated || !userData) {
-          router.push("/staff/login");
+          router.push("/login");
           return;
         }
 
         // Check if user is staff
         if (userData.role !== "staff" && userData.role !== "admin") {
-          router.push("/staff/login");
+          router.push("/login");
           return;
         }
 
         setUser(userData);
       } catch (error) {
         // Redirect to login if validation fails
-        router.push("/staff/login");
+        router.push("/login");
       }
     };
 

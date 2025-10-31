@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { StaffLayout } from "@/components/layout/StaffLayout";
+import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,41 +25,41 @@ const statusConfig = {
   PENDING: {
     label: "Pending",
     icon: Clock,
-    color: "text-yellow-600 bg-yellow-50 dark:bg-yellow-950/30",
+    color: "text-yellow-400 bg-yellow-500/20 border-yellow-500/30",
   },
   CONFIRMED: {
     label: "Confirmed",
     icon: CheckCircle,
-    color: "text-blue-600 bg-blue-50 dark:bg-blue-950/30",
+    color: "text-blue-400 bg-blue-500/20 border-blue-500/30",
   },
   PROCESSING: {
     label: "Processing",
     icon: Package,
-    color: "text-purple-600 bg-purple-50 dark:bg-purple-950/30",
+    color: "text-purple-400 bg-purple-500/20 border-purple-500/30",
   },
   SHIPPED: {
     label: "Shipped",
     icon: Truck,
-    color: "text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30",
+    color: "text-indigo-400 bg-indigo-500/20 border-indigo-500/30",
   },
   DELIVERED: {
     label: "Delivered",
     icon: CheckCircle,
-    color: "text-green-600 bg-green-50 dark:bg-green-950/30",
+    color: "text-green-400 bg-green-500/20 border-green-500/30",
   },
   CANCELLED: {
     label: "Cancelled",
     icon: XCircle,
-    color: "text-gray-600 bg-gray-50 dark:bg-gray-950/30",
+    color: "text-gray-400 bg-gray-500/20 border-gray-500/30",
   },
   REJECTED: {
     label: "Rejected",
     icon: AlertCircle,
-    color: "text-red-600 bg-red-50 dark:bg-red-950/30",
+    color: "text-red-400 bg-red-500/20 border-red-500/30",
   },
 };
 
-export default function StaffOrdersPage() {
+export default function AdminOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
@@ -80,7 +80,7 @@ export default function StaffOrdersPage() {
           return;
         }
 
-        if (user.role !== "staff" && user.role !== "admin") {
+        if (user.role !== "admin") {
           router.push("/login");
           return;
         }
@@ -161,72 +161,82 @@ export default function StaffOrdersPage() {
 
   if (isLoading) {
     return (
-      <StaffLayout>
+      <AdminLayout>
         <div className="flex h-full items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-slate-900" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-amber-500" />
         </div>
-      </StaffLayout>
+      </AdminLayout>
     );
   }
 
   return (
-    <StaffLayout>
+    <AdminLayout>
       <div className="p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-3xl font-bold text-slate-900">
             Orders Management
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            View and manage all customer orders
+          <p className="text-slate-600 mt-1">
+            View and manage all customer orders across the platform
           </p>
         </div>
 
         {/* Stats Cards */}
         <div className="mb-6 grid gap-6 md:grid-cols-4">
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-slate-700">
                 Total Orders
               </CardTitle>
-              <Package className="h-4 w-4 text-slate-500" />
+              <Package className="h-4 w-4 text-slate-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{orders.length}</div>
+              <div className="text-2xl font-bold text-slate-900">{orders.length}</div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-700">
+                Pending
+              </CardTitle>
               <Clock className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-yellow-600">
                 {orders.filter((o) => o.status === "PENDING").length}
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
-              <CheckCircle className="h-4 w-4 text-blue-500" />
+              <CardTitle className="text-sm font-medium text-slate-700">
+                Processing
+              </CardTitle>
+              <Package className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {orders.filter((o) => o.status === "CONFIRMED").length}
+              <div className="text-2xl font-bold text-blue-600">
+                {
+                  orders.filter(
+                    (o) => o.status === "CONFIRMED" || o.status === "PROCESSING"
+                  ).length
+                }
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-700">
+                Completed
+              </CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-green-600">
                 {orders.filter((o) => o.status === "DELIVERED").length}
               </div>
             </CardContent>
@@ -234,27 +244,27 @@ export default function StaffOrdersPage() {
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card className="mb-6 bg-white border-slate-200">
           <CardContent className="pt-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center">
               {/* Search */}
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
                 <Input
-                  placeholder="Search by order ID, customer ID, or address..."
+                  placeholder="Search by order ID, customer, or address..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 focus:border-amber-500"
                 />
               </div>
 
               {/* Status Filter */}
               <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-slate-500" />
+                <Filter className="h-4 w-4 text-slate-600" />
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none"
                 >
                   <option value="ALL">All Status</option>
                   <option value="PENDING">Pending</option>
@@ -271,83 +281,86 @@ export default function StaffOrdersPage() {
         </Card>
 
         {/* Orders Table */}
-        <Card>
+        <Card className="bg-white border-slate-200">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+                <thead className="border-b border-slate-200 bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Order ID
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Customer
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                      Items
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                      Total
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                      Total
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                <tbody className="divide-y divide-slate-200 bg-white">
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center">
-                        <Package className="mx-auto h-12 w-12 text-slate-400" />
-                        <p className="mt-2 text-sm text-slate-500">
-                          No orders found
-                        </p>
+                      <td
+                        colSpan={6}
+                        className="px-6 py-12 text-center text-slate-600"
+                      >
+                        No orders found
                       </td>
                     </tr>
                   ) : (
                     filteredOrders.map((order) => {
-                      const StatusIcon = statusConfig[order.status].icon;
+                      const status = statusConfig[order.status];
+                      const StatusIcon = status.icon;
+
                       return (
                         <tr
                           key={order.orderId}
-                          className="hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                          className="hover:bg-slate-50 transition-colors"
                         >
-                          <td className="px-6 py-4 text-sm font-mono text-slate-900 dark:text-slate-100">
-                            {order.orderId.slice(0, 8)}...
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {order.customerId.slice(0, 8)}...
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {order.orderItems.length} item(s)
-                          </td>
-                          <td className="px-6 py-4 text-sm font-medium text-slate-900 dark:text-slate-100">
-                            {formatCurrency(order.transaction.totalAmount)}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                statusConfig[order.status].color
-                              }`}
-                            >
-                              <StatusIcon className="h-3 w-3" />
-                              {statusConfig[order.status].label}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-medium text-slate-900">
+                              {order.orderId}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400">
-                            {formatDate(order.createdAt)}
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-slate-700">
+                              {order.customerId}
+                            </span>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-slate-600">
+                              {formatDate(order.createdAt)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-medium text-slate-900">
+                              {formatCurrency(order.transaction.totalAmount)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${status.color}`}
+                            >
+                              <StatusIcon className="h-3 w-3" />
+                              {status.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <Button
-                              variant="ghost"
                               size="sm"
+                              variant="ghost"
                               onClick={() => handleViewDetails(order.orderId)}
+                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                             >
                               View Details
                             </Button>
@@ -361,15 +374,22 @@ export default function StaffOrdersPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Order Detail Modal */}
+      {/* Order Detail Modal */}
+      {selectedOrderId && (
         <OrderDetailModal
           orderId={selectedOrderId}
           open={isModalOpen}
-          onOpenChange={setIsModalOpen}
+          onOpenChange={(open) => {
+            setIsModalOpen(open);
+            if (!open) {
+              setSelectedOrderId(null);
+            }
+          }}
           onOrderUpdated={handleOrderUpdated}
         />
-      </div>
-    </StaffLayout>
+      )}
+    </AdminLayout>
   );
 }

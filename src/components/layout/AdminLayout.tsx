@@ -2,14 +2,14 @@
 
 import { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Sidebar } from "./Sidebar";
+import { AdminSidebar } from "./AdminSidebar";
 import { authService } from "@/services/authService";
 
-interface StaffLayoutProps {
+interface AdminLayoutProps {
   children: ReactNode;
 }
 
-export function StaffLayout({ children }: StaffLayoutProps) {
+export function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -18,8 +18,8 @@ export function StaffLayout({ children }: StaffLayoutProps) {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950">
-      <Sidebar onLogout={handleLogout} />
+    <div className="flex h-screen bg-slate-50">
+      <AdminSidebar onLogout={handleLogout} />
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   );

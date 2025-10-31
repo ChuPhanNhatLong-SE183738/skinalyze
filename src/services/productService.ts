@@ -1,0 +1,168 @@
+import { apiClient } from "@/lib/api";
+import type {
+  Product,
+  ProductsResponse,
+  CreateProductRequest,
+  UpdateProductRequest,
+} from "@/types/product";
+
+export class ProductService {
+  /**
+   * Get all products
+   * @param page - Page number for pagination
+   * @param limit - Number of items per page
+   */
+  async getProducts(page = 1, limit = 10): Promise<ProductsResponse> {
+    try {
+      const response = await fetch(
+        `/api/products?page=${page}&limit=${limit}`,
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to fetch products");
+      }
+
+      const result = await response.json();
+      
+      // Handle backend response format: { data: [...], message, statusCode }
+      if (result.data && Array.isArray(result.data)) {
+        return {
+          products: result.data,
+          total: result.data.length,
+          page: page,
+          limit: limit
+        };
+      }
+      
+      // Fallback to direct products array if already in expected format
+      return result;
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to fetch products");
+    }
+  }
+
+  /**
+   * Get a single product by ID
+   */
+  async getProduct(productId: string): Promise<Product> {
+    try {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to fetch product");
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to fetch product");
+    }
+  }
+
+  /**
+   * Create a new product
+   */
+  async createProduct(data: CreateProductRequest): Promise<Product> {
+    try {
+      const response = await fetch("/api/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create product");
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to create product");
+    }
+  }
+
+  /**
+   * Update an existing product
+   */
+  async updateProduct(
+    productId: string,
+    data: Partial<CreateProductRequest>
+  ): Promise<Product> {
+    try {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update product");
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to update product");
+    }
+  }
+
+  /**
+   * Delete a product
+   */
+  async deleteProduct(productId: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/products/${productId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete product");
+      }
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to delete product");
+    }
+  }
+
+  /**
+   * Update product stock
+   */
+  async updateStock(productId: string, stock: number): Promise<Product> {
+    try {
+      const response = await fetch(`/api/products/${productId}/stock`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ stock }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update stock");
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to update stock");
+    }
+  }
+}
+
+export const productService = new ProductService();

@@ -12,10 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Eye, EyeOff, ShieldCheck, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
 import { authService } from "@/services/authService";
 
-export default function StaffLoginPage() {
+export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -32,15 +32,21 @@ export default function StaffLoginPage() {
       // Login using authService (returns user data)
       const user = await authService.login({ email, password });
 
-      // Validate staff access
-      if (user.role !== "staff" && user.role !== "admin") {
-        setError("Access denied. Staff credentials required.");
-        setIsLoading(false);
-        return;
+      // Role-based redirect
+      switch (user.role) {
+        case "admin":
+          router.push("/admin/dashboard");
+          break;
+        case "staff":
+          router.push("/staff/dashboard");
+          break;
+        case "customer":
+          router.push("/");
+          break;
+        default:
+          setError("Invalid user role");
+          setIsLoading(false);
       }
-
-      // Redirect to staff dashboard
-      router.push("/staff/dashboard");
     } catch (err: any) {
       setError(err.message || "An error occurred during login");
       setIsLoading(false);
@@ -48,34 +54,36 @@ export default function StaffLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 p-4">
       <div className="w-full max-w-md">
         {/* Logo/Brand Section */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-900 dark:bg-slate-100 mb-4">
-            <ShieldCheck className="w-8 h-8 text-white dark:text-slate-900" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 mb-4 shadow-lg">
+            <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-3xl font-bold text-slate-900">
             Skinalyze
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
-            Staff Portal
+          <p className="text-slate-600 mt-1">
+            Welcome back
           </p>
         </div>
 
         {/* Login Card */}
-        <Card className="border-slate-200 dark:border-slate-800">
+        <Card className="border-slate-200 bg-white shadow-xl">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-            <CardDescription>
-              Enter your credentials to access the staff portal
+            <CardTitle className="text-2xl font-bold text-slate-900">
+              Sign in to your account
+            </CardTitle>
+            <CardDescription className="text-slate-600">
+              Enter your credentials to access your dashboard
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Error Message */}
               {error && (
-                <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-md">
+                <div className="flex items-center gap-2 p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -83,26 +91,30 @@ export default function StaffLoginPage() {
 
               {/* Email Field */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-slate-700 font-medium">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="staff@skinalyze.com"
+                  placeholder="your.email@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="transition-all"
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-amber-500"
                 />
               </div>
 
               {/* Password Field */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-slate-700 font-medium">
+                    Password
+                  </Label>
                   <button
                     type="button"
-                    className="text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
+                    className="text-xs text-slate-600 hover:text-amber-600 transition-colors font-medium"
                   >
                     Forgot password?
                   </button>
@@ -116,12 +128,12 @@ export default function StaffLoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="pr-10"
+                    className="pr-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-amber-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     disabled={isLoading}
                   >
                     {showPassword ? (
@@ -138,12 +150,12 @@ export default function StaffLoginPage() {
                 <input
                   type="checkbox"
                   id="remember"
-                  className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-2 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-2 focus:ring-amber-500 focus:ring-offset-0"
                   disabled={isLoading}
                 />
                 <Label
                   htmlFor="remember"
-                  className="text-sm font-normal cursor-pointer"
+                  className="text-sm font-normal cursor-pointer text-slate-600"
                 >
                   Remember me for 30 days
                 </Label>
@@ -152,33 +164,35 @@ export default function StaffLoginPage() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900"
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium shadow-lg hover:shadow-xl transition-all"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Signing in...
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    <span>Signing in...</span>
                   </div>
                 ) : (
                   "Sign in"
                 )}
               </Button>
             </form>
-
-            {/* Footer Note */}
-            <div className="mt-6 text-center">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Protected by Skinalyze Security
-              </p>
-            </div>
           </CardContent>
         </Card>
 
-        {/* Additional Info */}
-        <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-6">
-          Having trouble signing in? Contact your administrator
-        </p>
+        {/* Footer */}
+        <div className="mt-8 text-center text-xs text-slate-500">
+          <p>
+            By signing in, you agree to our{" "}
+            <a href="#" className="text-amber-600 hover:text-amber-700 hover:underline">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="#" className="text-amber-600 hover:text-amber-700 hover:underline">
+              Privacy Policy
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );
