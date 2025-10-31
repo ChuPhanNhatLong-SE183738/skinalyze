@@ -1,49 +1,44 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, Column, PrimaryColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
-import { DiseaseGroup } from 'src/disease-groups/entities/disease-group.entity';
+import { DiseaseGroup } from '../../disease-groups/entities/disease-group.entity';
 
 @Entity('skin_analysis')
 export class SkinAnalysis {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn()
   analysisId: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  source: string;
+  @Column()
+  customerId: string;
 
-  @Column({ type: 'text', nullable: true })
-  chiefComplaint: string;
-
-  @Column({ type: 'text', nullable: true })
-  patientSymptoms: string;
+  @Column()
+  diseaseGroupId: string;
 
   @Column({
-    type: 'json',
-    nullable: true,
+    type: 'enum',
+    enum: ['AI_SCAN', 'MANUAL'],
   })
+  source: string;
+
+  @Column({ type: 'text' })
+  chiefComplaint: string;
+
+  @Column({ type: 'text' })
+  patientSymptoms: string;
+
+  @Column('simple-array')
   imageUrls: string[];
 
   @Column({ type: 'text', nullable: true })
   notes: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ nullable: true })
   aiDetectedDisease: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ nullable: true })
   aiDetectedCondition: string;
 
-  @Column({
-    type: 'json',
-    nullable: true,
-  })
-  aiRecommendedProducts: string[];
+  @Column('simple-json', { nullable: true })
+  aiRecommendedProducts: any[];
 
   @CreateDateColumn()
   createdAt: Date;
@@ -51,11 +46,12 @@ export class SkinAnalysis {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @ManyToOne(() => Customer, (customer) => customer.skinAnalysis)
+  // Relations
+  @ManyToOne(() => Customer, (customer) => customer.skinAnalyses)
   @JoinColumn({ name: 'customerId' })
   customer: Customer;
 
-  @ManyToOne(() => DiseaseGroup, (group) => group.skinAnalysis)
+  @ManyToOne(() => DiseaseGroup, (diseaseGroup) => diseaseGroup.skinAnalyses)
   @JoinColumn({ name: 'diseaseGroupId' })
   diseaseGroup: DiseaseGroup;
 }

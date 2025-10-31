@@ -58,5 +58,5 @@ export class Customer {
   appointments: Appointment[];
 
   @OneToMany(() => SkinAnalysis, (analysis) => analysis.customer)
-  skinAnalysis: SkinAnalysis[];
+  skinAnalyses: SkinAnalysis[];
 }

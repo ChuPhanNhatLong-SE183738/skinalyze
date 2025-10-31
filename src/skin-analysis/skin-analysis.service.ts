@@ -1,98 +1,75 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SkinAnalysis } from './entities/skin-analysis.entity';
 import { CreateSkinAnalysisDto } from './dto/create-skin-analysis.dto';
-import { UpdateSkinAnalysisDto } from './dto/update-skin-analysis.dto';
-import { Customer } from '../customers/entities/customer.entity';
+import axios from 'axios';
+import * as FormData from 'form-data';
 
 @Injectable()
 export class SkinAnalysisService {
+  private readonly aiServiceUrl: string;
+
   constructor(
     @InjectRepository(SkinAnalysis)
-    private readonly skinAnalysisRepository: Repository<SkinAnalysis>,
-  ) {}
-
-  async create(createDto: CreateSkinAnalysisDto): Promise<SkinAnalysis> {
-    const { customerId, imageUrls, aiRecommendedProducts, ...rest } = createDto;
-
-    const analysis = this.skinAnalysisRepository.create({
-      ...rest,
-      imageUrls: imageUrls ?? [],
-      aiRecommendedProducts: aiRecommendedProducts ?? [],
-    });
-
-    analysis.customer = { customerId } as Customer;
-    return await this.skinAnalysisRepository.save(analysis);
+    private skinAnalysisRepository: Repository<SkinAnalysis>,
+    private configService: ConfigService,
+  ) {
+    this.aiServiceUrl = this.configService.get<string>('AI_SERVICE_URL') || 'http://localhost:8000';
   }
 
-  async findAll(): Promise<SkinAnalysis[]> {
-    return await this.skinAnalysisRepository.find({
-      relations: ['customer'],
-      order: { createdAt: 'DESC' },
-    });
-  }
+  async classifyImage(file: Express.Multer.File) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file.buffer, {
+        filename: file.originalname,
+        contentType: file.mimetype,
+      });
 
-  async findOne(id: string): Promise<SkinAnalysis> {
-    const analysis = await this.skinAnalysisRepository.findOne({
-      where: { analysisId: id },
-      relations: ['customer'],
-    });
+      const response = await axios.post(
+        `${this.aiServiceUrl}/api/classify`,
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+          },
+        },
+      );
 
-    if (!analysis) {
-      throw new NotFoundException(`Skin analysis with ID ${id} not found`);
+      return response.data;
+    } catch (error) {
+      throw new HttpException(
+        error.response?.data?.message || 'Error calling AI classification service',
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
-
-    return analysis;
   }
 
-  async findByCustomerId(customerId: string): Promise<SkinAnalysis[]> {
-    return await this.skinAnalysisRepository.find({
-      where: { customer: { customerId } },
-      relations: ['customer'],
-      order: { createdAt: 'DESC' },
-    });
-  }
+  async segmentImage(file: Express.Multer.File) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file.buffer, {
+        filename: file.originalname,
+        contentType: file.mimetype,
+      });
 
-  async update(
-    id: string,
-    updateDto: UpdateSkinAnalysisDto,
-  ): Promise<SkinAnalysis> {
-    const analysis = await this.findOne(id);
-    Object.assign(analysis, updateDto);
+      const response = await axios.post(
+        `${this.aiServiceUrl}/api/segment`,
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+          },
+        },
+      );
 
-    return await this.skinAnalysisRepository.save(analysis);
-  }
-
-  async remove(id: string): Promise<void> {
-    const analysis = await this.findOne(id);
-    await this.skinAnalysisRepository.remove(analysis);
-  }
-
-  async getLatestByCustomerId(
-    customerId: string,
-  ): Promise<SkinAnalysis | null> {
-    return await this.skinAnalysisRepository.findOne({
-      where: { customer: { customerId } },
-      relations: ['customer'],
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  async getAnalysisByDateRange(
-    customerId: string,
-    startDate: Date,
-    endDate: Date,
-  ): Promise<SkinAnalysis[]> {
-    return await this.skinAnalysisRepository
-      .createQueryBuilder('analysis')
-      .leftJoinAndSelect('analysis.customer', 'customer')
-      .where('analysis.customerId = :customerId', { customerId })
-      .andWhere('analysis.createdAt BETWEEN :startDate AND :endDate', {
-        startDate,
-        endDate,
-      })
-      .orderBy('analysis.createdAt', 'DESC')
-      .getMany();
+      return response.data;
+    } catch (error) {
+      throw new HttpException(
+        error.response?.data?.message || 'Error calling AI segmentation service',
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

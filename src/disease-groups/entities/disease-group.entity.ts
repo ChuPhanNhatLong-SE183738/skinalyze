@@ -24,7 +24,7 @@ export class DiseaseGroup {
   diseases: Disease[];
 
   @OneToMany(() => SkinAnalysis, (skinAnalysis) => skinAnalysis.diseaseGroup)
-  skinAnalysis: SkinAnalysis[];
+  skinAnalyses: SkinAnalysis[];
 
   @CreateDateColumn()
   createdAt: Date;
