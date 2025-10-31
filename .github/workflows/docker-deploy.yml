@@ -69,6 +69,9 @@ jobs:
             docker --version
             docker-compose --version
             
+            echo "⏹️  Stopping existing containers..."
+            docker-compose down
+            
             echo "🔨 Building new app image..."
             docker-compose build --no-cache app
             
@@ -76,25 +79,15 @@ jobs:
             docker-compose up -d
             
             echo "⏳ Waiting for services to start..."
-            sleep 10
+            sleep 20
             
             echo "🏥 Checking service health..."
-            docker-compose -f docker-compose.prod.yml ps
+            docker-compose ps
             
             echo "📋 Showing recent logs..."
-            docker-compose -f docker-compose.prod.yml logs --tail=50 app
+            docker-compose logs --tail=50 app
             
             echo "✅ Deployment complete!"
-            echo "🚀 Starting new containers..."
-            docker-compose -f docker-compose.prod.yml up -d
-            
-            echo "⏳ Waiting for services to be ready..."
-            sleep 15
-            
-            echo "🔍 Checking container status..."
-            docker-compose -f docker-compose.prod.yml ps
-            
-            echo "✅ Deployment completed!"
 
       - name: 🏥 Health Check
         id: health_check
