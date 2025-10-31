@@ -85,11 +85,15 @@ export class OrderService {
   /**
    * Confirm order
    */
-  async confirmOrder(orderId: string): Promise<any> {
+  async confirmOrder(orderId: string, processedBy: string, note?: string): Promise<any> {
     try {
       const response = await fetch(`/api/orders/${orderId}/confirm`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         credentials: "include",
+        body: JSON.stringify({ processedBy, note }),
       });
 
       if (!response.ok) {
@@ -106,7 +110,7 @@ export class OrderService {
   /**
    * Cancel order
    */
-  async cancelOrder(orderId: string, reason: string): Promise<any> {
+  async cancelOrder(orderId: string, reason: string, cancelledBy?: string): Promise<any> {
     try {
       const response = await fetch(`/api/orders/${orderId}/cancel`, {
         method: "POST",
@@ -114,7 +118,7 @@ export class OrderService {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ reason }),
+        body: JSON.stringify({ reason, cancelledBy }),
       });
 
       if (!response.ok) {

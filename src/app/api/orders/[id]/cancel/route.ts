@@ -18,7 +18,7 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { reason } = body;
+    const { reason, cancelledBy } = body;
 
     if (!reason) {
       return NextResponse.json(
@@ -34,7 +34,7 @@ export async function POST(
         Authorization: `Bearer ${token.value}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason, cancelledBy }),
     });
 
     const result = await response.json();

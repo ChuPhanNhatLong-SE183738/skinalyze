@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { orderService } from "@/services/orderService";
+import { authService } from "@/services/authService";
 import {
   Package,
   User,
@@ -81,7 +82,10 @@ export function OrderDetailModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [customReason, setCustomReason] = useState("");
+  const [confirmNote, setConfirmNote] = useState("");
   const [error, setError] = useState("");
 
   // Load order details when modal opens
@@ -111,9 +115,17 @@ export function OrderDetailModal({
 
     try {
       setIsProcessing(true);
-      await orderService.confirmOrder(orderId);
+      const user = authService.getUserFromCookie();
+      if (!user) {
+        setError("User not authenticated");
+        return;
+      }
+      
+      await orderService.confirmOrder(orderId, user.userId, confirmNote || undefined);
       onOrderUpdated();
       onOpenChange(false);
+      setShowConfirmDialog(false);
+      setConfirmNote("");
     } catch (err: any) {
       setError(err.message || "Failed to confirm order");
     } finally {
@@ -122,18 +134,25 @@ export function OrderDetailModal({
   };
 
   const handleCancel = async () => {
-    if (!orderId || !cancelReason.trim()) {
+    if (!orderId) return;
+
+    const finalReason = cancelReason === "custom" ? customReason : cancelReason;
+    
+    if (!finalReason.trim()) {
       setError("Please provide a reason for cancellation");
       return;
     }
 
     try {
       setIsProcessing(true);
-      await orderService.cancelOrder(orderId, cancelReason);
+      const user = authService.getUserFromCookie();
+      
+      await orderService.cancelOrder(orderId, finalReason, user?.userId);
       onOrderUpdated();
       onOpenChange(false);
       setShowCancelDialog(false);
       setCancelReason("");
+      setCustomReason("");
     } catch (err: any) {
       setError(err.message || "Failed to cancel order");
     } finally {
@@ -164,7 +183,7 @@ export function OrderDetailModal({
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Order</DialogTitle>
+            <DialogTitle>❌ Cancel Order</DialogTitle>
             <DialogDescription>
               Please provide a reason for cancelling this order. This will be
               shared with the customer.
@@ -180,16 +199,41 @@ export function OrderDetailModal({
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="reason">Cancellation Reason *</Label>
-              <Textarea
-                id="reason"
-                placeholder="e.g., Out of stock, Customer request, Invalid address..."
+              <Label htmlFor="reason-select">Select Reason *</Label>
+              <select
+                id="reason-select"
+                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-slate-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950"
                 value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                rows={4}
+                onChange={(e) => {
+                  setCancelReason(e.target.value);
+                  if (e.target.value !== "custom") {
+                    setCustomReason("");
+                  }
+                }}
                 disabled={isProcessing}
-              />
+              >
+                <option value="">-- Select a reason --</option>
+                <option value="Sản phẩm tạm hết hàng">Sản phẩm tạm hết hàng</option>
+                <option value="Khách hàng yêu cầu hủy">Khách hàng yêu cầu hủy</option>
+                <option value="Địa chỉ giao hàng không hợp lệ">Địa chỉ giao hàng không hợp lệ</option>
+                <option value="Không thể xác nhận thanh toán">Không thể xác nhận thanh toán</option>
+                <option value="custom">Other reason...</option>
+              </select>
             </div>
+
+            {cancelReason === "custom" && (
+              <div className="space-y-2">
+                <Label htmlFor="custom-reason">Custom Reason *</Label>
+                <Textarea
+                  id="custom-reason"
+                  placeholder="Enter your reason..."
+                  value={customReason}
+                  onChange={(e) => setCustomReason(e.target.value)}
+                  rows={4}
+                  disabled={isProcessing}
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -198,6 +242,7 @@ export function OrderDetailModal({
               onClick={() => {
                 setShowCancelDialog(false);
                 setCancelReason("");
+                setCustomReason("");
                 setError("");
               }}
               disabled={isProcessing}
@@ -207,9 +252,71 @@ export function OrderDetailModal({
             <Button
               variant="destructive"
               onClick={handleCancel}
-              disabled={isProcessing || !cancelReason.trim()}
+              disabled={isProcessing || !cancelReason || (cancelReason === "custom" && !customReason.trim())}
             >
               {isProcessing ? "Cancelling..." : "Cancel Order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show confirm dialog
+  if (showConfirmDialog) {
+    return (
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>✅ Confirm Order</DialogTitle>
+            <DialogDescription>
+              {orderId && `Confirm order #${orderId.slice(0, 8)}...`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {error && (
+              <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950/30">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-note">Note (Optional)</Label>
+              <Textarea
+                id="confirm-note"
+                placeholder="e.g., Đã kiểm tra hàng, sẵn sàng giao..."
+                value={confirmNote}
+                onChange={(e) => setConfirmNote(e.target.value)}
+                rows={4}
+                disabled={isProcessing}
+              />
+              <p className="text-xs text-slate-500">
+                Add any notes about the order confirmation
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowConfirmDialog(false);
+                setConfirmNote("");
+                setError("");
+              }}
+              disabled={isProcessing}
+            >
+              Back
+            </Button>
+            <Button
+              onClick={handleConfirm}
+              disabled={isProcessing}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              {isProcessing ? "Confirming..." : "Confirm Order"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -423,19 +530,25 @@ export function OrderDetailModal({
             <>
               <Button
                 variant="destructive"
-                onClick={() => setShowCancelDialog(true)}
+                onClick={() => {
+                  setShowCancelDialog(true);
+                  setError("");
+                }}
                 disabled={isProcessing}
               >
                 <XCircle className="mr-2 h-4 w-4" />
                 Cancel Order
               </Button>
               <Button
-                onClick={handleConfirm}
+                onClick={() => {
+                  setShowConfirmDialog(true);
+                  setError("");
+                }}
                 disabled={isProcessing}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <CheckCircle className="mr-2 h-4 w-4" />
-                {isProcessing ? "Confirming..." : "Confirm Order"}
+                Confirm Order
               </Button>
             </>
           )}

@@ -17,6 +17,15 @@ export async function POST(
     }
 
     const { id } = await params;
+    const body = await request.json();
+    const { processedBy, note } = body;
+
+    if (!processedBy) {
+      return NextResponse.json(
+        { error: "processedBy is required" },
+        { status: 400 }
+      );
+    }
 
     // Call backend API with token
     const response = await fetch(`${API_BASE_URL}/orders/${id}/confirm`, {
@@ -25,6 +34,7 @@ export async function POST(
         Authorization: `Bearer ${token.value}`,
         "Content-Type": "application/json",
       },
+      body: JSON.stringify({ processedBy, note }),
     });
 
     const result = await response.json();
