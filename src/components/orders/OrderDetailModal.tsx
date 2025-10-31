@@ -15,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { orderService } from "@/services/orderService";
 import { authService } from "@/services/authService";
 import { userService } from "@/services/userService";
+import { notificationService } from "@/services/notificationService";
+import { NotificationType, NotificationPriority } from "@/types/notification";
 import {
   Package,
   User,
@@ -134,7 +136,7 @@ export function OrderDetailModal({
   };
 
   const handleConfirm = async () => {
-    if (!orderId) return;
+    if (!orderId || !order) return;
 
     try {
       setIsProcessing(true);
@@ -144,7 +146,29 @@ export function OrderDetailModal({
         return;
       }
       
+      // Confirm the order
       await orderService.confirmOrder(orderId, user.userId, confirmNote || undefined);
+      
+      // Send notification to customer
+      try {
+        await notificationService.sendToUser({
+          userId: order.customerId,
+          type: NotificationType.ORDER,
+          title: "✅ Đơn hàng đã được xác nhận",
+          message: `Đơn hàng #${orderId.slice(0, 8)} đã được xác nhận và đang được chuẩn bị. ${confirmNote ? `Ghi chú: ${confirmNote}` : ""}`,
+          data: {
+            orderId: orderId,
+            status: "CONFIRMED",
+            note: confirmNote,
+          },
+          actionUrl: `/orders/${orderId}`,
+          priority: NotificationPriority.HIGH,
+        });
+      } catch (notifError) {
+        console.error("Failed to send notification:", notifError);
+        // Don't block the flow if notification fails
+      }
+      
       onOrderUpdated();
       onOpenChange(false);
       setShowConfirmDialog(false);
@@ -157,7 +181,7 @@ export function OrderDetailModal({
   };
 
   const handleCancel = async () => {
-    if (!orderId) return;
+    if (!orderId || !order) return;
 
     const finalReason = cancelReason === "custom" ? customReason : cancelReason;
     
@@ -170,7 +194,29 @@ export function OrderDetailModal({
       setIsProcessing(true);
       const user = authService.getUserFromCookie();
       
+      // Cancel the order
       await orderService.cancelOrder(orderId, finalReason, user?.userId);
+      
+      // Send notification to customer
+      try {
+        await notificationService.sendToUser({
+          userId: order.customerId,
+          type: NotificationType.ORDER,
+          title: "❌ Đơn hàng bị từ chối",
+          message: `Đơn hàng #${orderId.slice(0, 8)} đã bị từ chối. Lý do: ${finalReason}`,
+          data: {
+            orderId: orderId,
+            status: "REJECTED",
+            rejectionReason: finalReason,
+          },
+          actionUrl: `/orders/${orderId}`,
+          priority: NotificationPriority.HIGH,
+        });
+      } catch (notifError) {
+        console.error("Failed to send notification:", notifError);
+        // Don't block the flow if notification fails
+      }
+      
       onOrderUpdated();
       onOpenChange(false);
       setShowCancelDialog(false);

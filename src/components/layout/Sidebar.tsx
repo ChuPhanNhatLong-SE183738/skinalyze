@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   Warehouse,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
