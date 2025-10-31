@@ -15,9 +15,6 @@ import { ProductsModule } from './products/products.module';
 import { AddressModule } from './address/address.module';
 import { CategoriesModule } from './categories/categories.module';
 import { Category } from './categories/entities/category.entity';
-import { BatchesModule } from './batches/batches.module';
-import { Batch } from './batches/entities/batch.entity';
-import { BatchItem } from './batches/entities/batch-item.entity';
 import { InventoryModule } from './inventory/inventory.module';
 import { Inventory } from './inventory/entities/inventory.entity';
 import { CartModule } from './cart/cart.module';
@@ -76,8 +73,6 @@ import { DiseaseGroup } from './disease-groups/entities/disease-group.entity';
         Customer,
         Dermatologist,
         SkinAnalysis,
-        Batch,
-        BatchItem,
         Inventory,
         Order,
         OrderItem,
@@ -102,7 +97,6 @@ import { DiseaseGroup } from './disease-groups/entities/disease-group.entity';
     ProductsModule,
     AddressModule,
     CategoriesModule,
-    BatchesModule,
     InventoryModule,
     CartModule,
     CustomersModule,
