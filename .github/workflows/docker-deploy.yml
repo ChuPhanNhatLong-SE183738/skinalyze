@@ -1,0 +1,181 @@
+# GitHub Actions workflow for automatic deployment
+name: 🚀 Deploy to Digital Ocean
+
+on:
+  push:
+    branches:
+      - main
+      - be
+  pull_request:
+    branches:
+      - main
+      - be
+  workflow_dispatch:
+
+env:
+  DEPLOY_PATH: /root/skinalyze
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔔 Discord notification - Deployment started
+        uses: sarisia/actions-status-discord@v1
+        if: always()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          title: "🚀 Deployment Started"
+          description: |
+            **Branch:** `${{ github.ref_name }}`
+            **Commit:** `${{ github.event.head_commit.message }}`
+            **Author:** ${{ github.actor }}
+          color: 0xFFFF00
+          username: Con vk skinalyze
+          avatar_url: https://res.cloudinary.com/dh2sxkvuu/image/upload/v1761827397/tyrant_wpum0x.jpg
+
+      - name: 🔐 Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 🧪 Test SSH connection
+        run: |
+          ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "echo '✅ SSH connection successful'"
+
+      - name: 🚀 Deploy to Digital Ocean
+        id: deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script_stop: true
+          script: |
+            echo "📁 Navigating to project directory..."
+            cd /root/skinalyze
+            
+            echo "📥 Pulling latest code..."
+            git fetch origin
+            git reset --hard origin/${{ github.ref_name }}
+            
+            echo "🔍 Checking Docker..."
+            docker --version
+            docker-compose --version
+            
+            echo "� Building new app image..."
+            docker-compose -f docker-compose.prod.yml build --no-cache app
+            
+            echo "🚀 Starting services..."
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            echo "⏳ Waiting for services to start..."
+            sleep 10
+            
+            echo "🏥 Checking service health..."
+            docker-compose -f docker-compose.prod.yml ps
+            
+            echo "📋 Showing recent logs..."
+            docker-compose -f docker-compose.prod.yml logs --tail=50 app
+            
+            echo "✅ Deployment complete!"
+            echo "🚀 Starting new containers..."
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            echo "⏳ Waiting for services to be ready..."
+            sleep 15
+            
+            echo "🔍 Checking container status..."
+            docker-compose -f docker-compose.prod.yml ps
+            
+            echo "✅ Deployment completed!"
+
+      - name: 🏥 Health Check
+        id: health_check
+        run: |
+          echo "⏳ Waiting for application to be ready..."
+          sleep 30
+          
+          # Health check với retry
+          for i in {1..10}; do
+            if ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "curl -f -k https://api.nhatlonh.id.vn/api/v1 || curl -f http://localhost:3000/api/v1"; then
+              echo "✅ Health check passed!"
+              echo "health_status=success" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            echo "⏳ Attempt $i/10 failed, retrying in 10s..."
+            sleep 10
+          done
+          
+          echo "⚠️ Health check timeout - checking logs..."
+          ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "cd /root/skinalyze && docker-compose -f docker-compose.prod.yml logs --tail=100 app"
+          echo "health_status=failed" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: 📊 Get deployment info
+        id: deployment_info
+        if: always()
+        run: |
+          DEPLOY_TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          echo "deploy_time=$DEPLOY_TIME" >> $GITHUB_OUTPUT
+          
+          # Get container status
+          CONTAINER_STATUS=$(ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "cd /root/skinalyze && docker-compose -f docker-compose.prod.yml ps" || echo "Failed to get status")
+          echo "Container Status:"
+          echo "$CONTAINER_STATUS"
+
+      - name: 🎉 Discord notification - Deployment succeeded
+        uses: sarisia/actions-status-discord@v1
+        if: success()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: "Success"
+          title: "✅ Deployment Successful"
+          description: |
+            **Branch:** `${{ github.ref_name }}`
+            **Commit:** `${{ github.event.head_commit.message }}`
+            **Author:** ${{ github.actor }}
+            **Deploy Time:** ${{ steps.deployment_info.outputs.deploy_time }}
+            **Health Check:** ✅ Passed
+            
+            🔗 [View Commit](${{ github.event.head_commit.url }})
+            🌐 [API Swagger](https://api.nhatlonh.id.vn/api/docs)
+            🏥 [Health Check](https://api.nhatlonh.id.vn/health)
+            
+            <@&1385529547281403966>
+          color: 0x00FF00
+          username: Con vk skinalyze
+          avatar_url: https://res.cloudinary.com/dh2sxkvuu/image/upload/v1761827397/tyrant_wpum0x.jpg
+
+      - name: ❌ Discord notification - Deployment failed
+        uses: sarisia/actions-status-discord@v1
+        if: failure()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: "Failure"
+          title: "❌ Deployment Failed"
+          description: |
+            **Branch:** `${{ github.ref_name }}`
+            **Commit:** `${{ github.event.head_commit.message }}`
+            **Author:** ${{ github.actor }}
+            **Error:** Deployment or health check failed
+            
+            🔗 [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            📋 [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            
+            <@&1385529547281403966>
+          color: 0xFF0000
+          username: Con vk skinalyze
+          avatar_url: https://res.cloudinary.com/dh2sxkvuu/image/upload/v1761827397/tyrant_wpum0x.jpg
+
+      - name: 📝 Get deployment logs
+        if: failure()
+        run: |
+          echo "Getting logs from failed deployment..."
+          ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "cd ${{ env.DEPLOY_PATH }} && docker-compose -f docker-compose.prod.yml logs --tail=100"

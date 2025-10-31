@@ -4,7 +4,11 @@
 /build
 /service-account-key.json
 
-/database
+# Database
+/database/*.sql
+!/database/README-INVENTORY-DATA.md
+
+*.md
 # Logs
 logs
 *.log
@@ -48,6 +52,25 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Docker
+*.env
+!.env.example
+docker-compose.override.yml
+
+# SSL Certificates
+/ssl/*
+
+# Backups
+/backups/*
+*.sql.gz
+*.tar.gz
+
+# Mac
+.DS_Store
+
+# Windows
+Thumbs.db
+
 # Runtime data
 pids
 *.pid
@@ -56,3 +79,6 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Models
+/models

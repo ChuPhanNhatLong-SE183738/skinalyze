@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
+import { DiseaseGroup } from 'src/disease-groups/entities/disease-group.entity';
 
 @Entity('skin_analysis')
 export class SkinAnalysis {
@@ -54,7 +55,7 @@ export class SkinAnalysis {
   @JoinColumn({ name: 'customerId' })
   customer: Customer;
 
-  // @ManyToOne(() => DiseaseGroup, (group) => group.skinAnalysis)
-  // @JoinColumn({ name: 'diseaseGroupId' })
-  // diseaseGroup: DiseaseGroup;
+  @ManyToOne(() => DiseaseGroup, (group) => group.skinAnalysis)
+  @JoinColumn({ name: 'diseaseGroupId' })
+  diseaseGroup: DiseaseGroup;
 }

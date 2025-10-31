@@ -8,10 +8,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const serviceAccount = require('../service-account-key.json');
 
-  // Set global API prefix
-  app.setGlobalPrefix('api/v1');
-
-  // Enable CORS for HTTP and WebSocket
+  // Enable CORS for HTTP and WebSocket (before setting prefix)
   app.enableCors({
     origin: true, // Allow all origins in development
     credentials: true,
@@ -22,7 +19,11 @@ async function bootstrap() {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
-  // Swagger configuration
+  
+  // Set global API prefix (BEFORE Swagger setup so Swagger knows about it)
+  app.setGlobalPrefix('api/v1');
+
+  // Swagger configuration (AFTER setting global prefix)
   const config = new DocumentBuilder()
     .setTitle('Skinalyze API')
     .setDescription('The Skinalyze API documentation')
@@ -33,10 +34,15 @@ async function bootstrap() {
     .addTag('Batches')
     .addTag('Stock Movement')
     .addTag('Inventory')
+    .addTag('Diseases')
+    .addTag('Disease Groups')
+    .addTag('Google Meet')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api/docs', app, document, {
+    useGlobalPrefix: false, // Swagger at /api/docs, not /api/v1/api/docs
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -163,6 +163,31 @@ export class InventoryService {
     await this.inventoryRepository.save(inventory);
   }
 
+  /**
+   * 💳 Reduce stock directly (for paid orders without reservation)
+   * Dùng khi order đã thanh toán, trừ stock trực tiếp
+   */
+  async reduceStock(productId: string, quantity: number): Promise<void> {
+    const inventory = await this.inventoryRepository.findOne({
+      where: { productId },
+    });
+
+    if (!inventory) {
+      throw new NotFoundException('Inventory not found');
+    }
+
+    const available = inventory.currentStock - inventory.reservedStock;
+
+    if (available < quantity) {
+      throw new BadRequestException(
+        `Insufficient stock. Available: ${available}, Requested: ${quantity}`,
+      );
+    }
+
+    inventory.currentStock -= quantity;
+    await this.inventoryRepository.save(inventory);
+  }
+
   // Confirm multiple sales
   async confirmMultipleSales(
     sales: Array<{ productId: string; quantity: number }>,
