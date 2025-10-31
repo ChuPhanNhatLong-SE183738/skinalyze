@@ -46,12 +46,9 @@ import { CustomerSubscription } from './customer-subscription/entities/customer-
 import { SubscriptionPlan } from './subscription-plans/entities/subscription-plan.entity';
 import { SubscriptionPlansModule } from './subscription-plans/subscription-plans.module';
 import { Payment } from './payments/entities/payment.entity';
-import { DiseaseGroupsModule } from './disease-groups/disease-groups.module';
-import { DiseasesModule } from './diseases/diseases.module';
 import { PaymentsModule } from './payments/payments.module';
 import { GoogleMeetModule } from './google-meet/google-meet.module';
-import { Disease } from './diseases/entities/disease.entity';
-import { DiseaseGroup } from './disease-groups/entities/disease-group.entity';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -88,8 +85,6 @@ import { DiseaseGroup } from './disease-groups/entities/disease-group.entity';
         SubscriptionPlan,
         CustomerSubscription,
         Payment,
-        DiseaseGroup,
-        Disease,
       ],
       synchronize: true, // Auto-create tables - disable after first deployment
       logging: process.env.NODE_ENV === 'development',
@@ -115,10 +110,9 @@ import { DiseaseGroup } from './disease-groups/entities/disease-group.entity';
     FirebaseModule,
     SubscriptionPlansModule,
     CustomerSubscriptionModule,
-    DiseaseGroupsModule,
-    DiseasesModule,
     PaymentsModule,
     GoogleMeetModule,
+    CloudinaryModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],
