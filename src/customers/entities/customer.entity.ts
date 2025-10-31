@@ -2,62 +2,61 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
   OneToOne,
-  OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
-import { SkinAnalysis } from '../../skin-analysis/entities/skin-analysis.entity';
-import { TreatmentRoadmap } from '../../treatment-roadmaps/entities/treatment-roadmap.entity';
+import { CustomerSubscription } from '../../customer-subscription/entities/customer-subscription.entity';
+import { User } from 'src/users/entities/user.entity';
+import { TreatmentRoutine } from 'src/treatment-routines/entities/treatment-routine.entity';
+import { Appointment } from 'src/appointments/entities/appointment.entity';
+import { SkinAnalysis } from 'src/skin-analysis/entities/skin-analysis.entity';
 
 @Entity('customers')
 export class Customer {
   @PrimaryGeneratedColumn('uuid')
   customerId: string;
 
-  // Foreign key reference to User
-  @OneToOne(() => User)
+  @OneToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
-
-  @Column({ type: 'uuid' })
-  userId: string;
-
-  @OneToMany(() => TreatmentRoadmap, (roadmap) => roadmap.customer)
-  treatmentRoadmaps: TreatmentRoadmap[];
 
   @Column({ type: 'int', default: 0 })
   aiUsageAmount: number;
 
-  @Column({ type: 'timestamp', nullable: true })
-  startDate: Date | null;
-
-  @Column({ type: 'timestamp', nullable: true })
-  endDate: Date | null;
-
-  @Column({ type: 'int', default: 0 })
-  sessionRemaining: number;
+  @Column({ type: 'json', nullable: true })
+  allergicTo: string[];
 
   @Column({ type: 'json', nullable: true })
-  subscriptionId: string[] | null;
+  pastDermatologicalHistory: string[];
 
-  // One-to-Many relationship with Skin Analysis
-  @OneToMany(() => SkinAnalysis, (analysis) => analysis.customer)
-  skinAnalyses: SkinAnalysis[];
-
-  // Array of analysis IDs (deprecated - use skinAnalyses relation instead)
-  @Column({ type: 'json', nullable: true })
-  analysisId: string[];
-
-  // Purchase history (will link to orders/transactions later)
-  @Column({ type: 'json', nullable: true })
+  @Column({
+    type: 'json',
+    nullable: true,
+  })
   purchaseHistory: any[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  // Danh sách các gói khách đã mua
+  @OneToMany(
+    () => CustomerSubscription,
+    (subscription) => subscription.customer,
+  )
+  customerSubscriptions: CustomerSubscription[];
+
+  @OneToMany(() => TreatmentRoutine, (routine) => routine.customer)
+  treatmentRoutines: TreatmentRoutine[];
+
+  @OneToMany(() => Appointment, (appointment) => appointment.customer)
+  appointments: Appointment[];
+
+  @OneToMany(() => SkinAnalysis, (analysis) => analysis.customer)
+  skinAnalyses: SkinAnalysis[];
 }

@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Disease } from '../../diseases/entities/disease.entity';
+import { SkinAnalysis } from 'src/skin-analysis/entities/skin-analysis.entity';
 
 @Entity('disease_groups')
 export class DiseaseGroup {
@@ -21,6 +22,9 @@ export class DiseaseGroup {
 
   @OneToMany(() => Disease, (disease) => disease.diseaseGroup)
   diseases: Disease[];
+
+  @OneToMany(() => SkinAnalysis, (skinAnalysis) => skinAnalysis.diseaseGroup)
+  skinAnalyses: SkinAnalysis[];
 
   @CreateDateColumn()
   createdAt: Date;

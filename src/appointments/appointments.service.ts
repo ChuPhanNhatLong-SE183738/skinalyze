@@ -72,7 +72,7 @@ export class AppointmentsService {
       ...createDto,
       startTime,
       endTime,
-      appointmentStatus: AppointmentStatus.PENDING,
+      appointmentStatus: AppointmentStatus.PENDING_PAYMENT,
     });
 
     let savedAppointment: Appointment | undefined;

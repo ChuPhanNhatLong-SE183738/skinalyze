@@ -1,43 +1,38 @@
-import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsUUID,
-  IsString,
-  IsUrl,
-  IsDateString,
-  IsArray,
-  IsOptional,
-} from 'class-validator';
+import { IsString, IsEnum, IsArray, IsOptional } from 'class-validator';
 
 export class CreateSkinAnalysisDto {
-  @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
-  @IsUUID()
+  @IsString()
   customerId: string;
 
-  @ApiProperty({ example: 'https://example.com/skin-images/image123.jpg' })
-  @IsUrl()
-  imageUrl: string;
-
-  @ApiProperty({
-    example: 'Oily',
-    description: 'Skin type: Oily, Dry, Combination, Normal, Sensitive',
-  })
   @IsString()
-  skinType: string;
+  diseaseGroupId: string;
 
-  @ApiProperty({ example: '2025-10-08T10:30:00Z', required: false })
-  @IsOptional()
-  @IsDateString()
-  analysisDate?: string;
+  @IsEnum(['AI_SCAN', 'MANUAL'])
+  source: string;
 
-  @ApiProperty({
-    example: [
-      '550e8400-e29b-41d4-a716-446655440001',
-      '550e8400-e29b-41d4-a716-446655440002',
-    ],
-    required: false,
-  })
-  @IsOptional()
+  @IsString()
+  chiefComplaint: string;
+
+  @IsString()
+  patientSymptoms: string;
+
   @IsArray()
   @IsString({ each: true })
-  recommendedProducts?: string[];
+  imageUrls: string[];
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @IsOptional()
+  @IsString()
+  aiDetectedDisease?: string;
+
+  @IsOptional()
+  @IsString()
+  aiDetectedCondition?: string;
+
+  @IsOptional()
+  @IsArray()
+  aiRecommendedProducts?: any[];
 }

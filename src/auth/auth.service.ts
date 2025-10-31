@@ -149,7 +149,6 @@ export class AuthService {
       await this.customersService.create({
         userId: user.userId,
         aiUsageAmount: 0,
-        analysisId: [],
         purchaseHistory: [],
       });
     } else if (user.role === UserRole.DERMATOLOGIST) {

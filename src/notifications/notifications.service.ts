@@ -268,17 +268,17 @@ export class NotificationsService {
     });
   }
 
-  async notifyTreatmentRoadmapCreated(
+  async notifyTreatmentRoutineCreated(
     userId: string,
-    roadmapId: string,
+    RoutineId: string,
   ): Promise<Notification> {
     return await this.create({
       userId,
-      type: NotificationType.TREATMENT_ROADMAP,
-      title: 'New Treatment Roadmap',
-      message: 'Your dermatologist has created a new treatment roadmap for you',
-      data: { roadmapId },
-      actionUrl: `/treatment-roadmaps/${roadmapId}`,
+      type: NotificationType.TREATMENT_Routine,
+      title: 'New Treatment Routine',
+      message: 'Your dermatologist has created a new treatment Routine for you',
+      data: { RoutineId },
+      actionUrl: `/treatment-Routines/${RoutineId}`,
       priority: NotificationPriority.HIGH,
     });
   }

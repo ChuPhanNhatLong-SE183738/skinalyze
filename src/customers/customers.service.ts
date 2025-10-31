@@ -4,22 +4,36 @@ import { Repository } from 'typeorm';
 import { Customer } from './entities/customer.entity';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
-import { Subscription } from '../subscriptions/entities/subscription.entity';
+import { SubscriptionPlan } from '../subscription-plans/entities/subscription-plan.entity';
+import { CustomerSubscription } from '../customer-subscription/entities/customer-subscription.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class CustomersService {
   constructor(
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
-    @InjectRepository(Subscription)
-    private readonly subscriptionRepository: Repository<Subscription>,
+    @InjectRepository(SubscriptionPlan)
+    private readonly subscriptionRepository: Repository<SubscriptionPlan>,
+    @InjectRepository(CustomerSubscription)
+    private readonly customerSubscriptionRepository: Repository<CustomerSubscription>,
   ) {}
 
   async create(createCustomerDto: CreateCustomerDto): Promise<Customer> {
+    const {
+      userId,
+      allergicTo,
+      pastDermatologicalHistory,
+      purchaseHistory,
+      ...rest
+    } = createCustomerDto;
+
     const customer = this.customerRepository.create({
-      ...createCustomerDto,
-      analysisId: createCustomerDto.analysisId || [],
-      purchaseHistory: createCustomerDto.purchaseHistory || [],
+      ...rest,
+      allergicTo: allergicTo ?? [],
+      pastDermatologicalHistory: pastDermatologicalHistory ?? [],
+      purchaseHistory: purchaseHistory ?? [],
+      user: { userId } as User,
     });
     return await this.customerRepository.save(customer);
   }
@@ -45,7 +59,7 @@ export class CustomersService {
 
   async findByUserId(userId: string): Promise<Customer | null> {
     return await this.customerRepository.findOne({
-      where: { userId },
+      where: { user: { userId } },
       relations: ['user'],
     });
   }
@@ -73,16 +87,14 @@ export class CustomersService {
     return await this.customerRepository.save(customer);
   }
 
-  async addAnalysis(userId: string, analysisId: string): Promise<Customer> {
+  async addAnalysis(userId: string, _analysisId: string): Promise<Customer> {
     const customer = await this.findByUserId(userId);
     if (!customer) {
       throw new NotFoundException(`Customer with userId ${userId} not found`);
     }
-    if (!customer.analysisId) {
-      customer.analysisId = [];
-    }
-    customer.analysisId.push(analysisId);
-    return await this.customerRepository.save(customer);
+    void _analysisId;
+    // Skin analyses are now tracked through the SkinAnalysis entity relation.
+    return customer;
   }
 
   async addPurchase(userId: string, purchaseData: any): Promise<Customer> {
@@ -107,7 +119,7 @@ export class CustomersService {
     }
 
     const subscription = await this.subscriptionRepository.findOne({
-      where: { subscriptionId, isActive: true },
+      where: { planId: subscriptionId, isActive: true },
     });
 
     if (!subscription) {
@@ -118,14 +130,32 @@ export class CustomersService {
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + subscription.durationInDays);
 
-    const subscriptionHistory = [...(customer.subscriptionId ?? [])];
-    subscriptionHistory.push(subscription.subscriptionId);
+    const activeSubscriptions = await this.customerSubscriptionRepository.find({
+      where: {
+        customer: { customerId: customer.customerId },
+        isActive: true,
+      },
+      relations: ['customer'],
+    });
 
-    customer.startDate = startDate;
-    customer.endDate = endDate;
-    customer.sessionRemaining = subscription.totalSessions;
-    customer.subscriptionId = subscriptionHistory;
+    if (activeSubscriptions.length) {
+      activeSubscriptions.forEach((record) => {
+        record.isActive = false;
+      });
+      await this.customerSubscriptionRepository.save(activeSubscriptions);
+    }
 
-    return await this.customerRepository.save(customer);
+    const newSubscription = this.customerSubscriptionRepository.create({
+      customer,
+      subscriptionPlan: subscription,
+      sessionsRemaining: subscription.totalSessions,
+      startDate,
+      endDate,
+      isActive: true,
+    });
+
+    await this.customerSubscriptionRepository.save(newSubscription);
+
+    return await this.findOne(customer.customerId);
   }
 }
