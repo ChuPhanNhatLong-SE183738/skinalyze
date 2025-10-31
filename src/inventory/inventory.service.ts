@@ -27,19 +27,28 @@ export class InventoryService {
   ) {}
 
   /**
-   * 🔄 Sync product stock with inventory stock
-   * Keep product.stock in sync with inventory.currentStock
+   * 🔄 Sync product stock with available inventory stock
+   * Keep product.stock in sync with available stock (currentStock - reservedStock)
+   * This shows customers what they can actually buy
    */
-  private async syncProductStock(
-    productId: string,
-    currentStock: number,
-  ): Promise<void> {
+  private async syncProductStock(productId: string): Promise<void> {
+    const inventory = await this.inventoryRepository.findOne({
+      where: { productId },
+    });
+
+    if (!inventory) return;
+
     const product = await this.productRepository.findOne({
       where: { productId },
     });
 
     if (product) {
-      product.stock = currentStock;
+      // Sync with AVAILABLE stock (what customers can buy)
+      const availableStock = Math.max(
+        0,
+        inventory.currentStock - inventory.reservedStock,
+      );
+      product.stock = availableStock;
       await this.productRepository.save(product);
     }
   }
@@ -100,7 +109,7 @@ export class InventoryService {
     }
 
     await this.inventoryRepository.save(inventory);
-    await this.syncProductStock(productId, inventory.currentStock);
+    await this.syncProductStock(productId);
   }
 
   // Set absolute stock level
@@ -128,7 +137,7 @@ export class InventoryService {
     }
 
     await this.inventoryRepository.save(inventory);
-    await this.syncProductStock(productId, inventory.currentStock);
+    await this.syncProductStock(productId);
   }
 
   // Reserve stock (simple version - no batch tracking)
@@ -152,6 +161,7 @@ export class InventoryService {
 
     inventory.reservedStock += quantity;
     await this.inventoryRepository.save(inventory);
+    await this.syncProductStock(productId); // Sync because available stock changed
 
     return { success: true };
   }
@@ -172,6 +182,7 @@ export class InventoryService {
 
     inventory.reservedStock -= quantity;
     await this.inventoryRepository.save(inventory);
+    await this.syncProductStock(productId); // Sync because available stock changed
   }
 
   // Confirm sale (reduce both current and reserved)
@@ -193,7 +204,7 @@ export class InventoryService {
     inventory.currentStock -= quantity;
     inventory.reservedStock -= quantity;
     await this.inventoryRepository.save(inventory);
-    await this.syncProductStock(productId, inventory.currentStock);
+    await this.syncProductStock(productId);
   }
 
   /**
@@ -219,7 +230,7 @@ export class InventoryService {
 
     inventory.currentStock -= quantity;
     await this.inventoryRepository.save(inventory);
-    await this.syncProductStock(productId, inventory.currentStock);
+    await this.syncProductStock(productId);
   }
 
   // Confirm multiple sales
@@ -341,9 +352,7 @@ export class InventoryService {
   /**
    * Get adjustment by ID
    */
-  async getAdjustmentById(
-    adjustmentId: string,
-  ): Promise<InventoryAdjustment> {
+  async getAdjustmentById(adjustmentId: string): Promise<InventoryAdjustment> {
     const adjustment = await this.adjustmentRepository.findOne({
       where: { adjustmentId },
       relations: ['product', 'requestedByUser', 'reviewedByUser'],
@@ -441,12 +450,15 @@ export class InventoryService {
     }
 
     // Update original price if provided (optional)
-    if (adjustment.originalPrice !== null && adjustment.originalPrice !== undefined) {
+    if (
+      adjustment.originalPrice !== null &&
+      adjustment.originalPrice !== undefined
+    ) {
       inventory.originalPrice = adjustment.originalPrice;
     }
 
     await this.inventoryRepository.save(inventory);
-    await this.syncProductStock(adjustment.productId, inventory.currentStock);
+    await this.syncProductStock(adjustment.productId);
   }
 
   /**

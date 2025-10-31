@@ -7,7 +7,9 @@ import { InventoryAdjustment } from './entities/inventory-adjustment.entity';
 import { Product } from '../products/entities/product.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Inventory, InventoryAdjustment, Product])],
+  imports: [
+    TypeOrmModule.forFeature([Inventory, InventoryAdjustment, Product]),
+  ],
   controllers: [InventoryController],
   providers: [InventoryService],
   exports: [InventoryService],

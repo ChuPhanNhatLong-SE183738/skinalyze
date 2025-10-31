@@ -194,7 +194,7 @@ export class InventoryController {
     await this.inventoryService.confirmSale(dto.productId, dto.quantity);
     return ResponseHelper.success('Sale confirmed successfully');
   }
-  
+
   @Post('adjustments/request')
   @Roles(UserRole.STAFF, UserRole.ADMIN)
   @HttpCode(HttpStatus.CREATED)
@@ -204,7 +204,13 @@ export class InventoryController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['productId', 'adjustmentType', 'quantity', 'reason', 'requestedBy'],
+      required: [
+        'productId',
+        'adjustmentType',
+        'quantity',
+        'reason',
+        'requestedBy',
+      ],
       properties: {
         productId: { type: 'string', description: 'Product UUID' },
         adjustmentType: {
@@ -218,12 +224,17 @@ export class InventoryController {
         },
         reason: {
           type: 'string',
-          description: 'Reason for adjustment (e.g., restock, damage, loss, correction)',
+          description:
+            'Reason for adjustment (e.g., restock, damage, loss, correction)',
         },
-        requestedBy: { type: 'string', description: 'User ID who is requesting' },
+        requestedBy: {
+          type: 'string',
+          description: 'User ID who is requesting',
+        },
         originalPrice: {
           type: 'number',
-          description: 'Optional - New cost price if updating (leave empty to keep current price)',
+          description:
+            'Optional - New cost price if updating (leave empty to keep current price)',
         },
       },
     },
@@ -233,8 +244,7 @@ export class InventoryController {
     description: 'Adjustment request created successfully',
   })
   async createAdjustmentRequest(@Body() dto: any) {
-    const adjustment =
-      await this.inventoryService.createAdjustmentRequest(dto);
+    const adjustment = await this.inventoryService.createAdjustmentRequest(dto);
     return ResponseHelper.created(
       'Adjustment request created and pending approval',
       adjustment,
@@ -288,7 +298,9 @@ export class InventoryController {
   @Post('adjustments/:id/review')
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Approve or reject adjustment request (Admin only)' })
+  @ApiOperation({
+    summary: 'Approve or reject adjustment request (Admin only)',
+  })
   @ApiParam({ name: 'id', description: 'Adjustment UUID' })
   @ApiBody({
     schema: {
@@ -328,7 +340,10 @@ export class InventoryController {
   @ApiResponse({ status: 200, description: 'Adjustment cancelled' })
   async cancelAdjustment(@Param('id') id: string) {
     const adjustment = await this.inventoryService.cancelAdjustment(id);
-    return ResponseHelper.success('Adjustment cancelled successfully', adjustment);
+    return ResponseHelper.success(
+      'Adjustment cancelled successfully',
+      adjustment,
+    );
   }
 
   @Get('products/:productId/adjustments')
