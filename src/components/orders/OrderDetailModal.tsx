@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { orderService } from "@/services/orderService";
 import { authService } from "@/services/authService";
+import { userService } from "@/services/userService";
 import {
   Package,
   User,
@@ -79,6 +80,11 @@ export function OrderDetailModal({
   onOrderUpdated,
 }: OrderDetailModalProps) {
   const [order, setOrder] = useState<Order | null>(null);
+  const [processedByUser, setProcessedByUser] = useState<{
+    fullName: string;
+    email: string;
+    role: string;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -103,6 +109,23 @@ export function OrderDetailModal({
       setError("");
       const response = await orderService.getOrderById(orderId);
       setOrder(response.data);
+      
+      // Fetch processed by user if available
+      if (response.data.processedBy) {
+        try {
+          const user = await userService.getUser(response.data.processedBy);
+          setProcessedByUser({
+            fullName: user.fullName,
+            email: user.email,
+            role: user.role,
+          });
+        } catch (err) {
+          console.error("Failed to fetch processed by user:", err);
+          setProcessedByUser(null);
+        }
+      } else {
+        setProcessedByUser(null);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to load order details");
     } finally {
@@ -161,9 +184,9 @@ export function OrderDetailModal({
   };
 
   const formatCurrency = (amount: string | number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("vi-VN", {
       style: "currency",
-      currency: "USD",
+      currency: "VND",
     }).format(typeof amount === "string" ? parseFloat(amount) : amount);
   };
 
@@ -372,6 +395,18 @@ export function OrderDetailModal({
                   {order.status}
                 </span>
               </div>
+              {processedByUser && (
+                <div className="mt-3 flex items-center gap-2 rounded-md bg-slate-50 p-3 dark:bg-slate-900">
+                  <User className="h-4 w-4 text-slate-500" />
+                  <div className="text-sm">
+                    <span className="text-slate-500">Processed by:</span>{" "}
+                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                      {processedByUser.fullName}
+                    </span>
+                    <span className="text-slate-400"> ({processedByUser.role})</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Customer Info */}

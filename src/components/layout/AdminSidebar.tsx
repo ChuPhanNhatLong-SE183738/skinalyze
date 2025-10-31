@@ -4,49 +4,72 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  ShieldCheck,
+  Shield,
   Package,
   Users,
   BarChart3,
   Settings,
   LogOut,
-  Warehouse,
+  ShoppingBag,
+  FileText,
+  Database,
+  Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface SidebarProps {
+interface AdminSidebarProps {
   onLogout: () => void;
 }
 
 const menuItems = [
   {
     title: "Dashboard",
-    href: "/staff/dashboard",
+    href: "/admin/dashboard",
     icon: BarChart3,
   },
   {
     title: "Orders",
-    href: "/staff/orders",
+    href: "/admin/orders",
+    icon: ShoppingBag,
+  },
+  {
+    title: "Products",
+    href: "/admin/products",
     icon: Package,
   },
   {
     title: "Inventory",
-    href: "/staff/inventory",
-    icon: Warehouse,
+    href: "/admin/inventory",
+    icon: Database,
   },
   {
-    title: "Customers",
-    href: "/staff/customers",
+    title: "Users",
+    href: "/admin/users",
     icon: Users,
   },
   {
+    title: "Reports",
+    href: "/admin/reports",
+    icon: FileText,
+  },
+  {
+    title: "Analytics",
+    href: "/admin/analytics",
+    icon: BarChart3,
+  },
+  {
+    title: "Notifications",
+    href: "/admin/notifications",
+    icon: Bell,
+  },
+  {
     title: "Settings",
-    href: "/staff/settings",
+    href: "/admin/settings",
     icon: Settings,
   },
 ];
 
-export function Sidebar({ onLogout }: SidebarProps) {
+export function AdminSidebar({ onLogout }: AdminSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -54,14 +77,14 @@ export function Sidebar({ onLogout }: SidebarProps) {
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-6">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg">
-          <ShieldCheck className="h-6 w-6 text-white" />
+          <Shield className="h-6 w-6 text-white" />
         </div>
         <div>
           <h1 className="text-lg font-bold text-slate-900">
             Skinalyze
           </h1>
-          <p className="text-xs text-slate-500">
-            Staff Portal
+          <p className="text-xs text-green-600">
+            Admin Portal
           </p>
         </div>
       </div>
@@ -77,10 +100,10 @@ export function Sidebar({ onLogout }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
                 isActive
-                  ? "bg-gradient-to-r from-green-500/10 to-emerald-500/10 text-green-600 border border-green-200/50"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  ? "bg-gradient-to-r from-green-500/10 to-emerald-500/10 text-green-600 border border-green-200"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               )}
             >
               <Icon className="h-5 w-5" />
@@ -94,7 +117,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
       <div className="border-t border-slate-200 p-4">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          className="w-full justify-start gap-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
           onClick={onLogout}
         >
           <LogOut className="h-5 w-5" />
