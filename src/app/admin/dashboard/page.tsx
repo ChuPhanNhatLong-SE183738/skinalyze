@@ -51,7 +51,7 @@ export default function AdminDashboardPage() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-amber-500 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-green-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -120,7 +120,7 @@ export default function AdminDashboardPage() {
           </Card>
 
           {/* System Health */}
-          <Card className="bg-gradient-to-br from-amber-500 to-orange-600 border-0 text-white">
+          <Card className="bg-gradient-to-br from-green-500 to-emerald-600 border-0 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 System Health
@@ -162,7 +162,7 @@ export default function AdminDashboardPage() {
               <div>
                 <p className="text-sm text-slate-600">Role</p>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 border border-amber-200">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/10 text-green-700 border border-green-200">
                     Administrator
                   </span>
                 </div>

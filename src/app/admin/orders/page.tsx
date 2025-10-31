@@ -10,6 +10,7 @@ import { OrderDetailModal } from "@/components/orders/OrderDetailModal";
 import { authService } from "@/services/authService";
 import { orderService } from "@/services/orderService";
 import type { Order } from "@/types/order";
+import { useToast } from "@/hooks/use-toast";
 import {
   Package,
   Search,
@@ -61,6 +62,7 @@ const statusConfig = {
 
 export default function AdminOrdersPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -140,6 +142,11 @@ export default function AdminOrdersPage() {
   const handleOrderUpdated = () => {
     // Reload orders after update
     loadOrders();
+    toast({
+      variant: "success",
+      title: "Success",
+      description: "Order updated successfully",
+    });
   };
 
   const formatCurrency = (amount: string) => {
@@ -163,7 +170,7 @@ export default function AdminOrdersPage() {
     return (
       <AdminLayout>
         <div className="flex h-full items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-amber-500" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-green-500" />
         </div>
       </AdminLayout>
     );
@@ -254,7 +261,7 @@ export default function AdminOrdersPage() {
                   placeholder="Search by order ID, customer, or address..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 focus:border-amber-500"
+                  className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 focus:border-green-500"
                 />
               </div>
 
@@ -264,7 +271,7 @@ export default function AdminOrdersPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none"
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-green-500 focus:outline-none"
                 >
                   <option value="ALL">All Status</option>
                   <option value="PENDING">Pending</option>
@@ -360,7 +367,7 @@ export default function AdminOrdersPage() {
                               size="sm"
                               variant="ghost"
                               onClick={() => handleViewDetails(order.orderId)}
-                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
                             >
                               View Details
                             </Button>

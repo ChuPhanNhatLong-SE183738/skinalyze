@@ -10,6 +10,7 @@ import { ProductFormModal } from "@/components/products/ProductFormModal";
 import { authService } from "@/services/authService";
 import { productService } from "@/services/productService";
 import type { Product, CreateProductRequest } from "@/types/product";
+import { useToast } from "@/hooks/use-toast";
 import {
   Package,
   Search,
@@ -24,6 +25,7 @@ import {
 
 export default function AdminProductsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,8 +110,17 @@ export default function AdminProductsPage() {
     try {
       await productService.deleteProduct(productId);
       await loadProducts();
+      toast({
+        variant: "success",
+        title: "Success",
+        description: "Product deleted successfully",
+      });
     } catch (error: any) {
-      alert("Failed to delete product: " + error.message);
+      toast({
+        variant: "error",
+        title: "Error",
+        description: error.message || "Failed to delete product",
+      });
     }
   };
 
@@ -117,13 +128,27 @@ export default function AdminProductsPage() {
     try {
       if (modalMode === "create") {
         await productService.createProduct(data);
+        toast({
+          variant: "success",
+          title: "Success",
+          description: "Product created successfully",
+        });
       } else if (selectedProduct?.productId) {
         await productService.updateProduct(selectedProduct.productId, data);
+        toast({
+          variant: "success",
+          title: "Success",
+          description: "Product updated successfully",
+        });
       }
       await loadProducts();
       setIsModalOpen(false);
     } catch (error: any) {
-      alert("Failed to save product: " + error.message);
+      toast({
+        variant: "error",
+        title: "Error",
+        description: error.message || "Failed to save product",
+      });
       throw error;
     }
   };
@@ -160,7 +185,7 @@ export default function AdminProductsPage() {
     return (
       <AdminLayout>
         <div className="flex h-full items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-amber-500" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-green-500" />
         </div>
       </AdminLayout>
     );
@@ -183,7 +208,7 @@ export default function AdminProductsPage() {
           </div>
           <Button
             onClick={handleCreateProduct}
-            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+            className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Product
@@ -261,38 +286,41 @@ export default function AdminProductsPage() {
 
         {/* Products Table */}
         <Card className="bg-white border-slate-200">
-          <CardContent className="pt-6">
+          <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="pb-3 text-left text-sm font-medium text-slate-700">
+                <thead className="border-b border-slate-200 bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Product
                     </th>
-                    <th className="pb-3 text-left text-sm font-medium text-slate-700">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Brand
                     </th>
-                    <th className="pb-3 text-left text-sm font-medium text-slate-700">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Price
                     </th>
-                    <th className="pb-3 text-left text-sm font-medium text-slate-700">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Stock
                     </th>
-                    <th className="pb-3 text-left text-sm font-medium text-slate-700">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Sale
                     </th>
-                    <th className="pb-3 text-left text-sm font-medium text-slate-700">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Categories
                     </th>
-                    <th className="pb-3 text-right text-sm font-medium text-slate-700">
+                    <th className="px-6 py-4 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-200 bg-white">
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="pt-8 text-center text-slate-600">
+                      <td
+                        colSpan={7}
+                        className="px-6 py-12 text-center text-slate-600"
+                      >
                         No products found
                       </td>
                     </tr>
@@ -300,9 +328,9 @@ export default function AdminProductsPage() {
                     filteredProducts.map((product) => (
                       <tr
                         key={product.productId}
-                        className="border-b border-slate-200 hover:bg-slate-50 transition-colors"
+                        className="hover:bg-slate-50 transition-colors"
                       >
-                        <td className="py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             {product.productImages[0] && (
                               <img
@@ -321,18 +349,20 @@ export default function AdminProductsPage() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 text-slate-700">{product.brand}</td>
-                        <td className="py-4">
-                          <div className="text-slate-900 font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-slate-700">{product.brand}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-slate-900">
                             {formatCurrency(product.sellingPrice)}
                           </div>
                           {(typeof product.salePercentage === 'string' ? parseFloat(product.salePercentage) : product.salePercentage) > 0 && (
-                            <div className="text-xs text-green-400">
+                            <div className="text-xs text-green-600">
                               {product.salePercentage}% off
                             </div>
                           )}
                         </td>
-                        <td className="py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                               product.stock < 10
@@ -345,9 +375,9 @@ export default function AdminProductsPage() {
                             {product.stock} units
                           </span>
                         </td>
-                        <td className="py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           {(typeof product.salePercentage === 'string' ? parseFloat(product.salePercentage) : product.salePercentage) > 0 ? (
-                            <div className="flex items-center gap-1 text-green-400">
+                            <div className="flex items-center gap-1 text-green-600">
                               <TrendingUp className="h-3 w-3" />
                               <span className="text-sm">{product.salePercentage}%</span>
                             </div>
@@ -355,12 +385,12 @@ export default function AdminProductsPage() {
                             <span className="text-slate-500 text-sm">-</span>
                           )}
                         </td>
-                        <td className="py-4">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex flex-wrap gap-1">
                             {(product.categories || product.categoryIds || []).slice(0, 2).map((cat) => (
                               <span
                                 key={typeof cat === 'string' ? cat : cat.categoryId}
-                                className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-amber-500/10 text-amber-700"
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-500/10 text-green-700"
                               >
                                 {typeof cat === 'string' ? cat : cat.categoryName}
                               </span>
@@ -372,13 +402,13 @@ export default function AdminProductsPage() {
                             )}
                           </div>
                         </td>
-                        <td className="py-4">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
                             <Button
                               onClick={() => handleEditProduct(product)}
                               size="sm"
-                              variant="outline"
-                              className="border-slate-300 text-slate-700 hover:bg-slate-100"
+                              variant="ghost"
+                              className="text-black-600 hover:text-black-700 hover:bg-gray-50"
                             >
                               <Edit className="h-3 w-3 mr-1" />
                               Edit
@@ -386,8 +416,8 @@ export default function AdminProductsPage() {
                             <Button
                               onClick={() => product.productId && handleDeleteProduct(product.productId)}
                               size="sm"
-                              variant="outline"
-                              className="border-red-500/30 text-red-400 hover:bg-red-500/20"
+                              variant="ghost"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
                               <Trash2 className="h-3 w-3 mr-1" />
                               Delete

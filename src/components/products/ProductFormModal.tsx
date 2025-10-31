@@ -307,7 +307,7 @@ export function ProductFormModal({
                 type="button"
                 onClick={addImage}
                 size="icon"
-                className="bg-amber-600 hover:bg-amber-700"
+                className="bg-green-600 hover:bg-green-700"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -351,7 +351,7 @@ export function ProductFormModal({
                 type="button"
                 onClick={addCategory}
                 size="icon"
-                className="bg-amber-600 hover:bg-amber-700"
+                className="bg-green-600 hover:bg-green-700"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -395,7 +395,7 @@ export function ProductFormModal({
                 type="button"
                 onClick={addSuitable}
                 size="icon"
-                className="bg-amber-600 hover:bg-amber-700"
+                className="bg-green-600 hover:bg-green-700"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -433,7 +433,7 @@ export function ProductFormModal({
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
             >
               {isSubmitting
                 ? "Saving..."

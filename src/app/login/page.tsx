@@ -14,9 +14,11 @@ import {
 } from "@/components/ui/card";
 import { Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
 import { authService } from "@/services/authService";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,6 +34,12 @@ export default function LoginPage() {
       // Login using authService (returns user data)
       const user = await authService.login({ email, password });
 
+      toast({
+        variant: "success",
+        title: "Success",
+        description: "Login successful! Redirecting...",
+      });
+
       // Role-based redirect
       switch (user.role) {
         case "admin":
@@ -45,20 +53,31 @@ export default function LoginPage() {
           break;
         default:
           setError("Invalid user role");
+          toast({
+            variant: "error",
+            title: "Error",
+            description: "Invalid user role",
+          });
           setIsLoading(false);
       }
     } catch (err: any) {
-      setError(err.message || "An error occurred during login");
+      const errorMessage = err.message || "An error occurred during login";
+      setError(errorMessage);
+      toast({
+        variant: "error",
+        title: "Login Failed",
+        description: errorMessage,
+      });
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-4">
       <div className="w-full max-w-md">
         {/* Logo/Brand Section */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 mb-4 shadow-lg">
             <Shield className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900">
@@ -102,7 +121,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-amber-500"
+                  className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500"
                 />
               </div>
 
@@ -114,7 +133,7 @@ export default function LoginPage() {
                   </Label>
                   <button
                     type="button"
-                    className="text-xs text-slate-600 hover:text-amber-600 transition-colors font-medium"
+                    className="text-xs text-slate-600 hover:text-green-600 transition-colors font-medium"
                   >
                     Forgot password?
                   </button>
@@ -128,7 +147,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
-                    className="pr-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-amber-500 focus:ring-amber-500"
+                    className="pr-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-green-500 focus:ring-green-500"
                   />
                   <button
                     type="button"
@@ -150,7 +169,7 @@ export default function LoginPage() {
                 <input
                   type="checkbox"
                   id="remember"
-                  className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-2 focus:ring-amber-500 focus:ring-offset-0"
+                  className="w-4 h-4 rounded border-slate-300 text-green-500 focus:ring-2 focus:ring-green-500 focus:ring-offset-0"
                   disabled={isLoading}
                 />
                 <Label
@@ -164,7 +183,7 @@ export default function LoginPage() {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium shadow-lg hover:shadow-xl transition-all"
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium shadow-lg hover:shadow-xl transition-all"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -184,11 +203,11 @@ export default function LoginPage() {
         <div className="mt-8 text-center text-xs text-slate-500">
           <p>
             By signing in, you agree to our{" "}
-            <a href="#" className="text-amber-600 hover:text-amber-700 hover:underline">
+            <a href="#" className="text-green-600 hover:text-green-700 hover:underline">
               Terms of Service
             </a>{" "}
             and{" "}
-            <a href="#" className="text-amber-600 hover:text-amber-700 hover:underline">
+            <a href="#" className="text-green-600 hover:text-green-700 hover:underline">
               Privacy Policy
             </a>
           </p>
