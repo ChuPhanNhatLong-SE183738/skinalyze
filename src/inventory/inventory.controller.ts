@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
   Param,
   Query,
@@ -77,7 +78,7 @@ export class InventoryController {
   }
 
   @Post('adjust')
-  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Adjust inventory stock' })
   @ApiBody({
@@ -96,7 +97,7 @@ export class InventoryController {
   }
 
   @Post('set')
-  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Set inventory stock' })
   @ApiBody({
@@ -192,5 +193,155 @@ export class InventoryController {
   async confirmSale(@Body() dto: { productId: string; quantity: number }) {
     await this.inventoryService.confirmSale(dto.productId, dto.quantity);
     return ResponseHelper.success('Sale confirmed successfully');
+  }
+  
+  @Post('adjustments/request')
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create stock adjustment request (requires admin approval)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['productId', 'adjustmentType', 'quantity', 'reason', 'requestedBy'],
+      properties: {
+        productId: { type: 'string', description: 'Product UUID' },
+        adjustmentType: {
+          type: 'string',
+          enum: ['INCREASE', 'DECREASE', 'SET'],
+          description: 'Type of adjustment',
+        },
+        quantity: {
+          type: 'number',
+          description: 'Quantity to adjust (positive number)',
+        },
+        reason: {
+          type: 'string',
+          description: 'Reason for adjustment (e.g., restock, damage, loss, correction)',
+        },
+        requestedBy: { type: 'string', description: 'User ID who is requesting' },
+        originalPrice: {
+          type: 'number',
+          description: 'Optional - New cost price if updating (leave empty to keep current price)',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Adjustment request created successfully',
+  })
+  async createAdjustmentRequest(@Body() dto: any) {
+    const adjustment =
+      await this.inventoryService.createAdjustmentRequest(dto);
+    return ResponseHelper.created(
+      'Adjustment request created and pending approval',
+      adjustment,
+    );
+  }
+
+  @Get('adjustments/pending')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all pending adjustment requests (Admin only)' })
+  @ApiResponse({ status: 200, description: 'Returns pending adjustments' })
+  async getPendingAdjustments() {
+    const adjustments = await this.inventoryService.getPendingAdjustments();
+    return ResponseHelper.success(
+      'Pending adjustments retrieved successfully',
+      adjustments,
+    );
+  }
+
+  @Get('adjustments')
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all adjustment requests' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+  })
+  @ApiResponse({ status: 200, description: 'Returns adjustment requests' })
+  async getAllAdjustments(@Query('status') status?: string) {
+    const adjustments = await this.inventoryService.getAllAdjustments(
+      status as any,
+    );
+    return ResponseHelper.success(
+      'Adjustments retrieved successfully',
+      adjustments,
+    );
+  }
+
+  @Get('adjustments/:id')
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get adjustment request by ID' })
+  @ApiParam({ name: 'id', description: 'Adjustment UUID' })
+  @ApiResponse({ status: 200, description: 'Returns adjustment request' })
+  async getAdjustmentById(@Param('id') id: string) {
+    const adjustment = await this.inventoryService.getAdjustmentById(id);
+    return ResponseHelper.success(
+      'Adjustment retrieved successfully',
+      adjustment,
+    );
+  }
+
+  @Post('adjustments/:id/review')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Approve or reject adjustment request (Admin only)' })
+  @ApiParam({ name: 'id', description: 'Adjustment UUID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['status', 'reviewedBy'],
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['APPROVED', 'REJECTED'],
+          description: 'Approval decision',
+        },
+        reviewedBy: {
+          type: 'string',
+          description: 'Admin user ID who is reviewing',
+        },
+        rejectionReason: {
+          type: 'string',
+          description: 'Required if status is REJECTED',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Adjustment reviewed successfully' })
+  async reviewAdjustment(@Param('id') id: string, @Body() dto: any) {
+    const adjustment = await this.inventoryService.reviewAdjustment(id, dto);
+    return ResponseHelper.success(
+      `Adjustment ${dto.status.toLowerCase()} successfully`,
+      adjustment,
+    );
+  }
+
+  @Delete('adjustments/:id/cancel')
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancel pending adjustment request' })
+  @ApiParam({ name: 'id', description: 'Adjustment UUID' })
+  @ApiResponse({ status: 200, description: 'Adjustment cancelled' })
+  async cancelAdjustment(@Param('id') id: string) {
+    const adjustment = await this.inventoryService.cancelAdjustment(id);
+    return ResponseHelper.success('Adjustment cancelled successfully', adjustment);
+  }
+
+  @Get('products/:productId/adjustments')
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get adjustment history for a product' })
+  @ApiParam({ name: 'productId', description: 'Product UUID' })
+  @ApiResponse({ status: 200, description: 'Returns adjustment history' })
+  async getProductAdjustmentHistory(@Param('productId') productId: string) {
+    const adjustments =
+      await this.inventoryService.getProductAdjustmentHistory(productId);
+    return ResponseHelper.success(
+      'Adjustment history retrieved successfully',
+      adjustments,
+    );
   }
 }

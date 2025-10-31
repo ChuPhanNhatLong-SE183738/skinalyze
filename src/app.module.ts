@@ -17,6 +17,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { Category } from './categories/entities/category.entity';
 import { InventoryModule } from './inventory/inventory.module';
 import { Inventory } from './inventory/entities/inventory.entity';
+import { InventoryAdjustment } from './inventory/entities/inventory-adjustment.entity';
 import { CartModule } from './cart/cart.module';
 import { CustomersModule } from './customers/customers.module';
 import { SkinAnalysisModule } from './skin-analysis/skin-analysis.module';
@@ -74,6 +75,7 @@ import { DiseaseGroup } from './disease-groups/entities/disease-group.entity';
         Dermatologist,
         SkinAnalysis,
         Inventory,
+        InventoryAdjustment,
         Order,
         OrderItem,
         Transaction,
