@@ -4,17 +4,16 @@ export class CreateSkinAnalysisDto {
   @IsString()
   customerId: string;
 
-  @IsString()
-  diseaseGroupId: string;
-
   @IsEnum(['AI_SCAN', 'MANUAL'])
   source: string;
 
+  @IsOptional()
   @IsString()
-  chiefComplaint: string;
+  chiefComplaint?: string;
 
+  @IsOptional()
   @IsString()
-  patientSymptoms: string;
+  patientSymptoms?: string;
 
   @IsArray()
   @IsString({ each: true })
@@ -35,4 +34,9 @@ export class CreateSkinAnalysisDto {
   @IsOptional()
   @IsArray()
   aiRecommendedProducts?: any[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  mask?: string[];
 }

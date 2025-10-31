@@ -35,6 +35,12 @@ export class CreateProductDto {
   @Type(() => Number)
   sellingPrice: number;
 
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  originalPrice?: number; // Cost price for inventory
+
   @IsArray()
   @IsString({ each: true })
   productImages: string[];

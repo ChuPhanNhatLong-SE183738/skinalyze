@@ -1,17 +1,13 @@
-import { Entity, Column, PrimaryColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
-import { DiseaseGroup } from '../../disease-groups/entities/disease-group.entity';
 
 @Entity('skin_analysis')
 export class SkinAnalysis {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn('uuid')
   analysisId: string;
 
   @Column()
   customerId: string;
-
-  @Column()
-  diseaseGroupId: string;
 
   @Column({
     type: 'enum',
@@ -19,10 +15,10 @@ export class SkinAnalysis {
   })
   source: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   chiefComplaint: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   patientSymptoms: string;
 
   @Column('simple-array')
@@ -40,6 +36,9 @@ export class SkinAnalysis {
   @Column('simple-json', { nullable: true })
   aiRecommendedProducts: any[];
 
+  @Column('simple-array', { nullable: true })
+  mask: string[];
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -50,8 +49,4 @@ export class SkinAnalysis {
   @ManyToOne(() => Customer, (customer) => customer.skinAnalyses)
   @JoinColumn({ name: 'customerId' })
   customer: Customer;
-
-  @ManyToOne(() => DiseaseGroup, (diseaseGroup) => diseaseGroup.skinAnalyses)
-  @JoinColumn({ name: 'diseaseGroupId' })
-  diseaseGroup: DiseaseGroup;
 }
