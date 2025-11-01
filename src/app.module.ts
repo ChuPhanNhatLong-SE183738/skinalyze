@@ -17,6 +17,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { Category } from './categories/entities/category.entity';
 import { InventoryModule } from './inventory/inventory.module';
 import { Inventory } from './inventory/entities/inventory.entity';
+import { InventoryAdjustment } from './inventory/entities/inventory-adjustment.entity';
 import { CartModule } from './cart/cart.module';
 import { CustomersModule } from './customers/customers.module';
 import { SkinAnalysisModule } from './skin-analysis/skin-analysis.module';
@@ -48,6 +49,8 @@ import { Payment } from './payments/entities/payment.entity';
 import { PaymentsModule } from './payments/payments.module';
 import { GoogleMeetModule } from './google-meet/google-meet.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { AvailabilitySlotsModule } from './availability-slots/availability-slots.module';
+import { AvailabilitySlot } from './availability-slots/entities/availability-slot.entity';
 
 @Module({
   imports: [
@@ -71,6 +74,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
         Dermatologist,
         SkinAnalysis,
         Inventory,
+        InventoryAdjustment,
         Order,
         OrderItem,
         Transaction,
@@ -83,6 +87,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
         SubscriptionPlan,
         CustomerSubscription,
         Payment,
+        AvailabilitySlot,
       ],
       synchronize: true, // Auto-create tables - disable after first deployment
       logging: process.env.NODE_ENV === 'development',
@@ -111,6 +116,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     PaymentsModule,
     GoogleMeetModule,
     CloudinaryModule,
+    AvailabilitySlotsModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

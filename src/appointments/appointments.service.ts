@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -13,6 +12,8 @@ import { CustomersService } from '../customers/customers.service';
 import { DermatologistsService } from '../dermatologists/dermatologists.service';
 import { TransactionStatus } from '../transactions/entities/transaction.entity';
 import { TransactionsService } from '../transactions/transactions.service';
+import { AvailabilitySlotsService } from '../availability-slots/availability-slots.service';
+import { AvailabilitySlot } from '../availability-slots/entities/availability-slot.entity';
 
 @Injectable()
 export class AppointmentsService {
@@ -21,6 +22,7 @@ export class AppointmentsService {
     private readonly appointmentRepository: Repository<Appointment>,
     private readonly customersService: CustomersService,
     private readonly dermatologistsService: DermatologistsService,
+    private readonly availabilitySlotsService: AvailabilitySlotsService,
     private readonly transactionsService: TransactionsService,
   ) {}
 
@@ -51,54 +53,37 @@ export class AppointmentsService {
       );
     }
 
-    const overlapping = await this.appointmentRepository
-      .createQueryBuilder('appointment')
-      .where('appointment.dermatologistId = :dermatologistId', {
-        dermatologistId: createDto.dermatologistId,
-      })
-      .andWhere(
-        '(appointment.startTime < :endTime AND appointment.endTime > :startTime)',
-        { startTime, endTime },
-      )
-      .getExists();
-
-    if (overlapping) {
-      throw new ConflictException(
-        'Dermatologist already has an appointment within this time range',
-      );
-    }
-
     const appointment = this.appointmentRepository.create({
       ...createDto,
       startTime,
       endTime,
-      appointmentStatus: AppointmentStatus.PENDING_PAYMENT,
+      appointmentStatus: AppointmentStatus.SCHEDULED,
     });
 
     let savedAppointment: Appointment | undefined;
-    let slotReserved = false;
+    let reservedSlot: AvailabilitySlot | undefined;
 
     try {
-      await this.dermatologistsService.markSlotAsOccupied(
+      reservedSlot = await this.availabilitySlotsService.reserveSlot(
         createDto.dermatologistId,
         createDto.startTime,
         createDto.endTime,
       );
-      slotReserved = true;
 
       savedAppointment = await this.appointmentRepository.save(appointment);
+
+      await this.availabilitySlotsService.linkSlotToAppointment(
+        reservedSlot.slotId,
+        savedAppointment.appointmentId,
+      );
     } catch (error) {
       if (savedAppointment?.appointmentId) {
         await this.appointmentRepository.delete(savedAppointment.appointmentId);
       }
 
-      if (slotReserved) {
+      if (reservedSlot) {
         try {
-          await this.dermatologistsService.markSlotAsAvailable(
-            createDto.dermatologistId,
-            createDto.startTime,
-            createDto.endTime,
-          );
+          await this.availabilitySlotsService.releaseSlot(reservedSlot.slotId);
         } catch {
           // swallow release errors to preserve original exception context
         }

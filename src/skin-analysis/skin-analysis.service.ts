@@ -1,4 +1,10 @@
-import { Injectable, HttpException, HttpStatus, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  HttpException,
+  HttpStatus,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -19,7 +25,9 @@ export class SkinAnalysisService {
     private configService: ConfigService,
     private cloudinaryService: CloudinaryService,
   ) {
-    this.aiServiceUrl = this.configService.get<string>('AI_SERVICE_URL') || 'http://localhost:8000';
+    this.aiServiceUrl =
+      this.configService.get<string>('AI_SERVICE_URL') ||
+      'http://localhost:8000';
   }
 
   async classifyDisease(file: Express.Multer.File) {
@@ -44,7 +52,8 @@ export class SkinAnalysisService {
     } catch (error) {
       this.logger.error('Failed to classify disease:', error);
       throw new HttpException(
-        error.response?.data?.message || 'Error calling AI classification service',
+        error.response?.data?.message ||
+          'Error calling AI classification service',
         error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -72,7 +81,8 @@ export class SkinAnalysisService {
     } catch (error) {
       this.logger.error('Failed to segment disease:', error);
       throw new HttpException(
-        error.response?.data?.message || 'Error calling AI segmentation service',
+        error.response?.data?.message ||
+          'Error calling AI segmentation service',
         error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -202,7 +212,7 @@ export class SkinAnalysisService {
       this.logger.log('Saving analysis to database...');
       const analysis = this.skinAnalysisRepository.create(skinAnalysisData);
       const savedAnalysis = await this.skinAnalysisRepository.save(analysis);
-      
+
       this.logger.log(`Analysis saved with ID: ${savedAnalysis.analysisId}`);
 
       return savedAnalysis;
@@ -225,9 +235,7 @@ export class SkinAnalysisService {
     });
 
     if (!analysis) {
-      throw new NotFoundException(
-        `Analysis with ID "${analysisId}" not found`,
-      );
+      throw new NotFoundException(`Analysis with ID "${analysisId}" not found`);
     }
 
     return analysis;

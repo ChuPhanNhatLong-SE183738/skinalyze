@@ -6,13 +6,52 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Inventory } from './entities/inventory.entity';
+import {
+  InventoryAdjustment,
+  AdjustmentType,
+  AdjustmentStatus,
+} from './entities/inventory-adjustment.entity';
+import { CreateAdjustmentDto } from './dto/create-adjustment.dto';
+import { ReviewAdjustmentDto } from './dto/review-adjustment.dto';
+import { Product } from '../products/entities/product.entity';
 
 @Injectable()
 export class InventoryService {
   constructor(
     @InjectRepository(Inventory)
     private readonly inventoryRepository: Repository<Inventory>,
+    @InjectRepository(InventoryAdjustment)
+    private readonly adjustmentRepository: Repository<InventoryAdjustment>,
+    @InjectRepository(Product)
+    private readonly productRepository: Repository<Product>,
   ) {}
+
+  /**
+   * 🔄 Sync product stock with available inventory stock
+   * Keep product.stock in sync with available stock (currentStock - reservedStock)
+   * This shows customers what they can actually buy
+   */
+  private async syncProductStock(productId: string): Promise<void> {
+    const inventory = await this.inventoryRepository.findOne({
+      where: { productId },
+    });
+
+    if (!inventory) return;
+
+    const product = await this.productRepository.findOne({
+      where: { productId },
+    });
+
+    if (product) {
+      // Sync with AVAILABLE stock (what customers can buy)
+      const availableStock = Math.max(
+        0,
+        inventory.currentStock - inventory.reservedStock,
+      );
+      product.stock = availableStock;
+      await this.productRepository.save(product);
+    }
+  }
 
   // Get all inventory
   async getAllInventory(): Promise<Inventory[]> {
@@ -70,6 +109,7 @@ export class InventoryService {
     }
 
     await this.inventoryRepository.save(inventory);
+    await this.syncProductStock(productId);
   }
 
   // Set absolute stock level
@@ -97,6 +137,7 @@ export class InventoryService {
     }
 
     await this.inventoryRepository.save(inventory);
+    await this.syncProductStock(productId);
   }
 
   // Reserve stock (simple version - no batch tracking)
@@ -120,6 +161,7 @@ export class InventoryService {
 
     inventory.reservedStock += quantity;
     await this.inventoryRepository.save(inventory);
+    await this.syncProductStock(productId); // Sync because available stock changed
 
     return { success: true };
   }
@@ -140,6 +182,7 @@ export class InventoryService {
 
     inventory.reservedStock -= quantity;
     await this.inventoryRepository.save(inventory);
+    await this.syncProductStock(productId); // Sync because available stock changed
   }
 
   // Confirm sale (reduce both current and reserved)
@@ -161,6 +204,7 @@ export class InventoryService {
     inventory.currentStock -= quantity;
     inventory.reservedStock -= quantity;
     await this.inventoryRepository.save(inventory);
+    await this.syncProductStock(productId);
   }
 
   /**
@@ -186,6 +230,7 @@ export class InventoryService {
 
     inventory.currentStock -= quantity;
     await this.inventoryRepository.save(inventory);
+    await this.syncProductStock(productId);
   }
 
   // Confirm multiple sales
@@ -234,5 +279,223 @@ export class InventoryService {
       totalReserved: parseInt(result?.totalReserved || '0'),
       availableStock: parseInt(result?.availableStock || '0'),
     };
+  }
+
+  async createAdjustmentRequest(
+    dto: CreateAdjustmentDto,
+  ): Promise<InventoryAdjustment> {
+    // Get current inventory
+    const inventory = await this.inventoryRepository.findOne({
+      where: { productId: dto.productId },
+      relations: ['product'],
+    });
+
+    if (!inventory) {
+      throw new NotFoundException('Product inventory not found');
+    }
+
+    // Create adjustment request
+    const adjustment = this.adjustmentRepository.create({
+      productId: dto.productId,
+      adjustmentType: dto.adjustmentType,
+      quantity: dto.quantity,
+      reason: dto.reason,
+      requestedBy: dto.requestedBy,
+      previousStock: inventory.currentStock,
+      status: AdjustmentStatus.PENDING,
+      originalPrice: dto.originalPrice, // Optional - only if updating cost price
+    });
+
+    // Calculate new stock for preview
+    if (dto.adjustmentType === AdjustmentType.INCREASE) {
+      adjustment.newStock = inventory.currentStock + dto.quantity;
+    } else if (dto.adjustmentType === AdjustmentType.DECREASE) {
+      adjustment.newStock = inventory.currentStock - dto.quantity;
+    } else if (dto.adjustmentType === AdjustmentType.SET) {
+      adjustment.newStock = dto.quantity;
+    }
+
+    return await this.adjustmentRepository.save(adjustment);
+  }
+
+  /**
+   * Get all pending adjustments (Admin)
+   */
+  async getPendingAdjustments(): Promise<InventoryAdjustment[]> {
+    return await this.adjustmentRepository.find({
+      where: { status: AdjustmentStatus.PENDING },
+      relations: ['product', 'requestedByUser'],
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  /**
+   * Get all adjustments with filters (Admin/Staff)
+   */
+  async getAllAdjustments(
+    status?: AdjustmentStatus,
+  ): Promise<InventoryAdjustment[]> {
+    const query = this.adjustmentRepository
+      .createQueryBuilder('adjustment')
+      .leftJoinAndSelect('adjustment.product', 'product')
+      .leftJoinAndSelect('adjustment.requestedByUser', 'requestedByUser')
+      .leftJoinAndSelect('adjustment.reviewedByUser', 'reviewedByUser')
+      .orderBy('adjustment.createdAt', 'DESC');
+
+    if (status) {
+      query.where('adjustment.status = :status', { status });
+    }
+
+    return await query.getMany();
+  }
+
+  /**
+   * Get adjustment by ID
+   */
+  async getAdjustmentById(adjustmentId: string): Promise<InventoryAdjustment> {
+    const adjustment = await this.adjustmentRepository.findOne({
+      where: { adjustmentId },
+      relations: ['product', 'requestedByUser', 'reviewedByUser'],
+    });
+
+    if (!adjustment) {
+      throw new NotFoundException('Adjustment request not found');
+    }
+
+    return adjustment;
+  }
+
+  /**
+   * Review adjustment request (Admin only)
+   * Approve or reject the adjustment
+   */
+  async reviewAdjustment(
+    adjustmentId: string,
+    dto: ReviewAdjustmentDto,
+  ): Promise<InventoryAdjustment> {
+    const adjustment = await this.adjustmentRepository.findOne({
+      where: { adjustmentId },
+      relations: ['product'],
+    });
+
+    if (!adjustment) {
+      throw new NotFoundException('Adjustment request not found');
+    }
+
+    if (adjustment.status !== AdjustmentStatus.PENDING) {
+      throw new BadRequestException('Adjustment has already been reviewed');
+    }
+
+    // Validate rejection reason
+    if (
+      dto.status === AdjustmentStatus.REJECTED &&
+      !dto.rejectionReason?.trim()
+    ) {
+      throw new BadRequestException(
+        'Rejection reason is required when rejecting an adjustment',
+      );
+    }
+
+    // Update adjustment status
+    adjustment.status = dto.status;
+    adjustment.reviewedBy = dto.reviewedBy;
+    adjustment.reviewedAt = new Date();
+
+    if (dto.status === AdjustmentStatus.REJECTED && dto.rejectionReason) {
+      adjustment.rejectionReason = dto.rejectionReason;
+    }
+
+    // If approved, apply the adjustment to inventory
+    if (dto.status === AdjustmentStatus.APPROVED) {
+      await this.applyAdjustment(adjustment);
+    }
+
+    return await this.adjustmentRepository.save(adjustment);
+  }
+
+  /**
+   * Apply approved adjustment to inventory
+   * Private method called when adjustment is approved
+   */
+  private async applyAdjustment(
+    adjustment: InventoryAdjustment,
+  ): Promise<void> {
+    const inventory = await this.inventoryRepository.findOne({
+      where: { productId: adjustment.productId },
+    });
+
+    if (!inventory) {
+      throw new NotFoundException('Inventory not found');
+    }
+
+    // Apply adjustment based on type
+    switch (adjustment.adjustmentType) {
+      case AdjustmentType.INCREASE:
+        inventory.currentStock += adjustment.quantity;
+        break;
+
+      case AdjustmentType.DECREASE:
+        if (inventory.currentStock < adjustment.quantity) {
+          throw new BadRequestException(
+            'Cannot decrease stock below zero. Current stock: ' +
+              inventory.currentStock,
+          );
+        }
+        inventory.currentStock -= adjustment.quantity;
+        break;
+
+      case AdjustmentType.SET:
+        inventory.currentStock = adjustment.quantity;
+        break;
+    }
+
+    // Update original price if provided (optional)
+    if (
+      adjustment.originalPrice !== null &&
+      adjustment.originalPrice !== undefined
+    ) {
+      inventory.originalPrice = adjustment.originalPrice;
+    }
+
+    await this.inventoryRepository.save(inventory);
+    await this.syncProductStock(adjustment.productId);
+  }
+
+  /**
+   * Cancel adjustment request (Staff - only if pending)
+   */
+  async cancelAdjustment(adjustmentId: string): Promise<InventoryAdjustment> {
+    const adjustment = await this.adjustmentRepository.findOne({
+      where: { adjustmentId },
+    });
+
+    if (!adjustment) {
+      throw new NotFoundException('Adjustment request not found');
+    }
+
+    if (adjustment.status !== AdjustmentStatus.PENDING) {
+      throw new BadRequestException(
+        'Can only cancel pending adjustment requests',
+      );
+    }
+
+    adjustment.status = AdjustmentStatus.REJECTED;
+    adjustment.rejectionReason = 'Cancelled by requestor';
+    adjustment.reviewedAt = new Date();
+
+    return await this.adjustmentRepository.save(adjustment);
+  }
+
+  /**
+   * Get adjustment history for a product
+   */
+  async getProductAdjustmentHistory(
+    productId: string,
+  ): Promise<InventoryAdjustment[]> {
+    return await this.adjustmentRepository.find({
+      where: { productId },
+      relations: ['requestedByUser', 'reviewedByUser'],
+      order: { createdAt: 'DESC' },
+    });
   }
 }

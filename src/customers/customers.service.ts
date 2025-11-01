@@ -35,6 +35,9 @@ export class CustomersService {
       purchaseHistory: purchaseHistory ?? [],
       user: { userId } as User,
     });
+    
+    (customer as any).userId = userId;
+    
     return await this.customerRepository.save(customer);
   }
 

@@ -5,6 +5,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
 import { Category } from '../categories/entities/category.entity';
+import { InventoryService } from '../inventory/inventory.service';
 
 @Injectable()
 export class ProductsService {
@@ -13,6 +14,7 @@ export class ProductsService {
     private readonly productRepository: Repository<Product>,
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
+    private readonly inventoryService: InventoryService,
   ) {}
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
@@ -25,7 +27,18 @@ export class ProductsService {
       ...productData,
       categories,
     });
-    return await this.productRepository.save(product);
+    
+    const savedProduct = await this.productRepository.save(product);
+
+    // Automatically create inventory record for new product
+    // Use stock and originalPrice from CreateProductDto if provided
+    await this.inventoryService.setStock(
+      savedProduct.productId,
+      createProductDto.stock || 0,
+      createProductDto.originalPrice || 0, // originalPrice (cost price)
+    );
+
+    return savedProduct;
   }
 
   async findAll(): Promise<Product[]> {

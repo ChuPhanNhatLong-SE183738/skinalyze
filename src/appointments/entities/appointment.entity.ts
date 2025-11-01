@@ -13,6 +13,7 @@ import { Dermatologist } from '../../dermatologists/entities/dermatologist.entit
 import { Transaction } from '../../transactions/entities/transaction.entity';
 import { TreatmentRoutine } from '../../treatment-routines/entities/treatment-routine.entity';
 import { SkinAnalysis } from '../../skin-analysis/entities/skin-analysis.entity'; // Import SkinAnalysis
+import { AvailabilitySlot } from 'src/availability-slots/entities/availability-slot.entity';
 
 export enum AppointmentStatus {
   PENDING_PAYMENT = 'pending_payment',
@@ -108,4 +109,7 @@ export class Appointment {
   )
   @JoinColumn({ name: 'trackingRoutineId' })
   trackingRoutine: TreatmentRoutine;
+
+  @OneToOne(() => AvailabilitySlot, (slot) => slot.appointment)
+  availabilitySlot: AvailabilitySlot;
 }

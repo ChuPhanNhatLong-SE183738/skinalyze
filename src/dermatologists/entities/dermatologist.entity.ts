@@ -12,6 +12,7 @@ import { User } from '../../users/entities/user.entity';
 import { TreatmentRoutine } from '../../treatment-routines/entities/treatment-routine.entity';
 import { Appointment } from 'src/appointments/entities/appointment.entity';
 import { SubscriptionPlan } from '../../subscription-plans/entities/subscription-plan.entity';
+import { AvailabilitySlot } from 'src/availability-slots/entities/availability-slot.entity';
 
 @Entity('dermatologists')
 export class Dermatologist {
@@ -23,12 +24,6 @@ export class Dermatologist {
     nullable: true,
   })
   purchaseHistory: any[];
-
-  @Column({
-    type: 'json',
-    nullable: true,
-  })
-  availability: any[];
 
   @Column({ type: 'int', nullable: true })
   yearsOfExp: number;
@@ -51,4 +46,7 @@ export class Dermatologist {
 
   @OneToMany(() => SubscriptionPlan, (plan) => plan.dermatologist)
   subscriptionPlans: SubscriptionPlan[];
+
+  @OneToMany(() => AvailabilitySlot, (slot) => slot.dermatologist)
+  slots: AvailabilitySlot[];
 }
