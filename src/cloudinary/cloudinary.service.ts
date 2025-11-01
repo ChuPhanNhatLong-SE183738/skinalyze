@@ -1,23 +1,35 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { v2 as cloudinary, UploadApiResponse, UploadApiErrorResponse } from 'cloudinary';
+import {
+  v2 as cloudinary,
+  UploadApiResponse,
+  UploadApiErrorResponse,
+} from 'cloudinary';
 
 @Injectable()
 export class CloudinaryService {
   private readonly logger = new Logger(CloudinaryService.name);
 
   constructor(private configService: ConfigService) {
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME
-    const apiKey = process.env.CLOUDINARY_API_KEY
-    const apiSecret = process.env.CLOUDINARY_API_SECRET
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
     // Validate that all required credentials are present
     if (!cloudName || !apiKey || !apiSecret) {
-      this.logger.error('❌ Cloudinary credentials are missing in environment variables');
+      this.logger.error(
+        '❌ Cloudinary credentials are missing in environment variables',
+      );
       this.logger.error(`Cloud Name: ${cloudName ? '✓' : '✗'}`);
       this.logger.error(`API Key: ${apiKey ? '✓' : '✗'}`);
       this.logger.error(`API Secret: ${apiSecret ? '✓' : '✗'}`);
-      throw new InternalServerErrorException('Cloudinary configuration is incomplete');
+      throw new InternalServerErrorException(
+        'Cloudinary configuration is incomplete',
+      );
     }
 
     cloudinary.config({
@@ -44,21 +56,23 @@ export class CloudinaryService {
       const uploadOptions = {
         folder: folder || 'skinalyze',
         resource_type: 'auto' as const,
-        transformation: [
-          { quality: 'auto:good' },
-          { fetch_format: 'auto' },
-        ],
+        transformation: [{ quality: 'auto:good' }, { fetch_format: 'auto' }],
       };
 
       const uploadStream = cloudinary.uploader.upload_stream(
         uploadOptions,
-        (error: UploadApiErrorResponse | undefined, result: UploadApiResponse | undefined) => {
+        (
+          error: UploadApiErrorResponse | undefined,
+          result: UploadApiResponse | undefined,
+        ) => {
           if (error) {
             this.logger.error('Failed to upload image to Cloudinary:', error);
             return reject(error);
           }
           if (result) {
-            this.logger.log(`Image uploaded successfully: ${result.secure_url}`);
+            this.logger.log(
+              `Image uploaded successfully: ${result.secure_url}`,
+            );
             resolve(result);
           }
         },

@@ -6,6 +6,7 @@ import { Appointment } from './entities/appointment.entity';
 import { CustomersModule } from '../customers/customers.module';
 import { DermatologistsModule } from '../dermatologists/dermatologists.module';
 import { TransactionsModule } from '../transactions/transactions.module';
+import { AvailabilitySlotsModule } from '../availability-slots/availability-slots.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
     CustomersModule,
     DermatologistsModule,
     TransactionsModule,
+    AvailabilitySlotsModule,
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],
