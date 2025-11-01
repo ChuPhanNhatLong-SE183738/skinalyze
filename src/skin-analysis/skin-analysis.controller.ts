@@ -331,6 +331,160 @@ export class SkinAnalysisController {
     return await this.skinAnalysisService.diseaseDetection(file, customerId);
   }
 
+  @Post('condition-detection')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Complete condition detection pipeline',
+    description:
+      'Complete AI-powered skin condition detection pipeline. This endpoint:\n' +
+      '1. Uploads the image to Cloudinary\n' +
+      '2. Detects the skin condition using AI\n' +
+      '3. Saves all results to the database\n\n' +
+      'Requires JWT authentication and a valid customerId.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Upload image and provide customer ID for condition detection',
+    schema: {
+      type: 'object',
+      properties: {
+        customerId: {
+          type: 'string',
+          description: 'Customer ID (UUID format)',
+          example: '550e8400-e29b-41d4-a716-446655440000',
+        },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file (.jpg, .jpeg, .png) - Max 5MB',
+        },
+      },
+      required: ['customerId', 'file'],
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Condition detection completed and analysis saved to database',
+    schema: {
+      type: 'object',
+      properties: {
+        analysisId: {
+          type: 'string',
+          example: '8a94a13f-9e06-4ba1-858c-5af59218d832',
+          description: 'Unique identifier for the analysis',
+        },
+        customerId: {
+          type: 'string',
+          example: '550e8400-e29b-41d4-a716-446655440000',
+          description: 'Customer ID who requested the analysis',
+        },
+        source: {
+          type: 'string',
+          example: 'AI_SCAN',
+          description: 'Source of the analysis',
+        },
+        chiefComplaint: {
+          type: 'string',
+          nullable: true,
+          example: null,
+          description: 'Chief complaint (will be null for AI scans)',
+        },
+        patientSymptoms: {
+          type: 'string',
+          nullable: true,
+          example: null,
+          description: 'Patient symptoms (will be null for AI scans)',
+        },
+        imageUrls: {
+          type: 'array',
+          items: { type: 'string' },
+          example: [
+            'https://res.cloudinary.com/dmtfteyxh/image/upload/v1761915961/skin-analysis/condition-detection/xyz789.jpg',
+          ],
+          description: 'URLs of uploaded images from Cloudinary',
+        },
+        notes: {
+          type: 'string',
+          nullable: true,
+          example: null,
+          description: 'Additional notes (will be null for AI scans)',
+        },
+        aiDetectedDisease: {
+          type: 'string',
+          nullable: true,
+          example: null,
+          description: 'AI-detected disease classification (will be null for condition detection)',
+        },
+        aiDetectedCondition: {
+          type: 'string',
+          example: 'Oily',
+          description: 'AI-detected skin condition (Oily, Dry, Normal, Sensitive, etc.)',
+        },
+        aiRecommendedProducts: {
+          type: 'array',
+          nullable: true,
+          example: null,
+          description: 'AI-recommended products (will be null for now)',
+        },
+        mask: {
+          type: 'array',
+          items: { type: 'string' },
+          nullable: true,
+          example: null,
+          description: 'Segmentation masks (will be null for condition detection)',
+        },
+        createdAt: {
+          type: 'string',
+          format: 'date-time',
+          example: '2025-10-31T20:06:05.123Z',
+          description: 'Timestamp when analysis was created',
+        },
+        updatedAt: {
+          type: 'string',
+          format: 'date-time',
+          example: '2025-10-31T20:06:05.123Z',
+          description: 'Timestamp when analysis was last updated',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Bad Request - customerId is required or invalid file',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized - Invalid or missing JWT token',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Internal server error during processing',
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async detectCondition(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png)$/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
+    @Body('customerId') customerId: string,
+  ) {
+    // Validate customerId is provided
+    if (!customerId) {
+      throw new HttpException(
+        'customerId is required',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    return await this.skinAnalysisService.conditionDetection(file, customerId);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

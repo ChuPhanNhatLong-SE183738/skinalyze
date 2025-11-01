@@ -31,7 +31,7 @@ export class SkinAnalysisService {
       });
 
       const response = await axios.post(
-        `${this.aiServiceUrl}/api/classify`,
+        `${this.aiServiceUrl}/api/classification-disease`,
         formData,
         {
           headers: {
@@ -59,7 +59,7 @@ export class SkinAnalysisService {
       });
 
       const response = await axios.post(
-        `${this.aiServiceUrl}/api/segment`,
+        `${this.aiServiceUrl}/api/segmentation-disease`,
         formData,
         {
           headers: {
@@ -86,7 +86,7 @@ export class SkinAnalysisService {
         contentType: file.mimetype,
       });
       const response = await axios.post(
-        `${this.aiServiceUrl}/api/condition`,
+        `${this.aiServiceUrl}/api/classification-condition`,
         formData,
         {
           headers: {
@@ -100,6 +100,58 @@ export class SkinAnalysisService {
       throw new HttpException(
         error.response?.data?.message || 'Error calling AI condition service',
         error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Complete condition detection - Upload image, classify condition, and save to database
+   * @param file - Image file to analyze
+   * @param customerId - Customer ID (passed as parameter)
+   */
+  async conditionDetection(
+    file: Express.Multer.File,
+    customerId: string,
+  ): Promise<SkinAnalysis> {
+    try {
+      this.logger.log(`Starting condition detection for customer: ${customerId}`);
+
+      // 1. Upload image to Cloudinary
+      this.logger.log('Uploading image to Cloudinary...');
+      const uploadResult = await this.cloudinaryService.uploadImage(
+        file,
+        'skin-analysis/condition-detection',
+      );
+      const imageUrl = uploadResult.secure_url;
+      this.logger.log(`Image uploaded: ${imageUrl}`);
+
+      // 2. Call classify condition API
+      this.logger.log('Calling AI condition classification service...');
+      const classificationResult = await this.classifyCondition(file);
+      const aiDetectedCondition = classificationResult.predicted_class;
+      this.logger.log(`Condition detected: ${aiDetectedCondition}`);
+
+      // 3. Prepare data for database
+      const skinAnalysisData: CreateSkinAnalysisDto = {
+        customerId,
+        source: 'AI_SCAN',
+        imageUrls: [imageUrl],
+        aiDetectedCondition,
+      };
+
+      // 4. Save to database
+      this.logger.log('Saving analysis to database...');
+      const analysis = this.skinAnalysisRepository.create(skinAnalysisData);
+      const savedAnalysis = await this.skinAnalysisRepository.save(analysis);
+      
+      this.logger.log(`Analysis saved with ID: ${savedAnalysis.analysisId}`);
+
+      return savedAnalysis;
+    } catch (error) {
+      this.logger.error('Condition detection failed:', error);
+      throw new HttpException(
+        error.message || 'Condition detection failed',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
