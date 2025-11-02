@@ -11,6 +11,7 @@ import { Repository } from 'typeorm';
 import { SkinAnalysis } from './entities/skin-analysis.entity';
 import { CreateSkinAnalysisDto } from './dto/create-skin-analysis.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { Customer } from '../customers/entities/customer.entity';
 import axios from 'axios';
 import * as FormData from 'form-data';
 
@@ -22,6 +23,8 @@ export class SkinAnalysisService {
   constructor(
     @InjectRepository(SkinAnalysis)
     private skinAnalysisRepository: Repository<SkinAnalysis>,
+    @InjectRepository(Customer)
+    private customerRepository: Repository<Customer>,
     private configService: ConfigService,
     private cloudinaryService: CloudinaryService,
   ) {
@@ -126,6 +129,20 @@ export class SkinAnalysisService {
     try {
       this.logger.log(`Starting condition detection for customer: ${customerId}`);
 
+      // Validate customer exists
+      const customer = await this.customerRepository.findOne({
+        where: { customerId },
+      });
+
+      if (!customer) {
+        throw new HttpException(
+          `Customer with ID "${customerId}" not found. Please provide a valid customerId.`,
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      this.logger.log(`Customer validated: ${customer.customerId}`);
+
       // 1. Upload image to Cloudinary
       this.logger.log('Uploading image to Cloudinary...');
       const uploadResult = await this.cloudinaryService.uploadImage(
@@ -138,8 +155,11 @@ export class SkinAnalysisService {
       // 2. Call classify condition API
       this.logger.log('Calling AI condition classification service...');
       const classificationResult = await this.classifyCondition(file);
-      const aiDetectedCondition = classificationResult.predicted_class;
+      
+      // Fix: FastAPI returns 'predicted_condition' not 'predicted_class'
+      const aiDetectedCondition = classificationResult.predicted_condition;
       this.logger.log(`Condition detected: ${aiDetectedCondition}`);
+      this.logger.log(`Confidence: ${classificationResult.confidence}`);
 
       // 3. Prepare data for database
       const skinAnalysisData: CreateSkinAnalysisDto = {
@@ -159,6 +179,16 @@ export class SkinAnalysisService {
       return savedAnalysis;
     } catch (error) {
       this.logger.error('Condition detection failed:', error);
+      this.logger.error('Error details:', error.message);
+      
+      // Provide helpful error messages
+      if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+        throw new HttpException(
+          `Invalid customerId. The customer does not exist in the database. Please use a valid customerId (format: CUST-xxxx-xxxx-xxxx).`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      
       throw new HttpException(
         error.message || 'Condition detection failed',
         error.status || HttpStatus.INTERNAL_SERVER_ERROR,
@@ -177,6 +207,20 @@ export class SkinAnalysisService {
   ): Promise<SkinAnalysis> {
     try {
       this.logger.log(`Starting disease detection for customer: ${customerId}`);
+
+      // Validate customer exists
+      const customer = await this.customerRepository.findOne({
+        where: { customerId },
+      });
+
+      if (!customer) {
+        throw new HttpException(
+          `Customer with ID "${customerId}" not found. Please provide a valid customerId.`,
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      this.logger.log(`Customer validated: ${customer.customerId}`);
 
       // 1. Upload image to Cloudinary
       this.logger.log('Uploading image to Cloudinary...');
@@ -212,12 +256,22 @@ export class SkinAnalysisService {
       this.logger.log('Saving analysis to database...');
       const analysis = this.skinAnalysisRepository.create(skinAnalysisData);
       const savedAnalysis = await this.skinAnalysisRepository.save(analysis);
-
+      
       this.logger.log(`Analysis saved with ID: ${savedAnalysis.analysisId}`);
 
       return savedAnalysis;
     } catch (error) {
       this.logger.error('Disease detection failed:', error);
+      this.logger.error('Error details:', error.message);
+      
+      // Provide helpful error messages
+      if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+        throw new HttpException(
+          `Invalid customerId. The customer does not exist in the database. Please use a valid customerId (format: CUST-xxxx-xxxx-xxxx).`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      
       throw new HttpException(
         error.message || 'Disease detection failed',
         error.status || HttpStatus.INTERNAL_SERVER_ERROR,

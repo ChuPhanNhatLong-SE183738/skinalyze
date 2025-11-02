@@ -177,7 +177,7 @@ export class SkinAnalysisController {
     return await this.skinAnalysisService.segmentDisease(file);
   }
 
-  @Post('disease-detection')
+  @Post('disease-detection/:customerId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -188,26 +188,27 @@ export class SkinAnalysisController {
       '2. Classifies the disease using AI\n' +
       '3. Segments the affected area\n' +
       '4. Saves all results to the database\n\n' +
-      'Requires JWT authentication and a valid customerId.',
+      'Requires JWT authentication and a valid customerId in the URL.',
+  })
+  @ApiParam({
+    name: 'customerId',
+    description: 'Customer ID (UUID format)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    required: true,
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'Upload image and provide customer ID for disease detection',
+    description: 'Upload image file for disease detection',
     schema: {
       type: 'object',
       properties: {
-        customerId: {
-          type: 'string',
-          description: 'Customer ID (UUID format)',
-          example: '550e8400-e29b-41d4-a716-446655440000',
-        },
         file: {
           type: 'string',
           format: 'binary',
           description: 'Image file (.jpg, .jpeg, .png) - Max 5MB',
         },
       },
-      required: ['customerId', 'file'],
+      required: ['file'],
     },
   })
   @ApiResponse({
@@ -297,7 +298,7 @@ export class SkinAnalysisController {
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Bad Request - customerId is required or invalid file',
+    description: 'Bad Request - Invalid file',
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -309,6 +310,7 @@ export class SkinAnalysisController {
   })
   @UseInterceptors(FileInterceptor('file'))
   async diseaseDetection(
+    @Param('customerId') customerId: string,
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -318,20 +320,11 @@ export class SkinAnalysisController {
       }),
     )
     file: Express.Multer.File,
-    @Body('customerId') customerId: string,
   ) {
-    // Validate customerId is provided
-    if (!customerId) {
-      throw new HttpException(
-        'customerId is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
     return await this.skinAnalysisService.diseaseDetection(file, customerId);
   }
 
-  @Post('condition-detection')
+  @Post('condition-detection/:customerId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -341,26 +334,27 @@ export class SkinAnalysisController {
       '1. Uploads the image to Cloudinary\n' +
       '2. Detects the skin condition using AI\n' +
       '3. Saves all results to the database\n\n' +
-      'Requires JWT authentication and a valid customerId.',
+      'Requires JWT authentication and a valid customerId in the URL.',
+  })
+  @ApiParam({
+    name: 'customerId',
+    description: 'Customer ID (UUID format)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    required: true,
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'Upload image and provide customer ID for condition detection',
+    description: 'Upload image file for condition detection',
     schema: {
       type: 'object',
       properties: {
-        customerId: {
-          type: 'string',
-          description: 'Customer ID (UUID format)',
-          example: '550e8400-e29b-41d4-a716-446655440000',
-        },
         file: {
           type: 'string',
           format: 'binary',
           description: 'Image file (.jpg, .jpeg, .png) - Max 5MB',
         },
       },
-      required: ['customerId', 'file'],
+      required: ['file'],
     },
   })
   @ApiResponse({
@@ -451,7 +445,7 @@ export class SkinAnalysisController {
   })
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
-    description: 'Bad Request - customerId is required or invalid file',
+    description: 'Bad Request - Invalid file',
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
@@ -463,6 +457,7 @@ export class SkinAnalysisController {
   })
   @UseInterceptors(FileInterceptor('file'))
   async detectCondition(
+    @Param('customerId') customerId: string,
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -472,16 +467,7 @@ export class SkinAnalysisController {
       }),
     )
     file: Express.Multer.File,
-    @Body('customerId') customerId: string,
   ) {
-    // Validate customerId is provided
-    if (!customerId) {
-      throw new HttpException(
-        'customerId is required',
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
     return await this.skinAnalysisService.conditionDetection(file, customerId);
   }
 

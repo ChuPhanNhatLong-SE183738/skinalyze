@@ -44,7 +44,7 @@ export class SkinAnalysis {
   @Column('simple-json', { nullable: true })
   aiRecommendedProducts: any[];
 
-  @Column('simple-array', { nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   mask: string[];
 
   @CreateDateColumn()

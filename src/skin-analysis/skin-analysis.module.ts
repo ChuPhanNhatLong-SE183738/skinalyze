@@ -4,11 +4,12 @@ import { ConfigModule } from '@nestjs/config';
 import { SkinAnalysisController } from './skin-analysis.controller';
 import { SkinAnalysisService } from './skin-analysis.service';
 import { SkinAnalysis } from './entities/skin-analysis.entity';
+import { Customer } from '../customers/entities/customer.entity';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([SkinAnalysis]),
+    TypeOrmModule.forFeature([SkinAnalysis, Customer]),
     ConfigModule,
     CloudinaryModule,
   ],
