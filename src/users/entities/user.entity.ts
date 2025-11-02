@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 
 export enum UserRole {
   CUSTOMER = 'customer',
@@ -23,12 +24,14 @@ export class User {
   email: string;
 
   @Column()
+  @Exclude()
   password: string;
 
   @Column()
   fullName: string;
 
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  @Exclude()
   balance: number;
 
   @Column({ type: 'date', nullable: true })
@@ -63,8 +66,10 @@ export class User {
   isVerified: boolean;
 
   @Column({ nullable: true })
+  @Exclude() // 🔒 Không trả về token verification
   emailVerificationToken: string;
 
   @Column({ type: 'timestamp', nullable: true })
+  @Exclude() // 🔒 Không trả về expiry token
   emailVerificationTokenExpiry: Date;
 }

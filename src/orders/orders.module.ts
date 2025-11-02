@@ -11,6 +11,7 @@ import { CustomersModule } from '../customers/customers.module';
 import { UsersModule } from '../users/users.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ShippingLogsModule } from '../shipping-logs/shipping-logs.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     UsersModule,
     forwardRef(() => PaymentsModule),
     NotificationsModule,
+    ShippingLogsModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

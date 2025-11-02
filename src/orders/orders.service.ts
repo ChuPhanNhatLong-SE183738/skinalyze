@@ -23,6 +23,8 @@ import { PaymentsService } from '../payments/payments.service';
 import { PaymentType } from '../payments/entities/payment.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
+import { ShippingLogsService } from '../shipping-logs/shipping-logs.service';
+import { ShippingStatus } from '../shipping-logs/entities/shipping-log.entity';
 
 @Injectable()
 export class OrdersService {
@@ -42,6 +44,7 @@ export class OrdersService {
     @Inject(forwardRef(() => PaymentsService))
     private readonly paymentsService: PaymentsService,
     private readonly notificationsService: NotificationsService,
+    private readonly shippingLogsService: ShippingLogsService,
   ) {}
 
   async create(createDto: CreateOrderDto): Promise<Order> {
@@ -207,6 +210,18 @@ export class OrdersService {
     }
 
     const savedOrder = await this.orderRepository.save(order);
+
+    try {
+      await this.shippingLogsService.create({
+        orderId: order.orderId,
+        status: ShippingStatus.PENDING,
+        totalAmount: order.transaction?.totalAmount || 0,
+        note: 'Đơn hàng đã được xác nhận, đang chờ xử lý',
+      });
+      this.logger.log(`✅ Created shipping log for order ${order.orderId}`);
+    } catch (error) {
+      this.logger.error(`Failed to create shipping log for order ${order.orderId}:`, error.message);
+    }
 
     // 🔔 Gửi notification cho customer
     const userId = order.customer?.user?.userId;

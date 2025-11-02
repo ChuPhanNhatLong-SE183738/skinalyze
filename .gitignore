@@ -3,6 +3,7 @@
 /node_modules
 /build
 /service-account-key.json
+/skinalyze-475715-0f499dd5cd61.json
 
 # Database
 /database/*.sql

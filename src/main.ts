@@ -1,5 +1,5 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ValidationPipe, ClassSerializerInterceptor } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import * as admin from 'firebase-admin';
@@ -43,6 +43,14 @@ async function bootstrap() {
       whitelist: true, // Strip unknown properties
       forbidNonWhitelisted: true, // Throw error for unknown properties
       transform: true, // Transform payloads to DTO instances
+    }),
+  );
+
+  // 🔒 Enable global serialization to exclude sensitive fields
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector), {
+      excludeExtraneousValues: false,
+      exposeUnsetFields: false,
     }),
   );
 

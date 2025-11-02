@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
+import { User } from '../../users/entities/user.entity';
 
 export enum ShippingStatus {
   PENDING = 'PENDING',
@@ -33,6 +35,24 @@ export class ShippingLog {
   @Column({ type: 'uuid' })
   orderId: string;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  shippingFee: number;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  carrierName: string;
+
+  @Column({ type: 'text', nullable: true })
+  note: string;
+
+  @Column({ type: 'text', nullable: true })
+  unexpectedCase: string;
+
+  @Column({ type: 'boolean', default: false })
+  isCodCollected: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  isCodTransferred: boolean;
+
   @Column({
     type: 'enum',
     enum: ShippingStatus,
@@ -40,12 +60,35 @@ export class ShippingLog {
   })
   status: ShippingStatus;
 
-  @Column({ type: 'text', nullable: true })
-  location: string;
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  totalAmount: number;
 
-  @Column({ type: 'text', nullable: true })
-  notes: string;
+  @Column({ type: 'datetime', nullable: true })
+  codCollectDate: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  codTransferDate: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  estimatedDeliveryDate: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  returnedDate: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  deliveredDate: Date;
+
+  // Staff người thực hiện ship
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'shippingStaffId' })
+  shippingStaff: User;
+
+  @Column({ type: 'uuid', nullable: true })
+  shippingStaffId: string;
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
