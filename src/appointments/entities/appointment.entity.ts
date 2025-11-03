@@ -14,6 +14,7 @@ import { Transaction } from '../../transactions/entities/transaction.entity';
 import { TreatmentRoutine } from '../../treatment-routines/entities/treatment-routine.entity';
 import { SkinAnalysis } from '../../skin-analysis/entities/skin-analysis.entity'; // Import SkinAnalysis
 import { AvailabilitySlot } from 'src/availability-slots/entities/availability-slot.entity';
+import { Payment } from 'src/payments/entities/payment.entity';
 
 export enum AppointmentStatus {
   PENDING_PAYMENT = 'pending_payment',
@@ -34,6 +35,9 @@ export enum AppointmentType {
 export class Appointment {
   @PrimaryGeneratedColumn('uuid')
   appointmentId: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  paymentId: string;
 
   @Column({ type: 'datetime' })
   startTime: Date;
@@ -87,9 +91,9 @@ export class Appointment {
   @JoinColumn({ name: 'customerId' })
   customer: Customer;
 
-  @OneToOne(() => Transaction, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'transactionId' })
-  transaction: Transaction;
+  @OneToOne(() => Payment, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'paymentId' })
+  payment: Payment;
 
   @OneToOne(() => SkinAnalysis, { nullable: true })
   @JoinColumn({ name: 'analysisId' })

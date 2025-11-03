@@ -42,6 +42,14 @@ export class AvailabilitySlot {
   @Column({ type: 'uuid', nullable: true })
   appointmentId: string | null;
 
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
+  price: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

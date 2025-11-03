@@ -10,12 +10,15 @@ import {
 } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
 import { SubscriptionPlan } from '../../subscription-plans/entities/subscription-plan.entity';
-import { Transaction } from 'src/transactions/entities/transaction.entity';
+import { Payment } from 'src/payments/entities/payment.entity';
 
 @Entity('customer_subscription')
 export class CustomerSubscription {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  paymentId: string;
 
   @Column({ type: 'int' })
   sessionsRemaining: number;
@@ -43,7 +46,7 @@ export class CustomerSubscription {
   @JoinColumn({ name: 'planId' })
   subscriptionPlan: SubscriptionPlan;
 
-  @OneToOne(() => Transaction, { nullable: false })
-  @JoinColumn({ name: 'transactionId' })
-  transaction: Transaction;
+  @OneToOne(() => Payment, { nullable: true })
+  @JoinColumn({ name: 'paymentId' })
+  payment: Payment;
 }

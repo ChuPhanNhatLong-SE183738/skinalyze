@@ -10,8 +10,7 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
 import { CustomersService } from '../customers/customers.service';
 import { DermatologistsService } from '../dermatologists/dermatologists.service';
-import { TransactionStatus } from '../transactions/entities/transaction.entity';
-import { TransactionsService } from '../transactions/transactions.service';
+
 import { AvailabilitySlotsService } from '../availability-slots/availability-slots.service';
 import { AvailabilitySlot } from '../availability-slots/entities/availability-slot.entity';
 
@@ -23,7 +22,6 @@ export class AppointmentsService {
     private readonly customersService: CustomersService,
     private readonly dermatologistsService: DermatologistsService,
     private readonly availabilitySlotsService: AvailabilitySlotsService,
-    private readonly transactionsService: TransactionsService,
   ) {}
 
   async create(createDto: CreateAppointmentDto): Promise<Appointment> {
@@ -39,19 +37,9 @@ export class AppointmentsService {
     }
 
     await Promise.all([
-      this.customersService.findOne(createDto.customerId),
+      // this.customersService.findOne(createDto.customerId),
       this.dermatologistsService.findOne(createDto.dermatologistId),
     ]);
-
-    const transaction = await this.transactionsService.findOne(
-      createDto.transactionId,
-    );
-
-    if (transaction.status !== TransactionStatus.COMPLETED) {
-      throw new BadRequestException(
-        'Payment must be completed before booking an appointment',
-      );
-    }
 
     const appointment = this.appointmentRepository.create({
       ...createDto,

@@ -28,6 +28,14 @@ export class Dermatologist {
   @Column({ type: 'int', nullable: true })
   yearsOfExp: number;
 
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
+  defaultSlotPrice: number;
+
   @CreateDateColumn()
   createdAt: Date;
 
