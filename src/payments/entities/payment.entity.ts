@@ -6,8 +6,11 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToOne,
 } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
+import { Appointment } from 'src/appointments/entities/appointment.entity';
+import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
 
 export enum PaymentStatus {
   PENDING = 'pending',
@@ -24,10 +27,10 @@ export enum PaymentMethod {
 }
 
 export enum PaymentType {
-  ORDER = 'order',       // Thanh toán đơn hàng
-  TOPUP = 'topup',       // Nạp tiền vào ví
+  ORDER = 'order', // Thanh toán đơn hàng
+  TOPUP = 'topup', // Nạp tiền vào ví
   BOOKING = 'booking',
-  SUBSCRIPTION = 'subscription'
+  SUBSCRIPTION = 'subscription',
 }
 
 @Entity('payments')
@@ -120,4 +123,10 @@ export class Payment {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToOne(() => Appointment, (appointment) => appointment.payment)
+  appointment: Appointment;
+
+  @OneToOne(() => CustomerSubscription, (subscription) => subscription.payment)
+  customerSubscription: CustomerSubscription;
 }

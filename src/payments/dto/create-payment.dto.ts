@@ -5,7 +5,6 @@ import {
   Min,
   IsString,
   IsObject,
-  IsArray,
 } from 'class-validator';
 import { PaymentMethod, PaymentType } from '../entities/payment.entity';
 import { ApiProperty } from '@nestjs/swagger';

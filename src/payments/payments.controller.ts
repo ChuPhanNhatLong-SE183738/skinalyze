@@ -34,9 +34,10 @@ export class PaymentsController {
    */
   @Post('webhook/sepay')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'SePay webhook endpoint',
-    description: 'Receives payment notifications from SePay when customers transfer money'
+    description:
+      'Receives payment notifications from SePay when customers transfer money',
   })
   @ApiBody({ type: SepayWebhookDto })
   @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
@@ -44,9 +45,11 @@ export class PaymentsController {
     // Log FIRST to catch all requests
     console.log('🚨 WEBHOOK HIT! Timestamp:', new Date().toISOString());
     console.log('🚨 Webhook data:', JSON.stringify(webhookData, null, 2));
-    
-    this.logger.log(`📥 Received SePay webhook: Transaction #${webhookData.id}`);
-    
+
+    this.logger.log(
+      `📥 Received SePay webhook: Transaction #${webhookData.id}`,
+    );
+
     try {
       const result = await this.paymentsService.handleSepayWebhook(webhookData);
       return {
@@ -69,16 +72,17 @@ export class PaymentsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create payment (order or topup)',
-    description: 'Create payment for order or balance topup' 
+    description: 'Create payment for order or balance topup',
   })
   @ApiResponse({ status: 201, description: 'Payment created successfully' })
   async createPayment(@Body() createPaymentDto: CreatePaymentDto) {
     const payment = await this.paymentsService.createPayment(createPaymentDto);
-    
-    const paymentTypeLabel = payment.paymentType === 'order' ? 'đơn hàng' : 'nạp tiền';
-    
+
+    const paymentTypeLabel =
+      payment.paymentType === 'order' ? 'đơn hàng' : 'nạp tiền';
+
     return {
       success: true,
       message: `Payment created for ${paymentTypeLabel}. Vui lòng chuyển khoản với mã thanh toán.`,
@@ -95,9 +99,10 @@ export class PaymentsController {
           transferContent: payment.paymentCode, // Customer PHẢI nhập đúng code này
           amount: payment.amount,
           qrCodeUrl: `https://img.vietqr.io/image/MB-0347178790-compact2.png?amount=${payment.amount}&addInfo=${payment.paymentCode}`,
-          note: payment.paymentType === 'order' 
-            ? 'Thanh toán đơn hàng - Vui lòng nhập CHÍNH XÁC mã thanh toán vào nội dung chuyển khoản'
-            : 'Nạp tiền vào ví - Vui lòng nhập CHÍNH XÁC mã thanh toán vào nội dung chuyển khoản',
+          note:
+            payment.paymentType === 'order'
+              ? 'Thanh toán đơn hàng - Vui lòng nhập CHÍNH XÁC mã thanh toán vào nội dung chuyển khoản'
+              : 'Nạp tiền vào ví - Vui lòng nhập CHÍNH XÁC mã thanh toán vào nội dung chuyển khoản',
         },
       },
     };
@@ -111,7 +116,7 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Payment status retrieved' })
   async checkPaymentStatus(@Param('paymentCode') paymentCode: string) {
     const status = await this.paymentsService.checkPaymentStatus(paymentCode);
-    
+
     return {
       success: true,
       data: status,
@@ -128,7 +133,7 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Payments retrieved successfully' })
   async getPaymentsByOrder(@Param('orderId') orderId: string) {
     const payments = await this.paymentsService.findByOrderId(orderId);
-    
+
     return {
       success: true,
       data: payments,
@@ -145,7 +150,7 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: 'Payment retrieved successfully' })
   async getPaymentByCode(@Param('paymentCode') paymentCode: string) {
     const payment = await this.paymentsService.findByCode(paymentCode);
-    
+
     return {
       success: true,
       data: payment,

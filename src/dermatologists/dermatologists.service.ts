@@ -3,6 +3,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
   HttpException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,21 +12,34 @@ import {
   CreateDermatologistDto,
   UpdateDermatologistDto,
 } from './dto/create-dermatologist.dto';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class DermatologistsService {
   constructor(
     @InjectRepository(Dermatologist)
     private readonly dermatologistRepository: Repository<Dermatologist>,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(
+    userId: string,
     createDermatologistDto: CreateDermatologistDto,
   ): Promise<Dermatologist> {
     try {
-      const dermatologist = this.dermatologistRepository.create(
-        createDermatologistDto,
-      );
+      await this.usersService.findOne(userId);
+      const existingProfile = await this.dermatologistRepository.findOne({
+        where: { user: { userId: userId } },
+      });
+      if (existingProfile) {
+        throw new ConflictException(
+          `Dermatologist profile for this user already exists`,
+        );
+      }
+      const dermatologist = this.dermatologistRepository.create({
+        ...createDermatologistDto,
+        user: { userId: userId },
+      });
       return await this.dermatologistRepository.save(dermatologist);
     } catch (error) {
       this.handleError(error, 'Failed to create dermatologist');
@@ -81,16 +95,36 @@ export class DermatologistsService {
     }
   }
 
-  async update(
-    id: string,
+  async updateMyProfile(
+    userId: string,
     updateDermatologistDto: UpdateDermatologistDto,
   ): Promise<Dermatologist> {
     try {
-      const dermatologist = await this.findOne(id);
+      const dermatologist = await this.findByUserId(userId);
+
       Object.assign(dermatologist, updateDermatologistDto);
       return await this.dermatologistRepository.save(dermatologist);
     } catch (error) {
-      this.handleError(error, `Failed to update dermatologist ${id}`);
+      this.handleError(
+        error,
+        `Failed to update dermatologist for user ${userId}`,
+      );
+    }
+  }
+
+  async update(
+    dermatologistId: string,
+    updateDermatologistDto: UpdateDermatologistDto,
+  ): Promise<Dermatologist> {
+    try {
+      const dermatologist = await this.findOne(dermatologistId);
+      Object.assign(dermatologist, updateDermatologistDto);
+      return await this.dermatologistRepository.save(dermatologist);
+    } catch (error) {
+      this.handleError(
+        error,
+        `Failed to update dermatologist ${dermatologistId}`,
+      );
     }
   }
 

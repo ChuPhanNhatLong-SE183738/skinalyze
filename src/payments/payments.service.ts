@@ -7,7 +7,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import {
   Payment,
   PaymentStatus,
@@ -17,8 +17,6 @@ import {
 import { SepayWebhookDto } from './dto/sepay-webhook.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { OrdersService } from '../orders/orders.service';
-import { TransactionsService } from '../transactions/transactions.service';
-import { TransactionStatus } from '../transactions/entities/transaction.entity';
 import { OrderStatus } from '../orders/entities/order.entity';
 import { UsersService } from '../users/users.service';
 import { CartService } from '../cart/cart.service';
@@ -28,11 +26,11 @@ export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
   constructor(
+    private readonly entityManager: EntityManager,
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
     @Inject(forwardRef(() => OrdersService))
     private readonly ordersService: OrdersService,
-    private readonly transactionsService: TransactionsService,
     private readonly usersService: UsersService,
     @Inject(forwardRef(() => CartService))
     private readonly cartService: CartService,
@@ -84,6 +82,12 @@ export class PaymentsService {
       }
       if (amount > 50000000) {
         throw new BadRequestException('Số tiền nạp tối đa là 50,000,000 VND');
+      }
+    } else if (paymentType === PaymentType.BOOKING) {
+      if (!customerId) {
+        throw new BadRequestException(
+          'CustomerId ID is required for booking payment',
+        );
       }
     }
 
@@ -361,6 +365,8 @@ export class PaymentsService {
         oldBalance,
         newBalance,
       };
+    } else if (payment.paymentType === PaymentType.BOOKING) {
+      // Handle booking payment logic here
     }
   }
 
@@ -415,6 +421,18 @@ export class PaymentsService {
       // For topup, use last 8 chars of userId
       const userIdShort = userId.replace(/-/g, '').slice(-8).toUpperCase();
       return `SKT${userIdShort}${timestamp}`;
+    } else if (paymentType === PaymentType.BOOKING && customerId) {
+      const customerIdShort = customerId
+        .replace(/-/g, '')
+        .slice(-8)
+        .toUpperCase();
+      return `SKB${customerIdShort}${timestamp}`;
+    } else if (paymentType === PaymentType.SUBSCRIPTION && customerId) {
+      const customerIdShort = customerId
+        .replace(/-/g, '')
+        .slice(-8)
+        .toUpperCase();
+      return `SKS${customerIdShort}${timestamp}`;
     }
 
     // Fallback
@@ -427,7 +445,7 @@ export class PaymentsService {
    */
   private extractPaymentCode(content: string): string | null {
     // Match SKO hoặc SKT followed by alphanumeric
-    const match = content.match(/SK[OT][A-Z0-9]+/i);
+    const match = content.match(/SK[OTBS][A-Z0-9]+/i);
     return match ? match[0].toUpperCase() : null;
   }
 

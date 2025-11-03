@@ -10,7 +10,7 @@ import {
   HttpStatus,
   Query,
   ParseUUIDPipe,
-  BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { DermatologistsService } from './dermatologists.service';
 import {
@@ -18,7 +18,7 @@ import {
   UpdateDermatologistDto,
 } from './dto/create-dermatologist.dto';
 import { Roles } from 'src/auth/decorators/roles.decorator';
-import { UserRole } from 'src/users/entities/user.entity';
+import { User, UserRole } from 'src/users/entities/user.entity';
 import {
   ApiCreatedResponse,
   ApiOkResponse,
@@ -29,6 +29,9 @@ import {
 import { AvailabilitySlotsService } from 'src/availability-slots/availability-slots.service';
 import { SlotStatus } from 'src/availability-slots/entities/availability-slot.entity';
 import { ResponseHelper } from 'src/utils/responses';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 
 @ApiTags('Dermatologists')
 @Controller('dermatologists')
@@ -40,12 +43,15 @@ export class DermatologistsController {
 
   // CRUD Operations for Dermatologist
   @Post()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create a dermatologist profile' })
   @ApiCreatedResponse({ description: 'Dermatologist created successfully' })
   async create(
     @Body() createDermatologistDto: CreateDermatologistDto,
+    @GetUser() user: User,
   ): Promise<unknown> {
     const dermatologist = await this.dermatologistsService.create(
+      user.userId,
       createDermatologistDto,
     );
     return ResponseHelper.created(
@@ -104,12 +110,34 @@ export class DermatologistsController {
     );
   }
 
-  @Patch(':id')
+  @Patch('me')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.DERMATOLOGIST)
-  @ApiOperation({ summary: 'Update dermatologist profile' })
+  @ApiOperation({
+    summary: 'Update my dermatologist profile (Dermatologist only)',
+  })
   @ApiOkResponse({ description: 'Dermatologist updated successfully' })
-  async update(
-    @Param('id') id: string,
+  async updateMyProfile(
+    @GetUser() user: User,
+    @Body() updateDermatologistDto: UpdateDermatologistDto,
+  ): Promise<unknown> {
+    const dermatologist = await this.dermatologistsService.updateMyProfile(
+      user.userId,
+      updateDermatologistDto,
+    );
+    return ResponseHelper.success(
+      'Dermatologist updated successfully',
+      dermatologist,
+    );
+  }
+
+  @Patch('admin/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update any dermatologist profile (Admin only)' })
+  @ApiOkResponse({ description: 'Dermatologist updated successfully by admin' })
+  async adminUpdateProfile(
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() updateDermatologistDto: UpdateDermatologistDto,
   ): Promise<unknown> {
     const dermatologist = await this.dermatologistsService.update(
@@ -117,7 +145,7 @@ export class DermatologistsController {
       updateDermatologistDto,
     );
     return ResponseHelper.success(
-      'Dermatologist updated successfully',
+      'Dermatologist updated successfully by admin',
       dermatologist,
     );
   }
