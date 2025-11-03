@@ -41,7 +41,8 @@ export class Transaction {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // One-to-One relationship with Order
-  @OneToOne(() => Order, (order) => order.transaction)
-  order: Order;
+  // DEPRECATED: Transaction entity is being replaced by Payment entity
+  // One-to-One relationship with Order (no longer used)
+  // @OneToOne(() => Order, (order) => order.payment)
+  // order: Order;
 }

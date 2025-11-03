@@ -14,6 +14,7 @@ export enum PaymentStatus {
   COMPLETED = 'completed',
   FAILED = 'failed',
   EXPIRED = 'expired',
+  REFUNDED = 'refunded',
 }
 
 export enum PaymentMethod {
@@ -25,6 +26,8 @@ export enum PaymentMethod {
 export enum PaymentType {
   ORDER = 'order',       // Thanh toán đơn hàng
   TOPUP = 'topup',       // Nạp tiền vào ví
+  BOOKING = 'booking',
+  SUBSCRIPTION = 'subscription'
 }
 
 @Entity('payments')

@@ -10,7 +10,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
-import { Transaction } from '../../transactions/entities/transaction.entity';
+import { Payment } from '../../payments/entities/payment.entity';
 import { OrderItem } from './order-item.entity';
 import { ShippingLog } from '../../shipping-logs/entities/shipping-log.entity';
 
@@ -37,15 +37,15 @@ export class Order {
   @Column({ type: 'uuid' })
   customerId: string;
 
-  // One-to-One with Transaction
-  @OneToOne(() => Transaction, (transaction) => transaction.order, {
+  // One-to-One with Payment (thay vì Transaction)
+  @OneToOne(() => Payment, (payment) => payment.order, {
     cascade: true,
   })
-  @JoinColumn({ name: 'transactionId' })
-  transaction: Transaction;
+  @JoinColumn({ name: 'paymentId' })
+  payment: Payment;
 
-  @Column({ type: 'uuid', nullable: true })
-  transactionId: string;
+  @Column({ type: 'int', nullable: true })
+  paymentId: number;
 
   @Column({
     type: 'enum',
