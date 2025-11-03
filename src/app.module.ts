@@ -51,6 +51,7 @@ import { GoogleMeetModule } from './google-meet/google-meet.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { AvailabilitySlotsModule } from './availability-slots/availability-slots.module';
 import { AvailabilitySlot } from './availability-slots/entities/availability-slot.entity';
+import { TrackingModule } from './tracking/tracking.module';
 
 @Module({
   imports: [
@@ -117,6 +118,7 @@ import { AvailabilitySlot } from './availability-slots/entities/availability-slo
     GoogleMeetModule,
     CloudinaryModule,
     AvailabilitySlotsModule,
+    TrackingModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

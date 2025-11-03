@@ -73,6 +73,7 @@ services:
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      GOONG_API_KEY: ${GOONG_API_KEY}
     depends_on:
       mysql:
         condition: service_healthy

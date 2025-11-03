@@ -8,8 +8,13 @@ import {
   Delete,
   UseGuards,
   Request,
+  UseInterceptors,
+  UploadedFile,
+  UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ShippingLogsService } from './shipping-logs.service';
 import { CreateShippingLogDto } from './dto/create-shipping-log.dto';
 import { UpdateShippingLogDto } from './dto/update-shipping-log.dto';
@@ -80,25 +85,51 @@ export class ShippingLogsController {
     return ResponseHelper.success('Shipping logs retrieved successfully', logs);
   }
 
-  @Get(':id')
+  @Post(':id/upload-finished-pictures')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get a shipping log by ID' })
-  async findOne(@Param('id') id: string) {
-    const log = await this.shippingLogsService.findOne(id);
-    return ResponseHelper.success('Shipping log retrieved successfully', log);
-  }
-
-  @Patch(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update a shipping log' })
-  async update(
+  @UseInterceptors(FilesInterceptor('pictures', 5)) // Max 5 ảnh
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: '📸 Shipper upload ảnh bằng chứng hoàn thành đơn hàng',
+    description: 'Upload 1-5 ảnh bằng chứng giao hàng thành công',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        pictures: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Ảnh bằng chứng (1-5 ảnh)',
+        },
+      },
+    },
+  })
+  async uploadFinishedPictures(
     @Param('id') id: string,
-    @Body() updateDto: UpdateShippingLogDto,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Request() req,
   ) {
-    const log = await this.shippingLogsService.update(id, updateDto);
-    return ResponseHelper.success('Shipping log updated successfully', log);
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Vui lòng upload ít nhất 1 ảnh');
+    }
+
+    if (files.length > 5) {
+      throw new BadRequestException('Chỉ được upload tối đa 5 ảnh');
+    }
+
+    const userId = req.user.userId;
+    const result = await this.shippingLogsService.uploadFinishedPictures(
+      id,
+      files,
+      userId,
+    );
+
+    return ResponseHelper.success('Upload ảnh thành công', result);
   }
 
   @Post(':id/assign-to-me')
@@ -135,6 +166,27 @@ export class ShippingLogsController {
       assignDto.force,
     );
     return ResponseHelper.success('Staff assigned successfully', log);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a shipping log by ID' })
+  async findOne(@Param('id') id: string) {
+    const log = await this.shippingLogsService.findOne(id);
+    return ResponseHelper.success('Shipping log retrieved successfully', log);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a shipping log' })
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateShippingLogDto,
+  ) {
+    const log = await this.shippingLogsService.update(id, updateDto);
+    return ResponseHelper.success('Shipping log updated successfully', log);
   }
 
   @Delete(':id')
