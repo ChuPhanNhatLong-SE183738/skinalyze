@@ -1,7 +1,8 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Order } from '../orders/entities/order.entity';
+import { ShippingLog } from '../shipping-logs/entities/shipping-log.entity';
 import axios from 'axios';
 
 // Forward reference to avoid circular dependency
@@ -13,16 +14,49 @@ export interface ETAResult {
   text: string; // "5 phút", "10 phút"
 }
 
+export interface TrackingInfo {
+  orderId: string;
+  shippingLog: {
+    shippingLogId: string;
+    status: string;
+    estimatedDeliveryDate: Date | null;
+    deliveredDate: Date | null;
+  };
+  shipper: {
+    userId: string;
+    fullName: string;
+    phone: string;
+  } | null;
+  customer: {
+    address: string;
+    location: {
+      lat: number;
+      lng: number;
+    };
+  };
+  currentLocation: {
+    lat: number;
+    lng: number;
+    timestamp: Date;
+  } | null;
+  eta: ETAResult | null;
+}
+
 @Injectable()
 export class TrackingService {
   private readonly logger = new Logger(TrackingService.name);
 
   // Cache customer addresses để tránh geocode lại nhiều lần
   private customerAddresses: Map<string, { lat: number; lng: number }> = new Map();
+  
+  // Cache shipper locations từ REST API (in-memory, 5 phút expire)
+  private shipperLocations: Map<string, { lat: number; lng: number; timestamp: Date }> = new Map();
 
   constructor(
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @InjectRepository(ShippingLog)
+    private readonly shippingLogRepository: Repository<ShippingLog>,
     @Inject('TrackingGateway')
     private trackingGateway: TrackingGateway,
   ) {}
@@ -169,6 +203,129 @@ export class TrackingService {
       return null;
     } catch (error) {
       this.logger.error(`Error geocoding address "${address}": ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Cache shipper location for tracking
+   */
+  async cacheShipperLocation(
+    orderId: string,
+    location: { lat: number; lng: number },
+  ): Promise<void> {
+    this.shipperLocations.set(orderId, {
+      lat: location.lat,
+      lng: location.lng,
+      timestamp: new Date(),
+    });
+
+    this.logger.log(
+      `📍 Cached shipper location for order ${orderId}: ${location.lat}, ${location.lng}`,
+    );
+
+    // Auto-expire after 5 minutes
+    setTimeout(() => {
+      this.shipperLocations.delete(orderId);
+      this.logger.log(`🗑️ Expired cached location for order ${orderId}`);
+    }, 5 * 60 * 1000);
+  }
+
+  /**
+   * Get comprehensive tracking info for customer
+   */
+  async getTrackingInfo(orderId: string): Promise<TrackingInfo | null> {
+    try {
+      // Find active shipping log with relations
+      const shippingLog = await this.shippingLogRepository.findOne({
+        where: {
+          orderId,
+          status: In([
+            'PICKED_UP',
+            'IN_TRANSIT',
+            'OUT_FOR_DELIVERY',
+            'DELIVERED',
+          ]),
+        },
+        relations: ['order', 'order.customer', 'order.customer.user', 'shippingStaff'],
+      });
+
+      if (!shippingLog) {
+        this.logger.warn(`No active shipping log found for order ${orderId}`);
+        return null;
+      }
+
+      // Build shipper info
+      let shipperInfo: { userId: string; fullName: string; phone: string } | null = null;
+      if (shippingLog.shippingStaff) {
+        shipperInfo = {
+          userId: shippingLog.shippingStaff.userId,
+          fullName: shippingLog.shippingStaff.fullName,
+          phone: shippingLog.shippingStaff.phone,
+        };
+      }
+
+      // Get cached shipper location (only if within 5 minutes)
+      const cachedLocation = this.shipperLocations.get(orderId);
+      let currentLocation: { lat: number; lng: number; timestamp: Date } | null = null;
+      if (cachedLocation) {
+        const ageMinutes =
+          (Date.now() - cachedLocation.timestamp.getTime()) / 1000 / 60;
+        if (ageMinutes <= 5) {
+          currentLocation = {
+            lat: cachedLocation.lat,
+            lng: cachedLocation.lng,
+            timestamp: cachedLocation.timestamp,
+          };
+        } else {
+          this.logger.log(
+            `⏰ Cached location for order ${orderId} is stale (${ageMinutes.toFixed(1)} min old)`,
+          );
+        }
+      }
+
+      // Get customer location
+      const customerLocation = await this.getCustomerLocation(orderId);
+
+      // Build customer info
+      const customerInfo = {
+        address: shippingLog.order.shippingAddress || 'N/A',
+        location: customerLocation || { lat: 0, lng: 0 },
+      };
+
+      // Calculate ETA if we have both locations
+      let eta: ETAResult | null = null;
+      if (currentLocation && customerLocation) {
+        eta = await this.calculateETA(
+          { lat: currentLocation.lat, lng: currentLocation.lng },
+          customerLocation,
+        );
+      }
+
+      // Build comprehensive tracking info
+      const trackingInfo: TrackingInfo = {
+        orderId: shippingLog.orderId,
+        shippingLog: {
+          shippingLogId: shippingLog.shippingLogId,
+          status: shippingLog.status,
+          estimatedDeliveryDate: shippingLog.estimatedDeliveryDate,
+          deliveredDate: shippingLog.deliveredDate,
+        },
+        shipper: shipperInfo,
+        customer: customerInfo,
+        currentLocation: currentLocation,
+        eta: eta,
+      };
+
+      this.logger.log(
+        `📦 Retrieved tracking info for order ${orderId}: ${shippingLog.status}, ETA: ${eta ? eta.text : 'N/A'}`,
+      );
+
+      return trackingInfo;
+    } catch (error) {
+      this.logger.error(
+        `Error getting tracking info for order ${orderId}: ${error.message}`,
+      );
       return null;
     }
   }

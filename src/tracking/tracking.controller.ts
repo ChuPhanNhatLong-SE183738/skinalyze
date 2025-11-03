@@ -30,6 +30,9 @@ export class TrackingController {
       timestamp: timestamp || new Date().toISOString(),
     };
 
+    // Cache vị trí shipper cho GET tracking endpoint
+    await this.trackingService.cacheShipperLocation(orderId, location);
+
     // Lấy địa chỉ khách hàng
     const customerLocation = await this.trackingService.getCustomerLocation(orderId);
 
@@ -72,5 +75,26 @@ export class TrackingController {
       eta,
       message: 'Vị trí và ETA đã được gửi đến khách hàng',
     });
+  }
+
+  @Get('order/:orderId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '📍 Customer lấy thông tin tracking đầy đủ',
+    description: 'Lấy vị trí shipper, ETA, thông tin shipper cho customer tracking',
+  })
+  async getTrackingInfo(@Param('orderId') orderId: string) {
+    const trackingInfo = await this.trackingService.getTrackingInfo(orderId);
+
+    if (!trackingInfo) {
+      return ResponseHelper.error(
+        404,
+        'Không tìm thấy thông tin tracking hoặc đơn hàng chưa được giao',
+        null,
+      );
+    }
+
+    return ResponseHelper.success('Lấy thông tin tracking thành công', trackingInfo);
   }
 }
