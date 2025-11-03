@@ -291,6 +291,7 @@ export class PaymentsService {
             shippingAddress: payment.shippingAddress,
             notes: payment.orderNotes,
             totalAmount: amountReceived,
+            paymentId: payment.paymentId,
           });
 
           // Update payment với orderId mới

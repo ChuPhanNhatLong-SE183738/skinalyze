@@ -10,11 +10,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
-import { Transaction } from '../transactions/entities/transaction.entity';
+import { Payment } from '../payments/entities/payment.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { CheckoutCartDto, PaymentMethod } from './dto/checkout-cart.dto';
-import { TransactionStatus } from '../transactions/entities/transaction.entity';
+import { PaymentStatus } from '../payments/entities/payment.entity';
 import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CustomersService } from '../customers/customers.service';
@@ -35,8 +35,8 @@ export class OrdersService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
     private readonly orderItemRepository: Repository<OrderItem>,
-    @InjectRepository(Transaction)
-    private readonly transactionRepository: Repository<Transaction>,
+    @InjectRepository(Payment)
+    private readonly paymentRepository: Repository<Payment>,
     private readonly cartService: CartService,
     private readonly inventoryService: InventoryService,
     private readonly customersService: CustomersService,
@@ -54,17 +54,21 @@ export class OrdersService {
       0,
     );
 
-    // Create transaction
-    const transaction = this.transactionRepository.create({
-      totalAmount,
-      status: TransactionStatus.PENDING,
+    // Create payment record
+    const payment = this.paymentRepository.create({
+      paymentCode: `ORD-${Date.now()}`, // Generate payment code
+      paymentType: PaymentType.ORDER,
+      amount: totalAmount,
+      paidAmount: 0,
+      paymentMethod: 'cash' as any, // Default, will be updated later
+      status: PaymentStatus.PENDING,
     });
-    const savedTransaction = await this.transactionRepository.save(transaction);
+    const savedPayment = await this.paymentRepository.save(payment);
 
     // Create order
     const order = this.orderRepository.create({
       customerId: createDto.customerId,
-      transactionId: savedTransaction.transactionId,
+      paymentId: savedPayment.paymentId,
       shippingAddress: createDto.shippingAddress,
       notes: createDto.notes,
       status: createDto.status,
@@ -89,7 +93,7 @@ export class OrdersService {
     return await this.orderRepository.find({
       relations: [
         'customer',
-        'transaction',
+        'payment',
         'orderItems',
         'orderItems.product',
       ],
@@ -103,7 +107,7 @@ export class OrdersService {
       relations: [
         'customer',
         'customer.user',
-        'transaction',
+        'payment',
         'orderItems',
         'orderItems.product',
         'shippingLogs',
@@ -123,7 +127,7 @@ export class OrdersService {
       relations: [
         'customer',
         'customer.user',
-        'transaction',
+        'payment',
         'orderItems',
         'orderItems.product',
       ],
@@ -154,10 +158,10 @@ export class OrdersService {
       order.rejectionReason = reason;
     }
 
-    // Update transaction status
-    if (order.transaction) {
-      order.transaction.status = TransactionStatus.CANCELLED;
-      await this.transactionRepository.save(order.transaction);
+    // Update payment status
+    if (order.payment) {
+      order.payment.status = PaymentStatus.FAILED;
+      await this.paymentRepository.save(order.payment);
     }
 
     const savedOrder = await this.orderRepository.save(order);
@@ -203,19 +207,22 @@ export class OrdersService {
     order.status = 'CONFIRMED' as any;
     order.processedBy = processedBy;
 
-    // Update transaction
-    if (order.transaction) {
-      order.transaction.status = TransactionStatus.COMPLETED;
-      await this.transactionRepository.save(order.transaction);
+    // Update payment status to completed
+    if (order.payment) {
+      order.payment.status = PaymentStatus.COMPLETED;
+      order.payment.paidAmount = order.payment.amount;
+      order.payment.paidAt = new Date();
+      await this.paymentRepository.save(order.payment);
     }
 
     const savedOrder = await this.orderRepository.save(order);
 
+    // 📦 Tạo shipping log khi order được confirm
     try {
       await this.shippingLogsService.create({
         orderId: order.orderId,
         status: ShippingStatus.PENDING,
-        totalAmount: order.transaction?.totalAmount || 0,
+        totalAmount: order.payment?.amount || 0,
         note: 'Đơn hàng đã được xác nhận, đang chờ xử lý',
       });
       this.logger.log(`✅ Created shipping log for order ${order.orderId}`);
@@ -238,7 +245,7 @@ export class OrdersService {
             data: {
               orderId: order.orderId,
               status: order.status,
-              totalAmount: order.transaction?.totalAmount,
+              totalAmount: order.payment?.amount,
             },
           });
         } else {
@@ -341,7 +348,7 @@ export class OrdersService {
 
     // 📦 COD & WALLET: TẠO ORDER NGAY
     let orderStatus: any = 'PENDING';
-    let transactionStatus = TransactionStatus.PENDING;
+    let paymentStatus = PaymentStatus.PENDING;
     let paymentInfo: any = null; // For storing payment info (not used for COD/WALLET in new flow)
 
     // 4a. Thanh toán bằng WALLET
@@ -360,25 +367,37 @@ export class OrdersService {
       await this.usersService.update(userId, { balance: newBalance });
 
       orderStatus = 'CONFIRMED';
-      transactionStatus = TransactionStatus.COMPLETED;
+      paymentStatus = PaymentStatus.COMPLETED;
 
       console.log(
         `✅ Paid by wallet: ${totalAmount} VND. New balance: ${newBalance} VND`,
       );
     }
 
-    // 5. Tạo transaction
-    const transaction = this.transactionRepository.create({
-      totalAmount,
-      status: transactionStatus,
-      paymentMethod: paymentMethod,
-    });
-    const savedTransaction = await this.transactionRepository.save(transaction);
+    // 5. Tạo payment record
+    const paymentData: any = {
+      paymentCode: `ORD-${Date.now()}`,
+      paymentType: PaymentType.ORDER,
+      customerId: customer.customerId,
+      userId: userId,
+      amount: totalAmount,
+      paidAmount: useWallet ? totalAmount : 0,
+      paymentMethod: paymentMethod as any,
+      status: paymentStatus,
+    };
+    
+    // Only set paidAt if payment is completed
+    if (useWallet) {
+      paymentData.paidAt = new Date();
+    }
+    
+    const payment = this.paymentRepository.create(paymentData) as unknown as Payment;
+    const savedPayment = await this.paymentRepository.save(payment);
 
     // 6. Tạo order
     const order = this.orderRepository.create({
       customerId: customer.customerId,
-      transactionId: savedTransaction.transactionId,
+      paymentId: savedPayment.paymentId,
       shippingAddress: checkoutDto.shippingAddress,
       notes: checkoutDto.notes,
       status: orderStatus,
@@ -438,21 +457,26 @@ export class OrdersService {
     shippingAddress: string;
     notes?: string;
     totalAmount: number;
+    paymentId: number;
   }): Promise<Order> {
-    const { customerId, cartItems, shippingAddress, notes, totalAmount } = data;
+    const { customerId, cartItems, shippingAddress, notes, totalAmount, paymentId } = data;
 
-    // 1. Tạo transaction với status COMPLETED
-    const transaction = this.transactionRepository.create({
-      totalAmount,
-      status: TransactionStatus.COMPLETED,
-      paymentMethod: 'banking',
+    // 1. Update payment status to completed (should already be done in webhook)
+    const payment = await this.paymentRepository.findOne({ 
+      where: { paymentId } 
     });
-    const savedTransaction = await this.transactionRepository.save(transaction);
+    
+    if (payment && payment.status !== PaymentStatus.COMPLETED) {
+      payment.status = PaymentStatus.COMPLETED;
+      payment.paidAmount = totalAmount;
+      payment.paidAt = new Date();
+      await this.paymentRepository.save(payment);
+    }
 
     // 2. Tạo order với status CONFIRMED
     const order = this.orderRepository.create({
       customerId,
-      transactionId: savedTransaction.transactionId,
+      paymentId: paymentId,
       shippingAddress,
       notes,
       status: 'CONFIRMED' as any,
