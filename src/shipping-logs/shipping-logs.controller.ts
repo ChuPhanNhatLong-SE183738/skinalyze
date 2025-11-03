@@ -46,9 +46,10 @@ export class ShippingLogsController {
   @Get('available')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
-    summary: '📦 Lấy danh sách đơn hàng chưa có staff nhận (available for pickup)',
-    description: 'Staff có thể xem và chọn đơn hàng để giao'
+  @ApiOperation({
+    summary:
+      '📦 Lấy danh sách đơn hàng chưa có staff nhận (available for pickup)',
+    description: 'Staff có thể xem và chọn đơn hàng để giao',
   })
   async findAvailable() {
     const logs = await this.shippingLogsService.findAvailableForPickup();
@@ -61,9 +62,9 @@ export class ShippingLogsController {
   @Get('my-deliveries')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '👤 Lấy danh sách đơn hàng của tôi (staff đang login)',
-    description: 'Xem các đơn hàng mà staff đang phụ trách'
+    description: 'Xem các đơn hàng mà staff đang phụ trách',
   })
   async findMyDeliveries(@Request() req) {
     const staffId = req.user.userId;
@@ -104,26 +105,23 @@ export class ShippingLogsController {
   @Post(':id/assign-to-me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '🤝 Staff tự nhận đơn hàng này',
-    description: 'Staff có thể tự chọn và nhận đơn hàng để giao'
+    description: 'Staff có thể tự chọn và nhận đơn hàng để giao',
   })
   async assignToMe(@Param('id') id: string, @Request() req) {
     const staffId = req.user.userId;
     const log = await this.shippingLogsService.assignToMe(id, staffId);
-    return ResponseHelper.success(
-      'Bạn đã nhận đơn hàng thành công',
-      log,
-    );
+    return ResponseHelper.success('Bạn đã nhận đơn hàng thành công', log);
   }
 
   @Post(':id/assign-staff')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '👨‍💼 Admin gán staff cho đơn hàng',
-    description: 'Chỉ ADMIN/MANAGER mới có thể gán staff cho đơn hàng'
+    description: 'Chỉ ADMIN/MANAGER mới có thể gán staff cho đơn hàng',
   })
   async assignStaff(
     @Param('id') id: string,

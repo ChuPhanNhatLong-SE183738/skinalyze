@@ -1,7 +1,19 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Payment, PaymentStatus, PaymentMethod, PaymentType } from './entities/payment.entity';
+import {
+  Payment,
+  PaymentStatus,
+  PaymentMethod,
+  PaymentType,
+} from './entities/payment.entity';
 import { SepayWebhookDto } from './dto/sepay-webhook.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { OrdersService } from '../orders/orders.service';
@@ -30,7 +42,17 @@ export class PaymentsService {
    * Tạo payment mới (cho order hoặc topup)
    */
   async createPayment(createPaymentDto: CreatePaymentDto): Promise<Payment> {
-    const { orderId, userId, customerId, cartData, shippingAddress, orderNotes, amount, paymentMethod, paymentType } = createPaymentDto;
+    const {
+      orderId,
+      userId,
+      customerId,
+      cartData,
+      shippingAddress,
+      orderNotes,
+      amount,
+      paymentMethod,
+      paymentType,
+    } = createPaymentDto;
 
     // Validate based on payment type
     if (paymentType === PaymentType.ORDER) {
@@ -43,7 +65,9 @@ export class PaymentsService {
       }
       // Nếu không có orderId, cần có cartData để tạo order sau khi thanh toán
       else if (!cartData || !customerId) {
-        throw new BadRequestException('Cart data and customer ID are required for order payment');
+        throw new BadRequestException(
+          'Cart data and customer ID are required for order payment',
+        );
       }
     } else if (paymentType === PaymentType.TOPUP) {
       if (!userId) {
@@ -64,7 +88,12 @@ export class PaymentsService {
     }
 
     // Generate unique payment code
-    const paymentCode = this.generatePaymentCode(paymentType, orderId, userId, customerId);
+    const paymentCode = this.generatePaymentCode(
+      paymentType,
+      orderId,
+      userId,
+      customerId,
+    );
 
     // Set expiration (15 minutes for banking)
     const expiredAt = new Date();
@@ -87,7 +116,9 @@ export class PaymentsService {
     if (shippingAddress) paymentData.shippingAddress = shippingAddress;
     if (orderNotes) paymentData.orderNotes = orderNotes;
 
-    const payment = this.paymentRepository.create(paymentData) as unknown as Payment;
+    const payment = this.paymentRepository.create(
+      paymentData,
+    ) as unknown as Payment;
     const savedPayment = await this.paymentRepository.save(payment);
 
     this.logger.log(
@@ -101,46 +132,58 @@ export class PaymentsService {
    * Xử lý webhook từ SePay
    */
   async handleSepayWebhook(webhookData: SepayWebhookDto): Promise<any> {
-    this.logger.log(`🔔 Received SePay webhook: ${JSON.stringify(webhookData)}`);
+    this.logger.log(
+      `🔔 Received SePay webhook: ${JSON.stringify(webhookData)}`,
+    );
 
     // Chỉ xử lý giao dịch tiền VÀO
     if (webhookData.transferType !== 'in') {
-      this.logger.warn(`⚠️ Ignored transaction type: ${webhookData.transferType}`);
+      this.logger.warn(
+        `⚠️ Ignored transaction type: ${webhookData.transferType}`,
+      );
       return { success: false, message: 'Only process incoming transactions' };
     }
 
     // Extract payment code từ nội dung chuyển khoản
     const paymentCode = this.extractPaymentCode(webhookData.content);
     if (!paymentCode) {
-      this.logger.warn(`⚠️ No payment code found in content: ${webhookData.content}`);
+      this.logger.warn(
+        `⚠️ No payment code found in content: ${webhookData.content}`,
+      );
       return { success: false, message: 'Payment code not found' };
     }
 
-    this.logger.log(`🔍 Extracted payment code: "${paymentCode}" (length: ${paymentCode.length})`);
+    this.logger.log(
+      `🔍 Extracted payment code: "${paymentCode}" (length: ${paymentCode.length})`,
+    );
 
     // Debug: Try multiple search methods
     this.logger.log(`🔍 Searching for payment...`);
-    
+
     // Method 1: Simple findOne
     const payment1 = await this.paymentRepository.findOne({
       where: { paymentCode: paymentCode },
     });
-    this.logger.log(`Method 1 (exact match): ${payment1 ? 'FOUND' : 'NOT FOUND'}`);
-    
+    this.logger.log(
+      `Method 1 (exact match): ${payment1 ? 'FOUND' : 'NOT FOUND'}`,
+    );
+
     // Method 2: Case insensitive
     const payment2 = await this.paymentRepository
       .createQueryBuilder('payment')
       .where('UPPER(payment.paymentCode) = UPPER(:code)', { code: paymentCode })
       .getOne();
-    this.logger.log(`Method 2 (case insensitive): ${payment2 ? 'FOUND' : 'NOT FOUND'}`);
-    
+    this.logger.log(
+      `Method 2 (case insensitive): ${payment2 ? 'FOUND' : 'NOT FOUND'}`,
+    );
+
     // Method 3: LIKE search
     const payment3 = await this.paymentRepository
       .createQueryBuilder('payment')
       .where('payment.paymentCode LIKE :code', { code: `%${paymentCode}%` })
       .getOne();
     this.logger.log(`Method 3 (LIKE): ${payment3 ? 'FOUND' : 'NOT FOUND'}`);
-    
+
     // Debug: List all payments with similar prefix
     const allPayments = await this.paymentRepository
       .createQueryBuilder('payment')
@@ -148,11 +191,13 @@ export class PaymentsService {
       .orderBy('payment.createdAt', 'DESC')
       .limit(10)
       .getMany();
-    this.logger.log(`📊 Recent SKO payments in DB: ${allPayments.map(p => `"${p.paymentCode}"`).join(', ')}`);
-    
+    this.logger.log(
+      `📊 Recent SKO payments in DB: ${allPayments.map((p) => `"${p.paymentCode}"`).join(', ')}`,
+    );
+
     // Use the payment found by any method
     const payment = payment1 || payment2 || payment3;
-    
+
     if (payment) {
       // Load order relation if needed
       const paymentWithOrder = await this.paymentRepository.findOne({
@@ -161,13 +206,13 @@ export class PaymentsService {
       });
       this.logger.log(`✅ Payment found! Loading with relations...`);
     }
-    
+
     this.logger.log(`🔍 Final result: ${payment ? 'FOUND' : 'NOT FOUND'}`);
 
     if (!payment) {
       this.logger.error(`❌ Payment not found in database: ${paymentCode}`);
       this.logger.error(`📋 Content was: ${webhookData.content}`);
-      
+
       return { success: false, message: 'Payment not found', paymentCode };
     }
 
@@ -203,7 +248,7 @@ export class PaymentsService {
       payment.transactionDate = new Date(webhookData.transactionDate);
       payment.webhookData = JSON.stringify(webhookData);
       await this.paymentRepository.save(payment);
-      
+
       return {
         success: false,
         message: 'Insufficient amount',
@@ -226,7 +271,9 @@ export class PaymentsService {
 
     await this.paymentRepository.save(payment);
 
-    this.logger.log(`✅ Payment completed: ${paymentCode} - Type: ${payment.paymentType}`);
+    this.logger.log(
+      `✅ Payment completed: ${paymentCode} - Type: ${payment.paymentType}`,
+    );
 
     // Process based on payment type
     if (payment.paymentType === PaymentType.ORDER) {
@@ -236,7 +283,7 @@ export class PaymentsService {
       if (!orderId && payment.cartData && payment.customerId) {
         try {
           const cartData = JSON.parse(payment.cartData);
-          
+
           // Tạo order với status CONFIRMED luôn (đã thanh toán)
           const newOrder = await this.ordersService.createOrderFromPayment({
             customerId: payment.customerId,
@@ -251,7 +298,7 @@ export class PaymentsService {
           await this.paymentRepository.save(payment);
 
           orderId = newOrder.orderId;
-          
+
           this.logger.log(`✅ Order created from payment: #${orderId}`);
 
           // 🆕 Xóa cart sau khi tạo order thành công
@@ -260,12 +307,16 @@ export class PaymentsService {
               await this.cartService.clearCart(payment.userId);
               this.logger.log(`✅ Cart cleared for user: ${payment.userId}`);
             } catch (error) {
-              this.logger.warn(`⚠️ Failed to clear cart for user ${payment.userId}: ${error.message}`);
+              this.logger.warn(
+                `⚠️ Failed to clear cart for user ${payment.userId}: ${error.message}`,
+              );
               // Don't throw - order already created, just log warning
             }
           }
         } catch (error) {
-          this.logger.error(`❌ Failed to create order from payment: ${error.message}`);
+          this.logger.error(
+            `❌ Failed to create order from payment: ${error.message}`,
+          );
           throw error;
         }
       }
@@ -290,7 +341,7 @@ export class PaymentsService {
       const user = await this.usersService.findOne(payment.userId);
       const oldBalance = parseFloat(user.balance.toString());
       const newBalance = oldBalance + amountReceived;
-      
+
       await this.usersService.update(payment.userId, {
         balance: newBalance,
       });
@@ -340,7 +391,7 @@ export class PaymentsService {
 
   /**
    * Generate payment code duy nhất
-   * Format: 
+   * Format:
    * - Order: SKO{orderId|customerId}{timestamp} (SKinalyze Order)
    * - Topup: SKT{userId_short}{timestamp} (SKinalyze Topup)
    */
@@ -364,7 +415,7 @@ export class PaymentsService {
       const userIdShort = userId.replace(/-/g, '').slice(-8).toUpperCase();
       return `SKT${userIdShort}${timestamp}`;
     }
-    
+
     // Fallback
     return `SK${timestamp}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
   }
@@ -394,10 +445,12 @@ export class PaymentsService {
       createdAt: payment.createdAt,
       expiredAt: payment.expiredAt,
       paidAt: payment.paidAt,
-      order: payment.order ? {
-        orderId: payment.order.orderId,
-        status: payment.order.status,
-      } : null,
+      order: payment.order
+        ? {
+            orderId: payment.order.orderId,
+            status: payment.order.status,
+          }
+        : null,
     };
   }
 

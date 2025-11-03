@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Repository } from 'typeorm';
+import { Between, FindOperator, In, Repository } from 'typeorm';
 import {
   AvailabilitySlot,
   SlotStatus,
@@ -84,21 +84,41 @@ export class AvailabilitySlotsService {
 
   async getMySlots(
     dermatologistId: string,
-    startDate: string,
-    endDate: string,
+    startDate?: string,
+    endDate?: string,
+    status?: SlotStatus,
   ) {
-    const rangeStart = this.parseDate(startDate, 'start date');
-    const rangeEnd = this.parseDate(endDate, 'end date');
+    let dateRangeFilter: FindOperator<Date> | undefined;
 
-    if (rangeEnd < rangeStart) {
-      throw new BadRequestException('End date must be after start date.');
+    if (startDate && endDate) {
+      const rangeStart = this.parseDate(startDate, 'start date');
+      const rangeEnd = this.parseDate(endDate, 'end date');
+
+      if (rangeEnd < rangeStart) {
+        throw new BadRequestException('End date must be after start date.');
+      }
+
+      dateRangeFilter = Between(rangeStart, rangeEnd);
+    } else if (startDate || endDate) {
+      throw new BadRequestException(
+        'Both startDate and endDate are required when filtering by range.',
+      );
+    }
+
+    const where: Record<string, unknown> = {
+      dermatologistId,
+    };
+
+    if (dateRangeFilter) {
+      where.startTime = dateRangeFilter;
+    }
+
+    if (status) {
+      where.status = status;
     }
 
     return this.slotRepository.find({
-      where: {
-        dermatologistId,
-        startTime: Between(rangeStart, rangeEnd),
-      },
+      where,
       order: {
         startTime: 'ASC',
       },

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,10 +7,20 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  ParseEnumPipe,
   Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -21,7 +30,10 @@ import { AvailabilitySlotsService } from './availability-slots.service';
 import { CreateAvailabilityDto } from './dto/create-availability.dto';
 import { DermatologistsService } from '../dermatologists/dermatologists.service';
 import { ResponseHelper } from '../utils/responses';
+import { SlotStatus } from './entities/availability-slot.entity';
 
+@ApiTags('Availability-slots')
+@ApiBearerAuth()
 @Controller('availability-slots')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.DERMATOLOGIST)
@@ -32,6 +44,12 @@ export class AvailabilitySlotsController {
   ) {}
 
   @Post()
+  @ApiOperation({
+    summary: 'Create availability slots for the authenticated dermatologist',
+  })
+  @ApiCreatedResponse({
+    description: 'Availability slots created successfully',
+  })
   async createSlots(@GetUser() user: User, @Body() dto: CreateAvailabilityDto) {
     const dermatologistId = await this.getDermatologistId(user.userId);
     const result = await this.availabilitySlotsService.createMySlots(
@@ -42,20 +60,41 @@ export class AvailabilitySlotsController {
   }
 
   @Get()
+  @ApiOperation({
+    summary: 'Retrieve availability slots within the given date range',
+  })
+  @ApiOkResponse({
+    description: 'Availability slots retrieved successfully',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    description: 'ISO 8601 timestamp marking the start of the search window',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    description: 'ISO 8601 timestamp marking the end of the search window',
+  })
+  @ApiQuery({
+    name: 'status',
+    enum: SlotStatus,
+    required: false,
+    description: 'Filter availability slots by status',
+  })
   async getSlots(
     @GetUser() user: User,
-    @Query('startDate') startDate: string,
-    @Query('endDate') endDate: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('status', new ParseEnumPipe(SlotStatus, { optional: true }))
+    status?: SlotStatus,
   ) {
-    if (!startDate || !endDate) {
-      throw new BadRequestException('startDate and endDate are required');
-    }
-
     const dermatologistId = await this.getDermatologistId(user.userId);
     const slots = await this.availabilitySlotsService.getMySlots(
       dermatologistId,
       startDate,
       endDate,
+      status,
     );
 
     return ResponseHelper.success('Slots retrieved successfully', slots);
@@ -63,6 +102,12 @@ export class AvailabilitySlotsController {
 
   @Delete(':slotId')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Cancel an availability slot',
+  })
+  @ApiNoContentResponse({
+    description: 'Availability slot cancelled successfully',
+  })
   async cancelSlot(
     @GetUser() user: User,
     @Param('slotId', new ParseUUIDPipe()) slotId: string,

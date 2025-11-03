@@ -1,83 +1,91 @@
-import { IsNumber, IsEnum, IsOptional, Min, IsString, IsObject, IsArray } from 'class-validator';
+import {
+  IsNumber,
+  IsEnum,
+  IsOptional,
+  Min,
+  IsString,
+  IsObject,
+  IsArray,
+} from 'class-validator';
 import { PaymentMethod, PaymentType } from '../entities/payment.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreatePaymentDto {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Order ID (required for order payment)',
     example: 'uuid-string',
-    required: false 
+    required: false,
   })
   @IsString()
   @IsOptional()
   orderId?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'User ID (required for topup)',
     example: 'uuid-string',
-    required: false 
+    required: false,
   })
   @IsString()
   @IsOptional()
   userId?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Customer ID (for creating order after payment)',
     example: 'customer-uuid',
-    required: false 
+    required: false,
   })
   @IsString()
   @IsOptional()
   customerId?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Cart data (for creating order after payment)',
     example: { items: [] },
-    required: false 
+    required: false,
   })
   @IsObject()
   @IsOptional()
   cartData?: any;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Shipping address',
     example: '123 Nguyen Hue, Q1, HCMC',
-    required: false 
+    required: false,
   })
   @IsString()
   @IsOptional()
   shippingAddress?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Order notes',
     example: 'Giao giờ hành chính',
-    required: false 
+    required: false,
   })
   @IsString()
   @IsOptional()
   orderNotes?: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Payment type',
     enum: PaymentType,
-    example: PaymentType.ORDER 
+    example: PaymentType.ORDER,
   })
   @IsEnum(PaymentType)
   paymentType: PaymentType;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Amount to pay (VND)',
     example: 500000,
-    minimum: 1000 
+    minimum: 1000,
   })
   @IsNumber()
   @Min(1000)
   amount: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Payment method',
     enum: PaymentMethod,
-    default: PaymentMethod.BANKING 
+    default: PaymentMethod.BANKING,
   })
   @IsEnum(PaymentMethod)
   @IsOptional()
