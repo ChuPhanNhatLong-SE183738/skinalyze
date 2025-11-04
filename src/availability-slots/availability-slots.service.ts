@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Repository } from 'typeorm';
+import { Between, EntityManager, FindOperator, In, Repository } from 'typeorm';
 import {
   AvailabilitySlot,
   SlotStatus,
@@ -20,7 +20,17 @@ export class AvailabilitySlotsService {
     private readonly slotRepository: Repository<AvailabilitySlot>,
   ) {}
 
-  async createMySlots(dermatologistId: string, dto: CreateAvailabilityDto) {
+  private getRepository(manager?: EntityManager) {
+    return manager
+      ? manager.getRepository(AvailabilitySlot)
+      : this.slotRepository;
+  }
+
+  async createMySlots(
+    dermatologistId: string,
+    defaultSlotPrice: number,
+    dto: CreateAvailabilityDto,
+  ) {
     const newSlotsToCreate: Partial<AvailabilitySlot>[] = [];
     const startTimesToCheck: Date[] = [];
 
@@ -28,7 +38,7 @@ export class AvailabilitySlotsService {
       const start = this.parseDate(block.startTime, 'block start time');
       const blockEnd = this.parseDate(block.endTime, 'block end time');
       const duration = block.slotDurationInMinutes;
-
+      const priceForThisBlock = block.price ?? defaultSlotPrice;
       if (blockEnd <= start) {
         throw new BadRequestException(
           'Block end time must be after block start time.',
@@ -49,6 +59,7 @@ export class AvailabilitySlotsService {
             startTime: currentSlotStart,
             endTime: currentSlotEnd,
             status: SlotStatus.AVAILABLE,
+            price: priceForThisBlock,
           });
           startTimesToCheck.push(currentSlotStart);
           currentSlotStart = currentSlotEnd;
@@ -84,21 +95,41 @@ export class AvailabilitySlotsService {
 
   async getMySlots(
     dermatologistId: string,
-    startDate: string,
-    endDate: string,
+    startDate?: string,
+    endDate?: string,
+    status?: SlotStatus,
   ) {
-    const rangeStart = this.parseDate(startDate, 'start date');
-    const rangeEnd = this.parseDate(endDate, 'end date');
+    let dateRangeFilter: FindOperator<Date> | undefined;
 
-    if (rangeEnd < rangeStart) {
-      throw new BadRequestException('End date must be after start date.');
+    if (startDate && endDate) {
+      const rangeStart = this.parseDate(startDate, 'start date');
+      const rangeEnd = this.parseDate(endDate, 'end date');
+
+      if (rangeEnd < rangeStart) {
+        throw new BadRequestException('End date must be after start date.');
+      }
+
+      dateRangeFilter = Between(rangeStart, rangeEnd);
+    } else if (startDate || endDate) {
+      throw new BadRequestException(
+        'Both startDate and endDate are required when filtering by range.',
+      );
+    }
+
+    const where: Record<string, unknown> = {
+      dermatologistId,
+    };
+
+    if (dateRangeFilter) {
+      where.startTime = dateRangeFilter;
+    }
+
+    if (status) {
+      where.status = status;
     }
 
     return this.slotRepository.find({
-      where: {
-        dermatologistId,
-        startTime: Between(rangeStart, rangeEnd),
-      },
+      where,
       order: {
         startTime: 'ASC',
       },
@@ -134,14 +165,17 @@ export class AvailabilitySlotsService {
     dermatologistId: string,
     startTimeIso: string,
     endTimeIso: string,
+    manager?: EntityManager,
   ): Promise<AvailabilitySlot> {
+    const repository = this.getRepository(manager);
     const slot = await this.ensureSlotAvailability(
+      repository,
       dermatologistId,
       startTimeIso,
       endTimeIso,
     );
 
-    const updateResult = await this.slotRepository.update(
+    const updateResult = await repository.update(
       { slotId: slot.slotId, status: SlotStatus.AVAILABLE },
       { status: SlotStatus.BOOKED },
     );
@@ -150,26 +184,37 @@ export class AvailabilitySlotsService {
       throw new ConflictException('Requested slot is no longer available.');
     }
 
+    slot.status = SlotStatus.BOOKED;
     return slot;
   }
 
-  async linkSlotToAppointment(slotId: string, appointmentId: string) {
-    await this.slotRepository.update(slotId, { appointmentId });
+  async linkSlotToAppointment(
+    slotId: string,
+    appointmentId: string,
+    manager?: EntityManager,
+  ) {
+    const repository = this.getRepository(manager);
+    await repository.update(slotId, { appointmentId });
   }
 
-  async releaseSlot(slotId: string) {
-    await this.slotRepository.update(slotId, {
+  async releaseSlot(slotId: string, manager?: EntityManager) {
+    const repository = this.getRepository(manager);
+    await repository.update(slotId, {
       status: SlotStatus.AVAILABLE,
       appointmentId: null,
     });
   }
 
-  async releaseSlotByAppointment(appointmentId: string) {
+  async releaseSlotByAppointment(
+    appointmentId: string,
+    manager?: EntityManager,
+  ) {
     if (!appointmentId) {
       return;
     }
 
-    const slot = await this.slotRepository.findOne({
+    const repository = this.getRepository(manager);
+    const slot = await repository.findOne({
       where: { appointmentId },
     });
 
@@ -177,17 +222,18 @@ export class AvailabilitySlotsService {
       return;
     }
 
-    await this.releaseSlot(slot.slotId);
+    await this.releaseSlot(slot.slotId, manager);
   }
 
   private async ensureSlotAvailability(
+    repository: Repository<AvailabilitySlot>,
     dermatologistId: string,
     startTimeIso: string,
     endTimeIso: string,
   ): Promise<AvailabilitySlot> {
     const { start, end } = this.getValidatedRange(startTimeIso, endTimeIso);
 
-    const slot = await this.slotRepository.findOne({
+    const slot = await repository.findOne({
       where: {
         dermatologistId,
         startTime: start,

@@ -78,6 +78,10 @@ export class ShippingLog {
   @Column({ type: 'datetime', nullable: true })
   deliveredDate: Date;
 
+  // 📸 Ảnh bằng chứng hoàn thành giao hàng (multiple images)
+  @Column({ type: 'json', nullable: true })
+  finishedPictures: string[];
+
   // Staff người thực hiện ship
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'shippingStaffId' })

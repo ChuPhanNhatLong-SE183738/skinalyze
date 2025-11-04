@@ -1,36 +1,79 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Payment, PaymentStatus, PaymentMethod, PaymentType } from './entities/payment.entity';
+import { EntityManager, Repository } from 'typeorm';
+import {
+  Payment,
+  PaymentStatus,
+  PaymentMethod,
+  PaymentType,
+} from './entities/payment.entity';
 import { SepayWebhookDto } from './dto/sepay-webhook.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { OrdersService } from '../orders/orders.service';
-import { TransactionsService } from '../transactions/transactions.service';
-import { TransactionStatus } from '../transactions/entities/transaction.entity';
 import { OrderStatus } from '../orders/entities/order.entity';
 import { UsersService } from '../users/users.service';
 import { CartService } from '../cart/cart.service';
+import {
+  Appointment,
+  AppointmentStatus,
+} from '../appointments/entities/appointment.entity';
+import {
+  AvailabilitySlot,
+  SlotStatus,
+} from '../availability-slots/entities/availability-slot.entity';
+
+interface PaymentProcessingResult {
+  success: boolean;
+  message: string;
+  paymentType?: string;
+  paymentCode?: string;
+  amount?: number;
+  [key: string]: unknown;
+}
 
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
   constructor(
+    private readonly entityManager: EntityManager,
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
     @Inject(forwardRef(() => OrdersService))
     private readonly ordersService: OrdersService,
-    private readonly transactionsService: TransactionsService,
     private readonly usersService: UsersService,
     @Inject(forwardRef(() => CartService))
     private readonly cartService: CartService,
   ) {}
 
   /**
-   * Tạo payment mới (cho order hoặc topup)
+   * Tạo payment mới (cho order, topup, booking...)
    */
-  async createPayment(createPaymentDto: CreatePaymentDto): Promise<Payment> {
-    const { orderId, userId, customerId, cartData, shippingAddress, orderNotes, amount, paymentMethod, paymentType } = createPaymentDto;
+  async createPayment(
+    createPaymentDto: CreatePaymentDto,
+    manager?: EntityManager,
+  ): Promise<Payment> {
+    const repository =
+      manager?.getRepository(Payment) ?? this.paymentRepository;
+
+    const {
+      orderId,
+      userId,
+      customerId,
+      cartData,
+      shippingAddress,
+      orderNotes,
+      amount,
+      paymentMethod,
+      paymentType,
+    } = createPaymentDto;
 
     // Validate based on payment type
     if (paymentType === PaymentType.ORDER) {
@@ -43,52 +86,76 @@ export class PaymentsService {
       }
       // Nếu không có orderId, cần có cartData để tạo order sau khi thanh toán
       else if (!cartData || !customerId) {
-        throw new BadRequestException('Cart data and customer ID are required for order payment');
+        throw new BadRequestException(
+          'Cart data and customer ID are required for order payment',
+        );
       }
     } else if (paymentType === PaymentType.TOPUP) {
       if (!userId) {
         throw new BadRequestException('User ID is required for topup');
       }
-      // Verify user exists
+
       const user = await this.usersService.findOne(userId);
       if (!user) {
         throw new NotFoundException(`User ${userId} not found`);
       }
-      // Validate topup amount
+
       if (amount < 10000) {
         throw new BadRequestException('Số tiền nạp tối thiểu là 10,000 VND');
       }
+
       if (amount > 50000000) {
         throw new BadRequestException('Số tiền nạp tối đa là 50,000,000 VND');
       }
+    } else if (paymentType === PaymentType.BOOKING) {
+      if (!customerId) {
+        throw new BadRequestException(
+          'CustomerId ID is required for booking payment',
+        );
+      }
     }
 
-    // Generate unique payment code
-    const paymentCode = this.generatePaymentCode(paymentType, orderId, userId, customerId);
+    const paymentCode = this.generatePaymentCode(
+      paymentType,
+      orderId,
+      userId,
+      customerId,
+    );
 
     // Set expiration (15 minutes for banking)
     const expiredAt = new Date();
     expiredAt.setMinutes(expiredAt.getMinutes() + 15);
 
-    const paymentData: any = {
+    const paymentData: Partial<Payment> = {
       paymentCode,
       paymentType,
       amount,
-      paymentMethod,
+      paymentMethod: paymentMethod ?? PaymentMethod.BANKING,
       status: PaymentStatus.PENDING,
       expiredAt,
     };
 
-    // Add optional fields only if they exist
-    if (orderId) paymentData.orderId = orderId;
-    if (userId) paymentData.userId = userId;
-    if (customerId) paymentData.customerId = customerId;
-    if (cartData) paymentData.cartData = JSON.stringify(cartData);
-    if (shippingAddress) paymentData.shippingAddress = shippingAddress;
-    if (orderNotes) paymentData.orderNotes = orderNotes;
+    if (orderId) {
+      paymentData.orderId = orderId;
+    }
+    if (userId) {
+      paymentData.userId = userId;
+    }
+    if (customerId) {
+      paymentData.customerId = customerId;
+    }
+    if (cartData) {
+      paymentData.cartData = JSON.stringify(cartData);
+    }
+    if (shippingAddress) {
+      paymentData.shippingAddress = shippingAddress;
+    }
+    if (orderNotes) {
+      paymentData.orderNotes = orderNotes;
+    }
 
-    const payment = this.paymentRepository.create(paymentData) as unknown as Payment;
-    const savedPayment = await this.paymentRepository.save(payment);
+    const payment = repository.create(paymentData);
+    const savedPayment = await repository.save(payment);
 
     this.logger.log(
       `💳 Payment created: ${paymentCode} - Type: ${paymentType} - Amount: ${amount}`,
@@ -98,124 +165,170 @@ export class PaymentsService {
   }
 
   /**
-   * Xử lý webhook từ SePay
+   * Xử lý webhook từ SePay (xác nhận thanh toán)
    */
   async handleSepayWebhook(webhookData: SepayWebhookDto): Promise<any> {
-    this.logger.log(`🔔 Received SePay webhook: ${JSON.stringify(webhookData)}`);
+    this.logger.log(
+      `🔔 Received SePay webhook: ${JSON.stringify(webhookData)}`,
+    );
 
     // Chỉ xử lý giao dịch tiền VÀO
     if (webhookData.transferType !== 'in') {
-      this.logger.warn(`⚠️ Ignored transaction type: ${webhookData.transferType}`);
+      this.logger.warn(
+        `⚠️ Ignored transaction type: ${webhookData.transferType}`,
+      );
       return { success: false, message: 'Only process incoming transactions' };
     }
 
     // Extract payment code từ nội dung chuyển khoản
     const paymentCode = this.extractPaymentCode(webhookData.content);
     if (!paymentCode) {
-      this.logger.warn(`⚠️ No payment code found in content: ${webhookData.content}`);
+      this.logger.warn(
+        `⚠️ No payment code found in content: ${webhookData.content}`,
+      );
       return { success: false, message: 'Payment code not found' };
     }
 
-    this.logger.log(`🔍 Extracted payment code: "${paymentCode}" (length: ${paymentCode.length})`);
+    let responsePayload: PaymentProcessingResult | undefined;
+    let postProcess: (() => Promise<void>) | undefined;
+    let processedPaymentInfo:
+      | { paymentId: number; paymentCode: string }
+      | undefined;
 
-    // Debug: Try multiple search methods
-    this.logger.log(`🔍 Searching for payment...`);
-    
-    // Method 1: Simple findOne
-    const payment1 = await this.paymentRepository.findOne({
-      where: { paymentCode: paymentCode },
-    });
-    this.logger.log(`Method 1 (exact match): ${payment1 ? 'FOUND' : 'NOT FOUND'}`);
-    
-    // Method 2: Case insensitive
-    const payment2 = await this.paymentRepository
-      .createQueryBuilder('payment')
-      .where('UPPER(payment.paymentCode) = UPPER(:code)', { code: paymentCode })
-      .getOne();
-    this.logger.log(`Method 2 (case insensitive): ${payment2 ? 'FOUND' : 'NOT FOUND'}`);
-    
-    // Method 3: LIKE search
-    const payment3 = await this.paymentRepository
-      .createQueryBuilder('payment')
-      .where('payment.paymentCode LIKE :code', { code: `%${paymentCode}%` })
-      .getOne();
-    this.logger.log(`Method 3 (LIKE): ${payment3 ? 'FOUND' : 'NOT FOUND'}`);
-    
-    // Debug: List all payments with similar prefix
-    const allPayments = await this.paymentRepository
-      .createQueryBuilder('payment')
-      .where('payment.paymentCode LIKE :prefix', { prefix: 'SKO%' })
-      .orderBy('payment.createdAt', 'DESC')
-      .limit(10)
-      .getMany();
-    this.logger.log(`📊 Recent SKO payments in DB: ${allPayments.map(p => `"${p.paymentCode}"`).join(', ')}`);
-    
-    // Use the payment found by any method
-    const payment = payment1 || payment2 || payment3;
-    
-    if (payment) {
-      // Load order relation if needed
-      const paymentWithOrder = await this.paymentRepository.findOne({
-        where: { paymentId: payment.paymentId },
-        relations: ['order'],
+    await this.entityManager.transaction(async (manager) => {
+      const paymentRepo = manager.getRepository(Payment);
+      const payment = await paymentRepo.findOne({
+        where: { paymentCode },
+        relations: ['appointment', 'appointment.availabilitySlot'],
+        lock: { mode: 'pessimistic_write' },
       });
-      this.logger.log(`✅ Payment found! Loading with relations...`);
-    }
-    
-    this.logger.log(`🔍 Final result: ${payment ? 'FOUND' : 'NOT FOUND'}`);
 
-    if (!payment) {
-      this.logger.error(`❌ Payment not found in database: ${paymentCode}`);
-      this.logger.error(`📋 Content was: ${webhookData.content}`);
-      
-      return { success: false, message: 'Payment not found', paymentCode };
-    }
+      if (!payment) {
+        this.logger.error(`❌ Payment not found in database: ${paymentCode}`);
+        responsePayload = {
+          success: false,
+          message: 'Payment not found',
+          paymentCode,
+        };
+        return;
+      }
 
-    // Kiểm tra payment đã hoàn thành chưa
-    if (payment.status === PaymentStatus.COMPLETED) {
-      this.logger.warn(`⚠️ Payment already completed: ${paymentCode}`);
-      return { success: false, message: 'Payment already completed' };
-    }
+      if (payment.status === PaymentStatus.COMPLETED) {
+        this.logger.warn(`⚠️ Payment already completed: ${paymentCode}`);
+        responsePayload = {
+          success: false,
+          message: 'Payment already completed',
+        };
+        return;
+      }
 
-    // Kiểm tra payment đã hết hạn chưa
-    if (payment.expiredAt && new Date() > payment.expiredAt) {
-      payment.status = PaymentStatus.EXPIRED;
-      await this.paymentRepository.save(payment);
-      this.logger.warn(`⚠️ Payment expired: ${paymentCode}`);
-      return { success: false, message: 'Payment expired' };
-    }
+      if (payment.expiredAt && new Date() > payment.expiredAt) {
+        payment.status = PaymentStatus.EXPIRED;
+        await paymentRepo.save(payment);
+        this.logger.warn(`⚠️ Payment expired: ${paymentCode}`);
+        responsePayload = { success: false, message: 'Payment expired' };
+        return;
+      }
 
-    // Kiểm tra số tiền
-    const amountReceived = webhookData.transferAmount;
-    const amountExpected = Number(payment.amount);
+      const amountReceived = webhookData.transferAmount;
+      const amountExpected = Number(payment.amount);
 
-    if (amountReceived < amountExpected) {
-      this.logger.warn(
-        `⚠️ Insufficient amount. Expected: ${amountExpected}, Received: ${amountReceived}`,
-      );
-      // Update paid amount nhưng không complete
-      payment.paidAmount = amountReceived;
-      payment.sepayTransactionId = webhookData.id;
-      payment.gateway = webhookData.gateway;
-      payment.accountNumber = webhookData.accountNumber;
-      payment.referenceCode = webhookData.referenceCode;
-      payment.transferContent = webhookData.content;
-      payment.transactionDate = new Date(webhookData.transactionDate);
-      payment.webhookData = JSON.stringify(webhookData);
-      await this.paymentRepository.save(payment);
-      
-      return {
-        success: false,
-        message: 'Insufficient amount',
-        expected: amountExpected,
-        received: amountReceived,
+      this.applyWebhookAudit(payment, webhookData, amountReceived);
+
+      if (amountReceived < amountExpected) {
+        this.logger.warn(
+          `⚠️ Insufficient amount. Expected: ${amountExpected}, Received: ${amountReceived}`,
+        );
+        await paymentRepo.save(payment);
+        responsePayload = {
+          success: false,
+          message: 'Insufficient amount',
+          expected: amountExpected,
+          received: amountReceived,
+        };
+        return;
+      }
+
+      payment.status = PaymentStatus.COMPLETED;
+      payment.paidAt = new Date();
+      await paymentRepo.save(payment);
+
+      processedPaymentInfo = {
+        paymentId: payment.paymentId,
+        paymentCode: payment.paymentCode,
       };
+
+      this.logger.log(
+        `✅ Payment completed: ${paymentCode} - Type: ${payment.paymentType}`,
+      );
+
+      switch (payment.paymentType) {
+        case PaymentType.ORDER:
+          postProcess = async () => {
+            responsePayload = await this.processOrderPaymentAfterCommit(
+              payment.paymentId,
+              amountReceived,
+            );
+          };
+          break;
+        case PaymentType.TOPUP:
+          postProcess = async () => {
+            responsePayload = await this.processTopupPaymentAfterCommit(
+              payment.paymentId,
+              amountReceived,
+            );
+          };
+          break;
+        case PaymentType.BOOKING:
+          postProcess = async () => {
+            responsePayload = await this.processBookingPaymentAfterCommit(
+              payment.paymentId,
+              amountReceived,
+            );
+          };
+          break;
+        default:
+          responsePayload = {
+            success: true,
+            message: 'Payment processed successfully',
+            paymentType: payment.paymentType,
+            paymentCode,
+            amount: amountReceived,
+          };
+      }
+    });
+
+    if (postProcess) {
+      try {
+        await postProcess();
+      } catch (error) {
+        //  LỖI NGHIỆP VỤ (CRITICAL)
+        const err = error as Error;
+        const paymentId = processedPaymentInfo?.paymentId ?? 'unknown';
+        const paymentCode = processedPaymentInfo?.paymentCode ?? 'unknown';
+        this.logger.error(
+          `[CRITICAL] Payment (ID: ${paymentId}, Code: ${paymentCode}) completed but post-processing failed: ${err.message}`,
+          err.stack,
+        );
+        //  TẠI ĐÂY PHẢI GỬI THÔNG BÁO CHO ADMIN
+        throw error;
+      }
     }
 
-    // Payment thành công!
-    payment.status = PaymentStatus.COMPLETED;
+    return (
+      responsePayload ?? {
+        success: false,
+        message: 'Unable to process payment',
+      }
+    );
+  }
+
+  private applyWebhookAudit(
+    payment: Payment,
+    webhookData: SepayWebhookDto,
+    amountReceived: number,
+  ): void {
     payment.paidAmount = amountReceived;
-    payment.paidAt = new Date();
     payment.sepayTransactionId = webhookData.id;
     payment.gateway = webhookData.gateway;
     payment.accountNumber = webhookData.accountNumber;
@@ -223,94 +336,197 @@ export class PaymentsService {
     payment.transferContent = webhookData.content;
     payment.transactionDate = new Date(webhookData.transactionDate);
     payment.webhookData = JSON.stringify(webhookData);
+  }
 
-    await this.paymentRepository.save(payment);
+  private async processBookingPaymentAfterCommit(
+    paymentId: number,
+    amountReceived: number,
+  ): Promise<PaymentProcessingResult> {
+    // Bắt đầu một transaction MỚI, riêng biệt
+    // để đảm bảo Cập nhật Hẹn và Cập nhật Slot xảy ra đồng bộ
+    return this.entityManager.transaction(async (manager) => {
+      // Dùng 'manager' để lấy các repository cho transaction này
+      const paymentRepo = manager.getRepository(Payment);
+      const appointmentRepo = manager.getRepository(Appointment);
+      const slotRepo = manager.getRepository(AvailabilitySlot);
 
-    this.logger.log(`✅ Payment completed: ${paymentCode} - Type: ${payment.paymentType}`);
-
-    // Process based on payment type
-    if (payment.paymentType === PaymentType.ORDER) {
-      let orderId = payment.orderId;
-
-      // 🆕 Nếu chưa có orderId, tạo order từ cartData
-      if (!orderId && payment.cartData && payment.customerId) {
-        try {
-          const cartData = JSON.parse(payment.cartData);
-          
-          // Tạo order với status CONFIRMED luôn (đã thanh toán)
-          const newOrder = await this.ordersService.createOrderFromPayment({
-            customerId: payment.customerId,
-            cartItems: cartData.items,
-            shippingAddress: payment.shippingAddress,
-            notes: payment.orderNotes,
-            totalAmount: amountReceived,
-            paymentId: payment.paymentId,
-          });
-
-          // Update payment với orderId mới
-          payment.orderId = newOrder.orderId;
-          await this.paymentRepository.save(payment);
-
-          orderId = newOrder.orderId;
-          
-          this.logger.log(`✅ Order created from payment: #${orderId}`);
-
-          // 🆕 Xóa cart sau khi tạo order thành công
-          if (payment.userId) {
-            try {
-              await this.cartService.clearCart(payment.userId);
-              this.logger.log(`✅ Cart cleared for user: ${payment.userId}`);
-            } catch (error) {
-              this.logger.warn(`⚠️ Failed to clear cart for user ${payment.userId}: ${error.message}`);
-              // Don't throw - order already created, just log warning
-            }
-          }
-        } catch (error) {
-          this.logger.error(`❌ Failed to create order from payment: ${error.message}`);
-          throw error;
-        }
-      }
-      // Nếu đã có orderId (trường hợp cũ), update order status
-      else if (orderId) {
-        await this.ordersService.update(orderId, {
-          status: OrderStatus.CONFIRMED,
-        });
-        this.logger.log(`✅ Order #${orderId} marked as CONFIRMED`);
-      }
-
-      return {
-        success: true,
-        message: 'Order payment processed successfully',
-        paymentType: 'order',
-        paymentCode,
-        amount: amountReceived,
-        orderId: orderId,
-      };
-    } else if (payment.paymentType === PaymentType.TOPUP) {
-      // Add balance to user account
-      const user = await this.usersService.findOne(payment.userId);
-      const oldBalance = parseFloat(user.balance.toString());
-      const newBalance = oldBalance + amountReceived;
-      
-      await this.usersService.update(payment.userId, {
-        balance: newBalance,
+      // 1. Tìm Payment (bằng ID)
+      const payment = await paymentRepo.findOne({
+        where: { paymentId },
       });
 
+      if (!payment) {
+        this.logger.error(`❌ Payment ${paymentId} not found after commit`);
+        throw new NotFoundException('Payment not found after commit');
+      }
+
+      // 2. Tìm Appointment liên quan
+      // (Giả sử Appointment đã được tạo và liên kết 'paymentId'
+      // trong luồng "Giữ Chỗ" ban đầu)
+      const appointment = await appointmentRepo.findOne({
+        where: { payment: { paymentId: paymentId } },
+        relations: ['availabilitySlot'],
+      });
+
+      if (!appointment) {
+        this.logger.error(
+          `❌ Booking payment ${payment.paymentCode} missing appointment linkage`,
+        );
+        throw new NotFoundException('Appointment not found for this payment');
+      }
+
+      // 3. Cập nhật trạng thái Appointment
+      if (appointment.appointmentStatus === AppointmentStatus.PENDING_PAYMENT) {
+        appointment.appointmentStatus = AppointmentStatus.SCHEDULED;
+      }
+      await appointmentRepo.save(appointment);
+
+      // 4. Cập nhật trạng thái Slot
+      if (appointment.availabilitySlot) {
+        await slotRepo.update(appointment.availabilitySlot.slotId, {
+          status: SlotStatus.BOOKED,
+          appointmentId: appointment.appointmentId,
+        });
+      }
+
       this.logger.log(
-        `✅ Balance updated for user ${payment.userId}: ${oldBalance} → ${newBalance}`,
+        `✅ Booking confirmed for Appointment ${appointment.appointmentId}`,
       );
 
+      // 5. Trả về kết quả
       return {
         success: true,
-        message: 'Topup processed successfully',
-        paymentType: 'topup',
-        paymentCode,
+        message: 'Booking payment processed successfully',
+        paymentType: 'booking',
+        paymentCode: payment.paymentCode,
         amount: amountReceived,
-        userId: payment.userId,
-        oldBalance,
-        newBalance,
+        appointmentId: appointment.appointmentId,
+        slotId: appointment.availabilitySlot?.slotId ?? null,
+      };
+    });
+  }
+
+  private async processOrderPaymentAfterCommit(
+    paymentId: number,
+    amountReceived: number,
+  ): Promise<PaymentProcessingResult> {
+    const payment = await this.paymentRepository.findOne({
+      where: { paymentId },
+    });
+
+    if (!payment) {
+      this.logger.error(
+        `❌ Payment ${paymentId} not found after transaction commit`,
+      );
+      return {
+        success: false,
+        message: 'Payment not found after commit',
+        paymentId,
       };
     }
+
+    let orderId = payment.orderId;
+
+    if (!orderId && payment.cartData && payment.customerId) {
+      try {
+        const parsedCart = JSON.parse(payment.cartData) as unknown;
+        const items = (parsedCart as { items?: unknown }).items;
+
+        if (!Array.isArray(items)) {
+          throw new BadRequestException('Invalid cart data on payment');
+        }
+
+        const newOrder = await this.ordersService.createOrderFromPayment({
+          customerId: payment.customerId,
+          cartItems: items as Record<string, unknown>[],
+          shippingAddress: payment.shippingAddress,
+          notes: payment.orderNotes,
+          totalAmount: amountReceived,
+          paymentId: payment.paymentId,
+        });
+
+        payment.orderId = newOrder.orderId;
+        await this.paymentRepository.save(payment);
+        orderId = newOrder.orderId;
+
+        this.logger.log(`✅ Order created from payment: #${orderId}`);
+
+        if (payment.userId) {
+          try {
+            await this.cartService.clearCart(payment.userId);
+            this.logger.log(`✅ Cart cleared for user: ${payment.userId}`);
+          } catch (error) {
+            const err = error as Error;
+            this.logger.warn(
+              `⚠️ Failed to clear cart for user ${payment.userId}: ${err.message}`,
+            );
+          }
+        }
+      } catch (error) {
+        const err = error as Error;
+        this.logger.error(
+          `❌ Failed to create order from payment: ${err.message}`,
+        );
+        throw error;
+      }
+    } else if (orderId) {
+      await this.ordersService.update(orderId, {
+        status: OrderStatus.CONFIRMED,
+      });
+      this.logger.log(`✅ Order #${orderId} marked as CONFIRMED`);
+    }
+
+    return {
+      success: true,
+      message: 'Order payment processed successfully',
+      paymentType: 'order',
+      paymentCode: payment.paymentCode,
+      amount: amountReceived,
+      orderId,
+    };
+  }
+
+  private async processTopupPaymentAfterCommit(
+    paymentId: number,
+    amountReceived: number,
+  ): Promise<PaymentProcessingResult> {
+    const payment = await this.paymentRepository.findOne({
+      where: { paymentId },
+    });
+
+    if (!payment || !payment.userId) {
+      this.logger.error(
+        `❌ Payment ${paymentId} missing user information for topup`,
+      );
+      return {
+        success: false,
+        message: 'Invalid topup payment data',
+        paymentId,
+      };
+    }
+
+    const user = await this.usersService.findOne(payment.userId);
+    const oldBalance = Number(user.balance);
+    const newBalance = oldBalance + amountReceived;
+
+    await this.usersService.update(payment.userId, {
+      balance: newBalance,
+    });
+
+    this.logger.log(
+      `✅ Balance updated for user ${payment.userId}: ${oldBalance} → ${newBalance}`,
+    );
+
+    return {
+      success: true,
+      message: 'Topup processed successfully',
+      paymentType: 'topup',
+      paymentCode: payment.paymentCode,
+      amount: amountReceived,
+      userId: payment.userId,
+      oldBalance,
+      newBalance,
+    };
   }
 
   /**
@@ -341,7 +557,7 @@ export class PaymentsService {
 
   /**
    * Generate payment code duy nhất
-   * Format: 
+   * Format:
    * - Order: SKO{orderId|customerId}{timestamp} (SKinalyze Order)
    * - Topup: SKT{userId_short}{timestamp} (SKinalyze Topup)
    */
@@ -364,8 +580,20 @@ export class PaymentsService {
       // For topup, use last 8 chars of userId
       const userIdShort = userId.replace(/-/g, '').slice(-8).toUpperCase();
       return `SKT${userIdShort}${timestamp}`;
+    } else if (paymentType === PaymentType.BOOKING && customerId) {
+      const customerIdShort = customerId
+        .replace(/-/g, '')
+        .slice(-8)
+        .toUpperCase();
+      return `SKB${customerIdShort}${timestamp}`;
+    } else if (paymentType === PaymentType.SUBSCRIPTION && customerId) {
+      const customerIdShort = customerId
+        .replace(/-/g, '')
+        .slice(-8)
+        .toUpperCase();
+      return `SKS${customerIdShort}${timestamp}`;
     }
-    
+
     // Fallback
     return `SK${timestamp}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
   }
@@ -376,7 +604,7 @@ export class PaymentsService {
    */
   private extractPaymentCode(content: string): string | null {
     // Match SKO hoặc SKT followed by alphanumeric
-    const match = content.match(/SK[OT][A-Z0-9]+/i);
+    const match = content.match(/SK[OTBS][A-Z0-9]+/i);
     return match ? match[0].toUpperCase() : null;
   }
 
@@ -395,10 +623,12 @@ export class PaymentsService {
       createdAt: payment.createdAt,
       expiredAt: payment.expiredAt,
       paidAt: payment.paidAt,
-      order: payment.order ? {
-        orderId: payment.order.orderId,
-        status: payment.order.status,
-      } : null,
+      order: payment.order
+        ? {
+            orderId: payment.order.orderId,
+            status: payment.order.status,
+          }
+        : null,
     };
   }
 

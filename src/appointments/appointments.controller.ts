@@ -6,18 +6,39 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
-import { AppointmentsService } from './appointments.service';
+import {
+  AppointmentsService,
+  AppointmentReservationResult,
+} from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import { User } from 'src/users/entities/user.entity';
+import { CreatedResponse, ResponseHelper } from 'src/utils/responses';
 
 @Controller('appointments')
+@UseGuards(JwtAuthGuard)
 export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) {}
 
   @Post()
-  create(@Body() createAppointmentDto: CreateAppointmentDto) {
-    return this.appointmentsService.create(createAppointmentDto);
+  async create(
+    @Body() createAppointmentDto: CreateAppointmentDto,
+    @GetUser() user: User,
+  ): Promise<CreatedResponse<AppointmentReservationResult>> {
+    const paymentDetails: AppointmentReservationResult =
+      await this.appointmentsService.createReservation(
+        user.userId,
+        createAppointmentDto,
+      );
+
+    return ResponseHelper.created(
+      'Appointment reservation created. Please complete payment.',
+      paymentDetails,
+    );
   }
 
   @Get()

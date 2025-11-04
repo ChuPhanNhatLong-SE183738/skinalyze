@@ -8,8 +8,13 @@ import {
   Delete,
   UseGuards,
   Request,
+  UseInterceptors,
+  UploadedFile,
+  UploadedFiles,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ShippingLogsService } from './shipping-logs.service';
 import { CreateShippingLogDto } from './dto/create-shipping-log.dto';
 import { UpdateShippingLogDto } from './dto/update-shipping-log.dto';
@@ -46,9 +51,10 @@ export class ShippingLogsController {
   @Get('available')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
-    summary: '📦 Lấy danh sách đơn hàng chưa có staff nhận (available for pickup)',
-    description: 'Staff có thể xem và chọn đơn hàng để giao'
+  @ApiOperation({
+    summary:
+      '📦 Lấy danh sách đơn hàng chưa có staff nhận (available for pickup)',
+    description: 'Staff có thể xem và chọn đơn hàng để giao',
   })
   async findAvailable() {
     const logs = await this.shippingLogsService.findAvailableForPickup();
@@ -61,9 +67,9 @@ export class ShippingLogsController {
   @Get('my-deliveries')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '👤 Lấy danh sách đơn hàng của tôi (staff đang login)',
-    description: 'Xem các đơn hàng mà staff đang phụ trách'
+    description: 'Xem các đơn hàng mà staff đang phụ trách',
   })
   async findMyDeliveries(@Request() req) {
     const staffId = req.user.userId;
@@ -78,6 +84,86 @@ export class ShippingLogsController {
   async findByOrderId(@Param('orderId') orderId: string) {
     const logs = await this.shippingLogsService.findByOrderId(orderId);
     return ResponseHelper.success('Shipping logs retrieved successfully', logs);
+  }
+
+  @Post(':id/upload-finished-pictures')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UseInterceptors(FilesInterceptor('pictures', 5)) // Max 5 ảnh
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: '📸 Shipper upload ảnh bằng chứng hoàn thành đơn hàng',
+    description: 'Upload 1-5 ảnh bằng chứng giao hàng thành công',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        pictures: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Ảnh bằng chứng (1-5 ảnh)',
+        },
+      },
+    },
+  })
+  async uploadFinishedPictures(
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Request() req,
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Vui lòng upload ít nhất 1 ảnh');
+    }
+
+    if (files.length > 5) {
+      throw new BadRequestException('Chỉ được upload tối đa 5 ảnh');
+    }
+
+    const userId = req.user.userId;
+    const result = await this.shippingLogsService.uploadFinishedPictures(
+      id,
+      files,
+      userId,
+    );
+
+    return ResponseHelper.success('Upload ảnh thành công', result);
+  }
+
+  @Post(':id/assign-to-me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '🤝 Staff tự nhận đơn hàng này',
+    description: 'Staff có thể tự chọn và nhận đơn hàng để giao',
+  })
+  async assignToMe(@Param('id') id: string, @Request() req) {
+    const staffId = req.user.userId;
+    const log = await this.shippingLogsService.assignToMe(id, staffId);
+    return ResponseHelper.success('Bạn đã nhận đơn hàng thành công', log);
+  }
+
+  @Post(':id/assign-staff')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '👨‍💼 Admin gán staff cho đơn hàng',
+    description: 'Chỉ ADMIN/MANAGER mới có thể gán staff cho đơn hàng',
+  })
+  async assignStaff(
+    @Param('id') id: string,
+    @Body() assignDto: AssignStaffDto,
+  ) {
+    const log = await this.shippingLogsService.assignStaff(
+      id,
+      assignDto.staffId,
+      assignDto.force,
+    );
+    return ResponseHelper.success('Staff assigned successfully', log);
   }
 
   @Get(':id')
@@ -99,42 +185,6 @@ export class ShippingLogsController {
   ) {
     const log = await this.shippingLogsService.update(id, updateDto);
     return ResponseHelper.success('Shipping log updated successfully', log);
-  }
-
-  @Post(':id/assign-to-me')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ 
-    summary: '🤝 Staff tự nhận đơn hàng này',
-    description: 'Staff có thể tự chọn và nhận đơn hàng để giao'
-  })
-  async assignToMe(@Param('id') id: string, @Request() req) {
-    const staffId = req.user.userId;
-    const log = await this.shippingLogsService.assignToMe(id, staffId);
-    return ResponseHelper.success(
-      'Bạn đã nhận đơn hàng thành công',
-      log,
-    );
-  }
-
-  @Post(':id/assign-staff')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.STAFF)
-  @ApiBearerAuth()
-  @ApiOperation({ 
-    summary: '👨‍💼 Admin gán staff cho đơn hàng',
-    description: 'Chỉ ADMIN/MANAGER mới có thể gán staff cho đơn hàng'
-  })
-  async assignStaff(
-    @Param('id') id: string,
-    @Body() assignDto: AssignStaffDto,
-  ) {
-    const log = await this.shippingLogsService.assignStaff(
-      id,
-      assignDto.staffId,
-      assignDto.force,
-    );
-    return ResponseHelper.success('Staff assigned successfully', log);
   }
 
   @Delete(':id')

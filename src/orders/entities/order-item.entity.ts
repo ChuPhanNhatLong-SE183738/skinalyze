@@ -22,7 +22,7 @@ export class OrderItem {
   orderId: string;
 
   // Many-to-One with Product
-  @ManyToOne(() => Product)
+  @ManyToOne(() => Product, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'productId' })
   product: Product;
 

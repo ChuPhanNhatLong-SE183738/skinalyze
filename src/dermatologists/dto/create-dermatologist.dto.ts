@@ -1,22 +1,25 @@
 import {
-  IsNotEmpty,
   IsOptional,
   IsString,
   IsNumber,
   IsArray,
-  IsUUID,
+  IsPositive,
+  Min,
 } from 'class-validator';
 
 export class CreateDermatologistDto {
-  @IsNotEmpty()
-  @IsUUID()
-  userId: string;
-
   @IsOptional()
   @IsNumber()
   yearsOfExp?: number;
 
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  @Min(0)
+  defaultSlotPrice?: number;
+
   @IsArray()
+  @IsOptional()
   @IsString({ each: true })
   specializations?: string[];
 }
@@ -25,6 +28,12 @@ export class UpdateDermatologistDto {
   @IsOptional()
   @IsNumber()
   yearsOfExp?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  @Min(0)
+  defaultSlotPrice?: number;
 
   @IsOptional()
   @IsArray()

@@ -1,16 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { ShippingLog } from './entities/shipping-log.entity';
 import { CreateShippingLogDto } from './dto/create-shipping-log.dto';
 import { UpdateShippingLogDto } from './dto/update-shipping-log.dto';
 import { ShippingStatus } from './entities/shipping-log.entity';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class ShippingLogsService {
+  private readonly logger = new Logger(ShippingLogsService.name);
+
   constructor(
     @InjectRepository(ShippingLog)
     private readonly shippingLogRepository: Repository<ShippingLog>,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async create(createDto: CreateShippingLogDto): Promise<ShippingLog> {
@@ -20,7 +24,14 @@ export class ShippingLogsService {
 
   async findAll(): Promise<ShippingLog[]> {
     return await this.shippingLogRepository.find({
-      relations: ['order', 'order.customer', 'order.customer.user', 'shippingStaff'],
+      relations: [
+        'order',
+        'order.customer',
+        'order.customer.user',
+        'order.orderItems',
+        'order.orderItems.product',
+        'shippingStaff',
+      ],
       order: { createdAt: 'DESC' },
     });
   }
@@ -34,7 +45,13 @@ export class ShippingLogsService {
         shippingStaffId: IsNull(),
         status: ShippingStatus.PENDING,
       },
-      relations: ['order', 'order.customer', 'order.customer.user'],
+      relations: [
+        'order',
+        'order.customer',
+        'order.customer.user',
+        'order.orderItems',
+        'order.orderItems.product',
+      ],
       order: { createdAt: 'ASC' },
     });
   }
@@ -45,7 +62,14 @@ export class ShippingLogsService {
   async findByStaffId(staffId: string): Promise<ShippingLog[]> {
     return await this.shippingLogRepository.find({
       where: { shippingStaffId: staffId },
-      relations: ['order', 'order.customer', 'order.customer.user', 'shippingStaff'],
+      relations: [
+        'order',
+        'order.customer',
+        'order.customer.user',
+        'order.orderItems',
+        'order.orderItems.product',
+        'shippingStaff',
+      ],
       order: { createdAt: 'DESC' },
     });
   }
@@ -53,7 +77,14 @@ export class ShippingLogsService {
   async findOne(id: string): Promise<ShippingLog> {
     const log = await this.shippingLogRepository.findOne({
       where: { shippingLogId: id },
-      relations: ['order', 'order.customer', 'order.customer.user', 'shippingStaff'],
+      relations: [
+        'order',
+        'order.customer',
+        'order.customer.user',
+        'order.orderItems',
+        'order.orderItems.product',
+        'shippingStaff',
+      ],
     });
 
     if (!log) {
@@ -66,7 +97,14 @@ export class ShippingLogsService {
   async findByOrderId(orderId: string): Promise<ShippingLog[]> {
     return await this.shippingLogRepository.find({
       where: { orderId },
-      relations: ['order', 'order.customer', 'order.customer.user', 'shippingStaff'],
+      relations: [
+        'order',
+        'order.customer',
+        'order.customer.user',
+        'order.orderItems',
+        'order.orderItems.product',
+        'shippingStaff',
+      ],
       order: { createdAt: 'ASC' },
     });
   }
@@ -132,6 +170,56 @@ export class ShippingLogsService {
     const log = await this.findOne(id);
     Object.assign(log, updateDto);
     return await this.shippingLogRepository.save(log);
+  }
+
+  /**
+   * 📸 Upload ảnh bằng chứng hoàn thành đơn hàng
+   */
+  async uploadFinishedPictures(
+    shippingLogId: string,
+    files: Express.Multer.File[],
+    staffId: string,
+  ): Promise<ShippingLog> {
+    const log = await this.findOne(shippingLogId);
+
+    // Kiểm tra staff có quyền upload không (phải là staff được assign)
+    if (log.shippingStaffId !== staffId) {
+      throw new BadRequestException(
+        'Bạn không có quyền upload ảnh cho đơn hàng này',
+      );
+    }
+
+    // Kiểm tra status (chỉ upload khi OUT_FOR_DELIVERY hoặc DELIVERED)
+    if (
+      log.status !== ShippingStatus.OUT_FOR_DELIVERY &&
+      log.status !== ShippingStatus.DELIVERED
+    ) {
+      throw new BadRequestException(
+        'Chỉ có thể upload ảnh khi đơn hàng đang giao hoặc đã giao',
+      );
+    }
+
+    this.logger.log(`Uploading ${files.length} pictures for shipping log ${shippingLogId}`);
+
+    // Upload ảnh lên Cloudinary
+    const uploadResults = await this.cloudinaryService.uploadMultipleImages(
+      files,
+      'shipping-finished',
+    );
+
+    // Lấy URLs
+    const pictureUrls = uploadResults.map((result) => result.secure_url);
+
+    // Cập nhật vào database
+    log.finishedPictures = pictureUrls;
+    log.status = ShippingStatus.DELIVERED;
+    log.deliveredDate = new Date();
+
+    const updatedLog = await this.shippingLogRepository.save(log);
+
+    this.logger.log(`✅ Uploaded ${pictureUrls.length} pictures successfully`);
+
+    return updatedLog;
   }
 
   async remove(id: string): Promise<void> {

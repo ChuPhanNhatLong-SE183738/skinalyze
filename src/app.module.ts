@@ -55,6 +55,7 @@ import { ChatSessionsModule } from './chat-sessions/chat-sessions.module';
 import { ChatMessagesModule } from './chat-messages/chat-messages.module';
 import { ChatMessage } from './chat-messages/entities/chat-message.entity';
 import { ChatSession } from './chat-sessions/entities/chat-session.entity';
+import { TrackingModule } from './tracking/tracking.module';
 
 @Module({
   imports: [
@@ -125,6 +126,7 @@ import { ChatSession } from './chat-sessions/entities/chat-session.entity';
     AvailabilitySlotsModule,
     ChatSessionsModule,
     ChatMessagesModule,
+    TrackingModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

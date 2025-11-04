@@ -7,7 +7,6 @@ import {
   OneToOne,
 } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
-import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
 
 export enum TransactionStatus {
   PENDING = 'PENDING',

@@ -10,7 +10,10 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -19,6 +22,7 @@ import {
   ApiQuery,
   ApiBody,
   ApiBearerAuth,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -39,13 +43,84 @@ export class ProductsController {
   @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new product (Admin only)' })
+  @ApiOperation({ summary: 'Create product with image URLs (Admin only)' })
   @ApiBody({ type: CreateProductDto })
   @ApiResponse({ status: 201, description: 'Product created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   async create(@Body() createProductDto: CreateProductDto) {
     const product = await this.productsService.create(createProductDto);
     return ResponseHelper.created('Product created successfully', product);
+  }
+
+  @Post('upload')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @UseInterceptors(FilesInterceptor('images', 5)) // Max 5 images
+  @HttpCode(HttpStatus.CREATED)
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Create product with uploaded images (Admin only)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        productName: { type: 'string' },
+        productDescription: { type: 'string' },
+        stock: { type: 'number' },
+        categoryIds: { type: 'array', items: { type: 'string' } },
+        brand: { type: 'string' },
+        sellingPrice: { type: 'number' },
+        originalPrice: { type: 'number' },
+        ingredients: { type: 'string' },
+        suitableFor: { type: 'array', items: { type: 'string' } },
+        salePercentage: { type: 'number' },
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'Upload image files (max 5)',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Product created with uploaded images',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async createWithUpload(
+    @Body() body: any,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    // Parse FormData fields (everything comes as strings)
+    const createProductDto: Omit<CreateProductDto, 'productImages'> = {
+      productName: body.productName,
+      productDescription: body.productDescription,
+      stock: parseInt(body.stock, 10),
+      categoryIds:
+        typeof body.categoryIds === 'string'
+          ? JSON.parse(body.categoryIds)
+          : body.categoryIds,
+      brand: body.brand,
+      sellingPrice: parseFloat(body.sellingPrice),
+      originalPrice: parseFloat(body.originalPrice),
+      ingredients: body.ingredients,
+      suitableFor:
+        typeof body.suitableFor === 'string'
+          ? JSON.parse(body.suitableFor)
+          : body.suitableFor,
+      salePercentage: body.salePercentage
+        ? parseFloat(body.salePercentage)
+        : undefined,
+    };
+
+    const product = await this.productsService.createWithUpload(
+      createProductDto,
+      files,
+    );
+    return ResponseHelper.created(
+      'Product created with uploaded images',
+      product,
+    );
   }
 
   @Get()
@@ -102,17 +177,80 @@ export class ProductsController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @UseInterceptors(FilesInterceptor('images', 5)) // Max 5 new images
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update product by ID (Admin only)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Update product (with optional image upload) (Admin only)' })
   @ApiParam({ name: 'id', type: String, description: 'Product UUID' })
-  @ApiBody({ type: UpdateProductDto })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        productName: { type: 'string' },
+        productDescription: { type: 'string' },
+        stock: { type: 'number' },
+        categoryIds: { type: 'array', items: { type: 'string' } },
+        brand: { type: 'string' },
+        sellingPrice: { type: 'number' },
+        ingredients: { type: 'string' },
+        suitableFor: { type: 'array', items: { type: 'string' } },
+        salePercentage: { type: 'number' },
+        imagesToKeep: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Existing image URLs to keep',
+        },
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'New image files to upload (max 5)',
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Product updated successfully' })
   @ApiResponse({ status: 404, description: 'Product not found' })
   async update(
     @Param('id') id: string,
-    @Body() updateProductDto: UpdateProductDto,
+    @Body() body: any,
+    @UploadedFiles() files: Express.Multer.File[],
   ) {
-    const product = await this.productsService.update(id, updateProductDto);
+    // Parse FormData fields
+    const updateData: Partial<UpdateProductDto> = {};
+    
+    if (body.productName) updateData.productName = body.productName;
+    if (body.productDescription) updateData.productDescription = body.productDescription;
+    if (body.stock) updateData.stock = parseInt(body.stock, 10);
+    if (body.brand) updateData.brand = body.brand;
+    if (body.sellingPrice) updateData.sellingPrice = parseFloat(body.sellingPrice);
+    if (body.ingredients) updateData.ingredients = body.ingredients;
+    if (body.salePercentage) updateData.salePercentage = parseFloat(body.salePercentage);
+    
+    if (body.categoryIds) {
+      updateData.categoryIds = typeof body.categoryIds === 'string'
+        ? JSON.parse(body.categoryIds)
+        : body.categoryIds;
+    }
+    
+    if (body.suitableFor) {
+      updateData.suitableFor = typeof body.suitableFor === 'string'
+        ? JSON.parse(body.suitableFor)
+        : body.suitableFor;
+    }
+
+    // Parse imagesToKeep
+    const imagesToKeep = body.imagesToKeep
+      ? typeof body.imagesToKeep === 'string'
+        ? JSON.parse(body.imagesToKeep)
+        : body.imagesToKeep
+      : undefined;
+
+    const product = await this.productsService.updateWithImages(
+      id,
+      updateData,
+      imagesToKeep,
+      files,
+    );
     return ResponseHelper.success('Product updated successfully', product);
   }
 
