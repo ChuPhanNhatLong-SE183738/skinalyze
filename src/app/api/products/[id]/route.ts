@@ -58,17 +58,34 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body = await request.json();
+    const contentType = request.headers.get("content-type");
 
-    // Call backend API with token
-    const response = await fetch(`${API_BASE_URL}/products/${id}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token.value}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    let response;
+
+    // Handle FormData (when updating with images)
+    if (contentType?.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      
+      response = await fetch(`${API_BASE_URL}/products/${id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token.value}`,
+        },
+        body: formData,
+      });
+    } else {
+      // Handle JSON (when updating without images)
+      const body = await request.json();
+      
+      response = await fetch(`${API_BASE_URL}/products/${id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token.value}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    }
 
     const result = await response.json();
 

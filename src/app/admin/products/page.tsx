@@ -149,6 +149,38 @@ export default function AdminProductsPage() {
         title: "Error",
         description: error.message || "Failed to save product",
       });
+    }
+  };
+
+  const handleFormSubmitWithFiles = async (
+    data: Omit<CreateProductRequest, 'productImages'>,
+    files: File[],
+    imagesToKeep?: string[]
+  ) => {
+    try {
+      if (modalMode === "create") {
+        await productService.createProductWithFiles(data, files, imagesToKeep);
+        toast({
+          variant: "success",
+          title: "Success",
+          description: "Product created successfully with uploaded images",
+        });
+      } else if (selectedProduct?.productId) {
+        await productService.updateProductWithImages(selectedProduct.productId, data, files, imagesToKeep);
+        toast({
+          variant: "success",
+          title: "Success",
+          description: "Product updated successfully",
+        });
+      }
+      await loadProducts();
+      setIsModalOpen(false);
+    } catch (error: any) {
+      toast({
+        variant: "error",
+        title: "Error",
+        description: error.message || "Failed to save product",
+      });
       throw error;
     }
   };
@@ -439,6 +471,7 @@ export default function AdminProductsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleFormSubmit}
+        onSubmitWithFiles={handleFormSubmitWithFiles}
         product={selectedProduct}
         mode={modalMode}
       />

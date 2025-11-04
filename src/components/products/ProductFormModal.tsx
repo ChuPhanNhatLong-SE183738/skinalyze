@@ -1,18 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { Product, CreateProductRequest } from "@/types/product";
-import { X, Plus } from "lucide-react";
+import type { Product, CreateProductRequest, Category } from "@/types/product";
+import { X, Plus, Upload, Link as LinkIcon, Star } from "lucide-react";
+import { categoryService } from "@/services/categoryService";
 
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: CreateProductRequest) => Promise<void>;
+  onSubmitWithFiles?: (
+    data: Omit<CreateProductRequest, "productImages">,
+    files: File[],
+    existingUrls?: string[]
+  ) => Promise<void>;
   product?: Product | null;
   mode: "create" | "edit";
 }
@@ -21,6 +32,7 @@ export function ProductFormModal({
   isOpen,
   onClose,
   onSubmit,
+  onSubmitWithFiles,
   product,
   mode,
 }: ProductFormModalProps) {
@@ -38,21 +50,41 @@ export function ProductFormModal({
   });
 
   const [imageInput, setImageInput] = useState("");
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imageFilePreviews, setImageFilePreviews] = useState<string[]>([]);
+  const [imageFileKeys, setImageFileKeys] = useState<string[]>([]); // Add unique keys for each file
+  const [imageMode, setImageMode] = useState<"url" | "upload">("url");
+  const [categories, setCategories] = useState<Category[]>([]);
   const [categoryInput, setCategoryInput] = useState("");
   const [suitableInput, setSuitableInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await categoryService.getCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     if (product && mode === "edit") {
       // Handle both categories (from API) and categoryIds (from form)
-      const categoryIds = product.categories 
-        ? product.categories.map(cat => cat.categoryId)
+      const categoryIds = product.categories
+        ? product.categories.map((cat) => cat.categoryId)
         : product.categoryIds || [];
-      
-      const salePercentage = typeof product.salePercentage === 'string'
-        ? parseFloat(product.salePercentage)
-        : product.salePercentage;
-        
+
+      const salePercentage =
+        typeof product.salePercentage === "string"
+          ? parseFloat(product.salePercentage)
+          : product.salePercentage;
+
       setFormData({
         productName: product.productName,
         productDescription: product.productDescription,
@@ -79,14 +111,39 @@ export function ProductFormModal({
         suitableFor: [],
         salePercentage: 0,
       });
+      setImageFiles([]);
+      setImageFilePreviews([]);
+      setImageFileKeys([]);
+      setImageMode("url");
     }
   }, [product, mode, isOpen]);
+
+  // Cleanup preview URLs when component unmounts or files change
+  useEffect(() => {
+    return () => {
+      imageFilePreviews.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imageFilePreviews]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      // In edit mode with images (existing or new), use FormData submission
+      if (mode === "edit" && (formData.productImages.length > 0 || imageFiles.length > 0) && onSubmitWithFiles) {
+        const { productImages, ...dataWithoutImages } = formData;
+        // Pass existing images (imagesToKeep) and new files
+        await onSubmitWithFiles(dataWithoutImages, imageFiles, productImages);
+      } 
+      // In create mode with new files
+      else if (imageFiles.length > 0 && onSubmitWithFiles) {
+        const { productImages, ...dataWithoutImages } = formData;
+        await onSubmitWithFiles(dataWithoutImages, imageFiles, productImages);
+      } 
+      // No images or create mode without files - use JSON
+      else {
+        await onSubmit(formData);
+      }
       onClose();
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -112,13 +169,190 @@ export function ProductFormModal({
     });
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const newFiles = Array.from(files);
+
+      // Create preview URLs for the new files
+      const newPreviews = newFiles.map((file) => URL.createObjectURL(file));
+
+      // Generate unique keys for each new file
+      const newKeys = newFiles.map(() =>
+        Math.random().toString(36).substr(2, 9)
+      );
+
+      setImageFiles([...imageFiles, ...newFiles]);
+      setImageFilePreviews([...imageFilePreviews, ...newPreviews]);
+      setImageFileKeys([...imageFileKeys, ...newKeys]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    // Revoke the preview URL to free memory
+    URL.revokeObjectURL(imageFilePreviews[index]);
+
+    setImageFiles(imageFiles.filter((_, i) => i !== index));
+    setImageFilePreviews(imageFilePreviews.filter((_, i) => i !== index));
+    setImageFileKeys(imageFileKeys.filter((_, i) => i !== index));
+  };
+
+  const setAsPrimaryImage = (index: number) => {
+    if (index === 0) return; // Already primary among files
+
+    // Move selected image to the front
+    const newFiles = [...imageFiles];
+    const newPreviews = [...imageFilePreviews];
+    const newKeys = [...imageFileKeys];
+
+    const [selectedFile] = newFiles.splice(index, 1);
+    const [selectedPreview] = newPreviews.splice(index, 1);
+    const [selectedKey] = newKeys.splice(index, 1);
+
+    newFiles.unshift(selectedFile);
+    newPreviews.unshift(selectedPreview);
+    newKeys.unshift(selectedKey);
+
+    setImageFiles(newFiles);
+    setImageFilePreviews(newPreviews);
+    setImageFileKeys(newKeys);
+  };
+
+  const setExistingAsPrimary = (index: number) => {
+    if (index === 0) return; // Already primary among existing images
+
+    // Move selected existing image to the front
+    const newUrls = [...formData.productImages];
+    const [selectedUrl] = newUrls.splice(index, 1);
+    newUrls.unshift(selectedUrl);
+
+    setFormData({
+      ...formData,
+      productImages: newUrls,
+    });
+  };
+
+  // Drag and drop handlers for existing images
+  const handleExistingDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('existingImageIndex', index.toString());
+    setDraggedIndex(index);
+  };
+
+  const handleExistingDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleExistingDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('existingImageIndex'));
+    
+    if (dragIndex === dropIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const newUrls = [...formData.productImages];
+    const [draggedUrl] = newUrls.splice(dragIndex, 1);
+    newUrls.splice(dropIndex, 0, draggedUrl);
+
+    setFormData({
+      ...formData,
+      productImages: newUrls,
+    });
+    setDraggedIndex(null);
+  };
+
+  const handleExistingDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
+  // Drag and drop handlers for new file uploads
+  const handleFileDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('fileIndex', index.toString());
+    setDraggedIndex(index);
+  };
+
+  const handleFileDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleFileDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('fileIndex'));
+    
+    if (dragIndex === dropIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const newFiles = [...imageFiles];
+    const newPreviews = [...imageFilePreviews];
+    const newKeys = [...imageFileKeys];
+
+    // Remove from drag position
+    const [draggedFile] = newFiles.splice(dragIndex, 1);
+    const [draggedPreview] = newPreviews.splice(dragIndex, 1);
+    const [draggedKey] = newKeys.splice(dragIndex, 1);
+
+    // Insert at drop position
+    newFiles.splice(dropIndex, 0, draggedFile);
+    newPreviews.splice(dropIndex, 0, draggedPreview);
+    newKeys.splice(dropIndex, 0, draggedKey);
+
+    setImageFiles(newFiles);
+    setImageFilePreviews(newPreviews);
+    setImageFileKeys(newKeys);
+    setDraggedIndex(null);
+  };
+
+  const handleFileDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
+  const setUrlAsPrimaryImage = (index: number) => {
+    if (index === 0) return; // Already primary
+
+    // Move selected URL to the front
+    const newUrls = [...formData.productImages];
+    const [selectedUrl] = newUrls.splice(index, 1);
+    newUrls.unshift(selectedUrl);
+
+    setFormData({
+      ...formData,
+      productImages: newUrls,
+    });
+  };
+
   const addCategory = () => {
-    if (categoryInput.trim() && !formData.categoryIds.includes(categoryInput.trim())) {
+    if (
+      categoryInput.trim() &&
+      !formData.categoryIds.includes(categoryInput.trim())
+    ) {
       setFormData({
         ...formData,
         categoryIds: [...formData.categoryIds, categoryInput.trim()],
       });
       setCategoryInput("");
+    }
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    if (formData.categoryIds.includes(categoryId)) {
+      // Remove category
+      setFormData({
+        ...formData,
+        categoryIds: formData.categoryIds.filter((id) => id !== categoryId),
+      });
+    } else {
+      // Add category
+      setFormData({
+        ...formData,
+        categoryIds: [...formData.categoryIds, categoryId],
+      });
     }
   };
 
@@ -130,7 +364,10 @@ export function ProductFormModal({
   };
 
   const addSuitable = () => {
-    if (suitableInput.trim() && !formData.suitableFor.includes(suitableInput.trim())) {
+    if (
+      suitableInput.trim() &&
+      !formData.suitableFor.includes(suitableInput.trim())
+    ) {
       setFormData({
         ...formData,
         suitableFor: [...formData.suitableFor, suitableInput.trim()],
@@ -288,91 +525,242 @@ export function ProductFormModal({
           </div>
 
           {/* Product Images */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label className="text-slate-700">Product Images</Label>
-            <div className="flex gap-2">
-              <Input
-                value={imageInput}
-                onChange={(e) => setImageInput(e.target.value)}
-                placeholder="Enter image URL"
-                className="bg-white border-slate-300 text-slate-900"
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addImage();
-                  }
-                }}
+
+            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
+              <input
+                type="file"
+                id="file-upload"
+                multiple
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
               />
-              <Button
-                type="button"
-                onClick={addImage}
-                size="icon"
-                className="bg-green-600 hover:bg-green-700"
+              <label
+                htmlFor="file-upload"
+                className="cursor-pointer flex flex-col items-center gap-2"
               >
-                <Plus className="h-4 w-4" />
-              </Button>
+                <Upload className="h-8 w-8 text-slate-400" />
+                <span className="text-sm text-slate-600">
+                  Click to upload or drag and drop
+                </span>
+                <span className="text-xs text-slate-500">
+                  PNG, JPG, GIF up to 10MB
+                </span>
+              </label>
             </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {formData.productImages.map((img, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded text-sm text-slate-700 border border-slate-200"
-                >
-                  <span className="truncate max-w-xs">{img}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeImage(index)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
+
+            {/* Image Previews - Show both existing URLs and new files */}
+            {(formData.productImages.length > 0 || imageFiles.length > 0) && (
+              <div>
+                <p className="text-sm text-slate-600 mb-2">
+                  Images ({formData.productImages.length + imageFiles.length} total)
+                  {formData.productImages.length > 0 && imageFiles.length === 0 && " - Drag to reorder"}
+                  {formData.productImages.length === 0 && imageFiles.length > 0 && " - Drag to reorder"}
+                  {formData.productImages.length > 0 && imageFiles.length > 0 && " - Drag within each group to reorder"}
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Existing images from database */}
+                  {formData.productImages.map((imgUrl, index) => (
+                    <div
+                      key={`existing-${index}`}
+                      draggable
+                      onDragStart={(e) => handleExistingDragStart(e, index)}
+                      onDragOver={handleExistingDragOver}
+                      onDrop={(e) => handleExistingDrop(e, index)}
+                      onDragEnd={handleExistingDragEnd}
+                      className={`relative group rounded-lg overflow-hidden border-2 transition-colors cursor-move ${
+                        draggedIndex === index 
+                          ? 'border-blue-500 opacity-50 scale-95' 
+                          : 'border-slate-200 hover:border-blue-500'
+                      }`}
+                      onClick={() => setExistingAsPrimary(index)}
+                    >
+                      <img
+                        src={imgUrl}
+                        alt={`Image ${index + 1}`}
+                        className="w-full h-32 object-cover"
+                      />
+
+                      {/* Primary Badge */}
+                      {index === 0 && imageFiles.length === 0 && (
+                        <div className="absolute top-2 left-2 bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                          <Star className="h-3 w-3 fill-white" />
+                          Primary
+                        </div>
+                      )}
+
+                      {/* Existing Image Badge */}
+                      <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded">
+                        Existing
+                      </div>
+
+                      {/* Hover overlay with buttons */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        {index !== 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExistingAsPrimary(index);
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-full text-sm flex items-center gap-1"
+                          >
+                            <Star className="h-3 w-3" />
+                            Set Primary
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFormData({
+                              ...formData,
+                              productImages: formData.productImages.filter((_, i) => i !== index),
+                            });
+                          }}
+                          className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Newly uploaded files */}
+                  {imageFiles.map((file, index) => (
+                    <div
+                      key={imageFileKeys[index]}
+                      draggable
+                      onDragStart={(e) => handleFileDragStart(e, index)}
+                      onDragOver={handleFileDragOver}
+                      onDrop={(e) => handleFileDrop(e, index)}
+                      onDragEnd={handleFileDragEnd}
+                      className={`relative group rounded-lg overflow-hidden border-2 transition-colors cursor-move ${
+                        draggedIndex === index 
+                          ? 'border-green-500 opacity-50 scale-95' 
+                          : 'border-slate-200 hover:border-green-500'
+                      }`}
+                      onClick={() => setAsPrimaryImage(index)}
+                    >
+                      <img
+                        src={imageFilePreviews[index]}
+                        alt={file.name}
+                        className="w-full h-32 object-cover"
+                      />
+
+                      {/* Primary Badge */}
+                      {index === 0 && formData.productImages.length === 0 && (
+                        <div className="absolute top-2 left-2 bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                          <Star className="h-3 w-3 fill-white" />
+                          Primary
+                        </div>
+                      )}
+                      
+                      {/* New Image Badge */}
+                      <div className="absolute top-2 right-2 bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded">
+                        New
+                      </div>
+
+                      {/* Hover overlay with buttons */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        {index !== 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAsPrimaryImage(index);
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-full text-sm flex items-center gap-1"
+                          >
+                            <Star className="h-3 w-3" />
+                            Set Primary
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFile(index);
+                          }}
+                          className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {/* Filename at bottom */}
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 truncate">
+                        {file.name}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Categories */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label className="text-slate-700">Categories</Label>
-            <div className="flex gap-2">
-              <Input
-                value={categoryInput}
-                onChange={(e) => setCategoryInput(e.target.value)}
-                placeholder="Enter category ID"
-                className="bg-white border-slate-300 text-slate-900"
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addCategory();
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                onClick={addCategory}
-                size="icon"
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {formData.categoryIds.map((cat) => (
-                <div
-                  key={cat}
-                  className="flex items-center gap-1 bg-slate-100 px-2 py-1 rounded text-sm text-slate-700 border border-slate-200"
-                >
-                  <span>{cat}</span>
+
+            {/* Category Selection Grid */}
+            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-3 bg-slate-50">
+              {categories.length === 0 ? (
+                <p className="text-sm text-slate-500 col-span-2 text-center py-2">
+                  Loading categories...
+                </p>
+              ) : (
+                categories.map((category) => (
                   <button
+                    key={category.categoryId}
                     type="button"
-                    onClick={() => removeCategory(cat)}
-                    className="text-red-600 hover:text-red-700"
+                    onClick={() => toggleCategory(category.categoryId)}
+                    className={`text-left px-3 py-2 rounded-lg border-2 transition-all ${
+                      formData.categoryIds.includes(category.categoryId)
+                        ? "bg-green-100 border-green-500 text-green-900 font-medium"
+                        : "bg-white border-slate-200 text-slate-700 hover:border-green-300"
+                    }`}
                   >
-                    <X className="h-3 w-3" />
+                    <div className="font-medium text-sm">
+                      {category.categoryName}
+                    </div>
+                    {category.categoryDescription && (
+                      <div className="text-xs text-slate-500 mt-0.5 truncate">
+                        {category.categoryDescription}
+                      </div>
+                    )}
                   </button>
-                </div>
-              ))}
+                ))
+              )}
             </div>
+
+            {/* Selected Categories Display */}
+            {formData.categoryIds.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {formData.categoryIds.map((catId) => {
+                  const category = categories.find(
+                    (c) => c.categoryId === catId
+                  );
+                  return (
+                    <div
+                      key={catId}
+                      className="flex items-center gap-1 bg-green-100 px-3 py-1 rounded-full text-sm text-green-900 border border-green-300"
+                    >
+                      <span>{category?.categoryName || catId}</span>
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory(catId)}
+                        className="text-green-700 hover:text-green-900"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Suitable For */}

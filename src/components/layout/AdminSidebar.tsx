@@ -14,6 +14,8 @@ import {
   FileText,
   Database,
   Bell,
+  Truck,
+  FolderTree,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -33,9 +35,19 @@ const menuItems = [
     icon: ShoppingBag,
   },
   {
+    title: "Shipping Logs",
+    href: "/admin/shipping-logs",
+    icon: Truck,
+  },
+  {
     title: "Products",
     href: "/admin/products",
     icon: Package,
+  },
+  {
+    title: "Categories",
+    href: "/admin/categories",
+    icon: FolderTree,
   },
   {
     title: "Inventory",
@@ -52,21 +64,6 @@ const menuItems = [
     href: "/admin/reports",
     icon: FileText,
   },
-  {
-    title: "Analytics",
-    href: "/admin/analytics",
-    icon: BarChart3,
-  },
-  {
-    title: "Notifications",
-    href: "/admin/notifications",
-    icon: Bell,
-  },
-  {
-    title: "Settings",
-    href: "/admin/settings",
-    icon: Settings,
-  },
 ];
 
 export function AdminSidebar({ onLogout }: AdminSidebarProps) {
@@ -80,12 +77,8 @@ export function AdminSidebar({ onLogout }: AdminSidebarProps) {
           <Shield className="h-6 w-6 text-white" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-slate-900">
-            Skinalyze
-          </h1>
-          <p className="text-xs text-green-600">
-            Admin Portal
-          </p>
+          <h1 className="text-lg font-bold text-slate-900">Skinalyze</h1>
+          <p className="text-xs text-green-600">Admin Portal</p>
         </div>
       </div>
 

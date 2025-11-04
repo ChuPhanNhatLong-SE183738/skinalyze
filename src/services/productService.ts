@@ -28,17 +28,17 @@ export class ProductService {
       }
 
       const result = await response.json();
-      
+
       // Handle backend response format: { data: [...], message, statusCode }
       if (result.data && Array.isArray(result.data)) {
         return {
           products: result.data,
           total: result.data.length,
           page: page,
-          limit: limit
+          limit: limit,
         };
       }
-      
+
       // Fallback to direct products array if already in expected format
       return result;
     } catch (error: any) {
@@ -93,7 +93,56 @@ export class ProductService {
   }
 
   /**
-   * Update an existing product
+   * Create a new product with file upload
+   */
+  async createProductWithFiles(
+    data: Omit<CreateProductRequest, "productImages">,
+    files: File[],
+    existingUrls?: string[]
+  ): Promise<Product> {
+    try {
+      const formData = new FormData();
+
+      // Append all text fields
+      formData.append("productName", data.productName);
+      formData.append("productDescription", data.productDescription);
+      formData.append("stock", data.stock.toString());
+      formData.append("brand", data.brand);
+      formData.append("sellingPrice", data.sellingPrice.toString());
+      formData.append("ingredients", data.ingredients);
+      formData.append("salePercentage", (data.salePercentage || 0).toString());
+
+      // Append arrays as JSON strings
+      formData.append("categoryIds", JSON.stringify(data.categoryIds));
+      formData.append("suitableFor", JSON.stringify(data.suitableFor));
+
+      // Append existing image URLs if provided
+      if (existingUrls && existingUrls.length > 0) {
+        formData.append("existingImageUrls", JSON.stringify(existingUrls));
+      }
+
+      // Append image files
+      files.forEach((file) => formData.append("images", file));
+
+      const response = await fetch("/api/products/upload", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create product with files");
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to create product with files");
+    }
+  }
+
+  /**
+   * Update an existing product (with optional file upload)
    */
   async updateProduct(
     productId: string,
@@ -107,6 +156,58 @@ export class ProductService {
         },
         credentials: "include",
         body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update product");
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to update product");
+    }
+  }
+
+  /**
+   * Update a product with images (with optional new files and keeping existing ones)
+   */
+  async updateProductWithImages(
+    productId: string,
+    data: Omit<CreateProductRequest, "productImages">,
+    files?: File[],
+    imagesToKeep?: string[]
+  ): Promise<Product> {
+    try {
+      const formData = new FormData();
+
+      // Append all text fields
+      formData.append("productName", data.productName);
+      formData.append("productDescription", data.productDescription);
+      formData.append("stock", data.stock.toString());
+      formData.append("brand", data.brand);
+      formData.append("sellingPrice", data.sellingPrice.toString());
+      formData.append("ingredients", data.ingredients);
+      formData.append("salePercentage", (data.salePercentage || 0).toString());
+
+      // Append arrays as JSON strings
+      formData.append("categoryIds", JSON.stringify(data.categoryIds));
+      formData.append("suitableFor", JSON.stringify(data.suitableFor));
+
+      // Append existing images to keep (if any)
+      if (imagesToKeep && imagesToKeep.length > 0) {
+        formData.append("imagesToKeep", JSON.stringify(imagesToKeep));
+      }
+
+      // Append new image files (if any)
+      if (files && files.length > 0) {
+        files.forEach((file) => formData.append("images", file));
+      }
+
+      const response = await fetch(`/api/products/${productId}`, {
+        method: "PATCH",
+        credentials: "include",
+        body: formData,
       });
 
       if (!response.ok) {
