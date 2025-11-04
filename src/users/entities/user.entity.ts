@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { ChatSession } from '../../chat-sessions/entities/chat-session.entity';
 
 export enum UserRole {
   CUSTOMER = 'customer',
@@ -72,4 +73,7 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   @Exclude() // 🔒 Không trả về expiry token
   emailVerificationTokenExpiry: Date;
+
+  @OneToMany(() => ChatSession, (chatSession) => chatSession.user)
+  chatSessions: ChatSession[];
 }

@@ -51,6 +51,10 @@ import { GoogleMeetModule } from './google-meet/google-meet.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { AvailabilitySlotsModule } from './availability-slots/availability-slots.module';
 import { AvailabilitySlot } from './availability-slots/entities/availability-slot.entity';
+import { ChatSessionsModule } from './chat-sessions/chat-sessions.module';
+import { ChatMessagesModule } from './chat-messages/chat-messages.module';
+import { ChatMessage } from './chat-messages/entities/chat-message.entity';
+import { ChatSession } from './chat-sessions/entities/chat-session.entity';
 
 @Module({
   imports: [
@@ -88,6 +92,8 @@ import { AvailabilitySlot } from './availability-slots/entities/availability-slo
         CustomerSubscription,
         Payment,
         AvailabilitySlot,
+        ChatMessage,
+        ChatSession
       ],
       synchronize: true, // Auto-create tables - disable after first deployment
       logging: process.env.NODE_ENV === 'development',
@@ -117,6 +123,8 @@ import { AvailabilitySlot } from './availability-slots/entities/availability-slo
     GoogleMeetModule,
     CloudinaryModule,
     AvailabilitySlotsModule,
+    ChatSessionsModule,
+    ChatMessagesModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],
