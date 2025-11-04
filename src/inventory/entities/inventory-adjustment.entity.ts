@@ -30,7 +30,7 @@ export class InventoryAdjustment {
   @Column({ type: 'uuid' })
   productId: string;
 
-  @ManyToOne(() => Product)
+  @ManyToOne(() => Product, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'productId' })
   product: Product;
 
