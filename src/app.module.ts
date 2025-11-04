@@ -56,6 +56,7 @@ import { ChatMessagesModule } from './chat-messages/chat-messages.module';
 import { ChatMessage } from './chat-messages/entities/chat-message.entity';
 import { ChatSession } from './chat-sessions/entities/chat-session.entity';
 import { TrackingModule } from './tracking/tracking.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -63,6 +64,8 @@ import { TrackingModule } from './tracking/tracking.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(), //  Activate CRON JOB
+
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST || 'localhost',
@@ -94,7 +97,7 @@ import { TrackingModule } from './tracking/tracking.module';
         Payment,
         AvailabilitySlot,
         ChatMessage,
-        ChatSession
+        ChatSession,
       ],
       synchronize: true, // Auto-create tables - disable after first deployment
       logging: process.env.NODE_ENV === 'development',

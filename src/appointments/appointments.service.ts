@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, EntityManager } from 'typeorm';
+import { Repository, EntityManager, Between, IsNull } from 'typeorm';
 import { Appointment, AppointmentStatus } from './entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
@@ -14,6 +19,9 @@ import { TreatmentRoutine } from '../treatment-routines/entities/treatment-routi
 import { AvailabilitySlotsService } from '../availability-slots/availability-slots.service';
 import { PaymentsService } from 'src/payments/payments.service';
 import { PaymentType } from 'src/payments/entities/payment.entity';
+import { GoogleMeetService } from 'src/google-meet/google-meet.service';
+import { addMinutes } from 'date-fns';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 export interface AppointmentReservationResult {
   appointmentId: string;
@@ -24,6 +32,7 @@ export interface AppointmentReservationResult {
 
 @Injectable()
 export class AppointmentsService {
+  private readonly logger = new Logger(AppointmentsService.name);
   constructor(
     @InjectRepository(Appointment)
     private readonly appointmentRepository: Repository<Appointment>,
@@ -31,6 +40,7 @@ export class AppointmentsService {
     private readonly dermatologistsService: DermatologistsService,
     private readonly availabilitySlotsService: AvailabilitySlotsService,
     private readonly paymentsService: PaymentsService,
+    private readonly googleMeetService: GoogleMeetService,
     private readonly entityManager: EntityManager,
   ) {}
 
@@ -141,5 +151,108 @@ export class AppointmentsService {
   async remove(id: string): Promise<void> {
     const appointment = await this.findOne(id);
     await this.appointmentRepository.remove(appointment);
+  }
+
+  async generateManualMeetLink(
+    userId: string,
+    appointmentId: string,
+  ): Promise<string> {
+    const dermatologist = await this.dermatologistsService.findByUserId(userId);
+
+    const appointment = await this.appointmentRepository.findOne({
+      where: {
+        appointmentId,
+        dermatologist: { dermatologistId: dermatologist.dermatologistId },
+      },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException(
+        'Appointment not found or you do not have permission.',
+      );
+    }
+
+    // Check if link already exists
+    if (appointment.meetingUrl) {
+      return appointment.meetingUrl;
+    }
+
+    // Check appointment status (only create link for 'SCHEDULED' appointments)
+    if (appointment.appointmentStatus !== AppointmentStatus.SCHEDULED) {
+      throw new BadRequestException(
+        'Cannot create link for a non-scheduled appointment.',
+      );
+    }
+
+    const meetLink = await this.googleMeetService.createMeetLinkFromDates(
+      ` Skinalyze - ${appointment.appointmentId}`,
+      appointment.startTime,
+      appointment.endTime,
+    );
+
+    await this.appointmentRepository.update(appointmentId, {
+      meetingUrl: meetLink,
+    });
+
+    return meetLink;
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE) // Run every minute
+  async handleGenerateMeetLinksCron() {
+    this.logger.log(
+      'Running Cron Job: Check for appointments needing Meet links...',
+    );
+
+    const now = new Date();
+    const targetTime = addMinutes(now, 10);
+
+    const appointmentsToProcess = await this.appointmentRepository.find({
+      where: {
+        appointmentStatus: AppointmentStatus.SCHEDULED,
+        meetingUrl: IsNull(),
+        startTime: Between(now, targetTime), // Start time in the next 10 minutes
+      },
+      relations: ['dermatologist', 'customer'], // Information for notifications
+    });
+
+    if (appointmentsToProcess.length === 0) {
+      this.logger.log('Cron Job: No appointments found needing links.');
+      return;
+    }
+
+    this.logger.log(
+      `Cron Job: Found ${appointmentsToProcess.length} appointments to process.`,
+    );
+
+    // Generate links for each appointment
+    for (const appointment of appointmentsToProcess) {
+      try {
+        const meetLink = await this.googleMeetService.createMeetLinkFromDates(
+          `Tư vấn Skinalyze - ${appointment.appointmentId}`,
+          appointment.startTime,
+          appointment.endTime,
+        );
+
+        await this.appointmentRepository.update(appointment.appointmentId, {
+          meetingUrl: meetLink,
+        });
+
+        // Send notification emails (if email service is set up)
+        // await this.emailService.sendMeetLinkNotification(
+        //   appointment.customer,
+        //   appointment.dermatologist,
+        //   meetLink,
+        // );
+
+        this.logger.log(
+          `Generated Meet link for appointment ${appointment.appointmentId}`,
+        );
+      } catch (error) {
+        // Ghi log lỗi cho từng cuộc hẹn nhưng không dừng vòng lặp
+        this.logger.error(
+          `Failed to process appointment ${appointment.appointmentId}: ${error.message}`,
+        );
+      }
+    }
   }
 }

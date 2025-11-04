@@ -8,6 +8,7 @@ import { DermatologistsModule } from '../dermatologists/dermatologists.module';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { AvailabilitySlotsModule } from '../availability-slots/availability-slots.module';
 import { PaymentsModule } from 'src/payments/payments.module';
+import { GoogleMeetModule } from 'src/google-meet/google-meet.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PaymentsModule } from 'src/payments/payments.module';
     TransactionsModule,
     AvailabilitySlotsModule,
     PaymentsModule,
+    GoogleMeetModule,
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],
