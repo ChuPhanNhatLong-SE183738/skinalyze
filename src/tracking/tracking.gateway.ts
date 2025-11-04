@@ -67,7 +67,7 @@ export class TrackingGateway
     await client.join(roomName);
 
     this.logger.log(
-      `${role.toUpperCase()} joined room: ${roomName} (socket: ${client.id})`,
+      `${role} joined room: ${roomName} (socket: ${client.id})`,
     );
 
     // Gửi thông báo cho client đã join thành công

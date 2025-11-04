@@ -21,8 +21,9 @@ export class TrackingController {
     @Body() updateLocationDto: UpdateLocationDto,
     @Request() req,
   ) {
-    const { orderId, lat, lng, timestamp } = updateLocationDto;
+    const { orderId, lat, lng, timestamp, vehicle } = updateLocationDto;
     const userId = req.user.userId;
+    const vehicleType = vehicle || 'bike'; // Default: bike (xe máy)
 
     const location = {
       lat,
@@ -30,8 +31,8 @@ export class TrackingController {
       timestamp: timestamp || new Date().toISOString(),
     };
 
-    // Cache vị trí shipper cho GET tracking endpoint
-    await this.trackingService.cacheShipperLocation(orderId, location);
+    // Cache vị trí shipper cho GET tracking endpoint (kèm vehicle type)
+    await this.trackingService.cacheShipperLocation(orderId, location, vehicleType);
 
     // Lấy địa chỉ khách hàng
     const customerLocation = await this.trackingService.getCustomerLocation(orderId);
@@ -44,8 +45,8 @@ export class TrackingController {
       );
     }
 
-    // Tính ETA ngay
-    const eta = await this.trackingService.calculateETA(location, customerLocation);
+    // Tính ETA ngay với vehicle type
+    const eta = await this.trackingService.calculateETA(location, customerLocation, vehicleType);
 
     // Broadcast qua WebSocket cho customer
     const gateway = this.trackingService['trackingGateway'];

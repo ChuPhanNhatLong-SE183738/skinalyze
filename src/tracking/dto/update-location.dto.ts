@@ -1,5 +1,11 @@
-import { IsNotEmpty, IsNumber, IsString, IsOptional, Min, Max } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, IsOptional, Min, Max, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+
+export enum VehicleType {
+  CAR = 'car',           // Ô tô
+  BIKE = 'bike',         // Xe đạp
+  MOTORCYCLE = 'bike',   // Xe máy (Goong API dùng 'bike' cho xe máy)
+}
 
 export class UpdateLocationDto {
   @ApiProperty({
@@ -42,4 +48,15 @@ export class UpdateLocationDto {
   @IsOptional()
   @IsString()
   timestamp?: string;
+
+  @ApiProperty({
+    description: 'Loại phương tiện di chuyển của shipper',
+    enum: VehicleType,
+    example: VehicleType.MOTORCYCLE,
+    default: VehicleType.MOTORCYCLE,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(VehicleType)
+  vehicle?: VehicleType;
 }

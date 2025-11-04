@@ -12,6 +12,7 @@ export interface ETAResult {
   distance: number; // meters
   duration: number; // seconds
   text: string; // "5 phút", "10 phút"
+  polyline?: string; // Encoded polyline string từ Goong Directions API
 }
 
 export interface TrackingInfo {
@@ -50,7 +51,7 @@ export class TrackingService {
   private customerAddresses: Map<string, { lat: number; lng: number }> = new Map();
   
   // Cache shipper locations từ REST API (in-memory, 5 phút expire)
-  private shipperLocations: Map<string, { lat: number; lng: number; timestamp: Date }> = new Map();
+  private shipperLocations: Map<string, { lat: number; lng: number; timestamp: Date; vehicle: string }> = new Map();
 
   constructor(
     @InjectRepository(Order)
@@ -95,12 +96,13 @@ export class TrackingService {
   }
 
   /**
-   * 🧮 Tính ETA bằng Goong Distance Matrix API v2
-   * Vehicle types: car (ô tô), bike (xe đạp), motorcycle (xe máy), truck (xe tải)
+   * 🧮 Tính ETA và route bằng Goong Directions API v2
+   * Vehicle types: car (ô tô), bike (xe đạp/xe máy)
    */
   async calculateETA(
     shipperLocation: { lat: number; lng: number },
     customerLocation: { lat: number; lng: number },
+    vehicle: string = 'bike', // Default: bike (xe máy)
   ): Promise<ETAResult | null> {
     try {
       const GOONG_API_KEY = process.env.GOONG_API_KEY;
@@ -110,50 +112,52 @@ export class TrackingService {
         return null;
       }
 
-      // Goong Distance Matrix API v2
-      const url = 'https://rsapi.goong.io/v2/distancematrix';
-      const params = {
-        origins: `${shipperLocation.lat},${shipperLocation.lng}`,
-        destinations: `${customerLocation.lat},${customerLocation.lng}`,
-        vehicle: 'motorcycle', // motorcycle cho shipper (xe máy)
+      // 🚀 Gọi Goong Directions API v2
+      const directionsUrl = 'https://rsapi.goong.io/v2/direction';
+      const directionsParams = {
+        origin: `${shipperLocation.lat},${shipperLocation.lng}`,
+        destination: `${customerLocation.lat},${customerLocation.lng}`,
+        vehicle: vehicle, // car, bike
         api_key: GOONG_API_KEY,
       };
 
-      this.logger.debug(`Calculating ETA: ${JSON.stringify(params)}`);
+      this.logger.debug(`Calculating route with vehicle=${vehicle}: ${JSON.stringify(directionsParams)}`);
 
-      const response = await axios.get(url, { params });
+      const response = await axios.get(directionsUrl, { params: directionsParams });
 
-      if (response.data.rows && response.data.rows[0]?.elements?.[0]) {
-        const element = response.data.rows[0].elements[0];
+      if (response.data.routes && response.data.routes.length > 0) {
+        const route = response.data.routes[0];
+        const leg = route.legs[0];
 
-        if (element.status === 'OK') {
-          const distance = element.distance.value; // meters
-          const duration = element.duration.value; // seconds
-          const durationText = element.duration.text; // "30 phút" (from Goong)
+        // Lấy polyline encoded string
+        const polyline = route.overview_polyline?.points || null;
 
-          this.logger.log(
-            `✅ ETA calculated: ${durationText} (${(distance / 1000).toFixed(2)} km)`,
-          );
+        const distance = leg.distance.value; // meters
+        const duration = leg.duration.value; // seconds
+        const durationText = leg.duration.text; // "30 phút"
 
-          // Convert duration to readable text (fallback nếu Goong không trả text)
-          const minutes = Math.ceil(duration / 60);
-          const text = durationText || (minutes < 60 
-            ? `${minutes} phút` 
-            : `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`);
+        this.logger.log(
+          `✅ Route calculated [${vehicle}]: ${durationText} (${(distance / 1000).toFixed(2)} km), polyline: ${polyline ? 'YES' : 'NO'}`,
+        );
 
-          return {
-            distance,
-            duration,
-            text,
-          };
-        } else {
-          this.logger.warn(`Distance Matrix status not OK: ${element.status}`);
-        }
+        // Convert duration to readable text (fallback)
+        const minutes = Math.ceil(duration / 60);
+        const text = durationText || (minutes < 60 
+          ? `${minutes} phút` 
+          : `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`);
+
+        return {
+          distance,
+          duration,
+          text,
+          polyline, // ✅ Trả về polyline string
+        };
       }
 
+      this.logger.warn('No routes found from Directions API');
       return null;
     } catch (error) {
-      this.logger.error(`Error calculating ETA: ${error.message}`);
+      this.logger.error(`Error calculating route: ${error.message}`);
       if (error.response) {
         this.logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
       }
@@ -213,15 +217,17 @@ export class TrackingService {
   async cacheShipperLocation(
     orderId: string,
     location: { lat: number; lng: number },
+    vehicle: string = 'bike',
   ): Promise<void> {
     this.shipperLocations.set(orderId, {
       lat: location.lat,
       lng: location.lng,
       timestamp: new Date(),
+      vehicle: vehicle,
     });
 
     this.logger.log(
-      `📍 Cached shipper location for order ${orderId}: ${location.lat}, ${location.lng}`,
+      `📍 Cached shipper location for order ${orderId}: ${location.lat}, ${location.lng}, vehicle: ${vehicle}`,
     );
 
     // Auto-expire after 5 minutes
@@ -236,6 +242,8 @@ export class TrackingService {
    */
   async getTrackingInfo(orderId: string): Promise<TrackingInfo | null> {
     try {
+      this.logger.log(`🔍 Getting tracking info for order: ${orderId}`);
+      
       // Find active shipping log with relations
       const shippingLog = await this.shippingLogRepository.findOne({
         where: {
@@ -255,6 +263,8 @@ export class TrackingService {
         return null;
       }
 
+      this.logger.log(`📦 Found shipping log: ${shippingLog.shippingLogId}, status: ${shippingLog.status}`);
+
       // Build shipper info
       let shipperInfo: { userId: string; fullName: string; phone: string } | null = null;
       if (shippingLog.shippingStaff) {
@@ -263,25 +273,35 @@ export class TrackingService {
           fullName: shippingLog.shippingStaff.fullName,
           phone: shippingLog.shippingStaff.phone,
         };
+        this.logger.log(`👤 Shipper: ${shipperInfo.fullName} (${shipperInfo.userId})`);
       }
 
       // Get cached shipper location (only if within 5 minutes)
+      this.logger.log(`📍 Checking cache... Total cached locations: ${this.shipperLocations.size}`);
+      this.logger.log(`📍 Cache keys: ${Array.from(this.shipperLocations.keys()).join(', ')}`);
+      
       const cachedLocation = this.shipperLocations.get(orderId);
       let currentLocation: { lat: number; lng: number; timestamp: Date } | null = null;
+      
       if (cachedLocation) {
         const ageMinutes =
           (Date.now() - cachedLocation.timestamp.getTime()) / 1000 / 60;
+        this.logger.log(`📍 Found cached location, age: ${ageMinutes.toFixed(2)} minutes`);
+        
         if (ageMinutes <= 5) {
           currentLocation = {
             lat: cachedLocation.lat,
             lng: cachedLocation.lng,
             timestamp: cachedLocation.timestamp,
           };
+          this.logger.log(`✅ Using cached location: ${currentLocation.lat}, ${currentLocation.lng}`);
         } else {
           this.logger.log(
             `⏰ Cached location for order ${orderId} is stale (${ageMinutes.toFixed(1)} min old)`,
           );
         }
+      } else {
+        this.logger.log(`❌ No cached location found for order ${orderId}`);
       }
 
       // Get customer location
@@ -296,9 +316,11 @@ export class TrackingService {
       // Calculate ETA if we have both locations
       let eta: ETAResult | null = null;
       if (currentLocation && customerLocation) {
+        const vehicle = cachedLocation?.vehicle || 'bike'; // Lấy vehicle từ cache
         eta = await this.calculateETA(
           { lat: currentLocation.lat, lng: currentLocation.lng },
           customerLocation,
+          vehicle, // ✅ Truyền vehicle type
         );
       }
 

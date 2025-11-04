@@ -14,7 +14,7 @@ import { Payment } from '../payments/entities/payment.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { CheckoutCartDto, PaymentMethod } from './dto/checkout-cart.dto';
-import { PaymentStatus } from '../payments/entities/payment.entity';
+import { PaymentStatus, PaymentMethod as PaymentEntityMethod } from '../payments/entities/payment.entity';
 import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CustomersService } from '../customers/customers.service';
@@ -47,6 +47,29 @@ export class OrdersService {
     private readonly shippingLogsService: ShippingLogsService,
   ) {}
 
+  /**
+   * Map payment method từ DTO sang Entity
+   * COD (cash on delivery) -> CASH
+   * WALLET -> WALLET
+   * BANKING/BANK_TRANSFER/... -> BANKING
+   */
+  private mapPaymentMethod(dtoMethod: PaymentMethod): PaymentEntityMethod {
+    switch (dtoMethod) {
+      case PaymentMethod.COD:
+        return PaymentEntityMethod.CASH;
+      case PaymentMethod.WALLET:
+        return PaymentEntityMethod.WALLET;
+      case PaymentMethod.BANKING:
+      case PaymentMethod.BANK_TRANSFER:
+      case PaymentMethod.MOMO:
+      case PaymentMethod.ZALOPAY:
+      case PaymentMethod.VNPAY:
+        return PaymentEntityMethod.BANKING;
+      default:
+        return PaymentEntityMethod.CASH; // Default fallback
+    }
+  }
+
   async create(createDto: CreateOrderDto): Promise<Order> {
     // Calculate total amount
     const totalAmount = createDto.orderItems.reduce(
@@ -60,7 +83,7 @@ export class OrdersService {
       paymentType: PaymentType.ORDER,
       amount: totalAmount,
       paidAmount: 0,
-      paymentMethod: 'cash' as any, // Default, will be updated later
+      paymentMethod: PaymentEntityMethod.CASH, // ✅ Default cash payment
       status: PaymentStatus.PENDING,
     });
     const savedPayment = await this.paymentRepository.save(payment);
@@ -308,7 +331,7 @@ export class OrdersService {
         shippingAddress: checkoutDto.shippingAddress,
         orderNotes: checkoutDto.notes,
         amount: totalAmount,
-        paymentMethod: 'banking' as any,
+        paymentMethod: PaymentEntityMethod.BANKING, // ✅ Sử dụng entity enum
       });
 
       // Generate QR code URL
@@ -382,7 +405,7 @@ export class OrdersService {
       userId: userId,
       amount: totalAmount,
       paidAmount: useWallet ? totalAmount : 0,
-      paymentMethod: paymentMethod as any,
+      paymentMethod: this.mapPaymentMethod(paymentMethod), // ✅ Map COD -> CASH
       status: paymentStatus,
     };
     
