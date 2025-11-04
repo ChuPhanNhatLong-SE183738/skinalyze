@@ -32,17 +32,22 @@ interface Order {
   orderId: string;
   customer: {
     customerId: string;
-    userId: string;
+    aiUsageAmount?: number;
+    allergicTo?: any;
+    pastDermatologicalHistory?: any;
+    purchaseHistory?: any[];
+    createdAt: string;
+    updatedAt: string;
   };
   customerId: string;
-  transaction: {
+  payment: {
     transactionId: string;
     status: string;
     totalAmount: string;
     createdAt: string;
     updatedAt: string;
-  };
-  transactionId: string;
+  } | null;
+  paymentId: string | null;
   status: string;
   shippingAddress: string;
   notes: string | null;
@@ -56,14 +61,20 @@ interface Order {
       productName: string;
       productDescription: string;
       brand: string;
+      stock: number;
       sellingPrice: number;
       productImages: string[];
+      ingredients?: string;
+      suitableFor?: string[];
+      reviews?: any[];
+      salePercentage?: string;
+      createdAt: string;
+      updatedAt: string;
     };
     productId: string;
     priceAtTime: string;
     quantity: number;
   }>;
-  shippingLogs: any[];
   createdAt: string;
   updatedAt: string;
 }
@@ -230,10 +241,17 @@ export function OrderDetailModal({
   };
 
   const formatCurrency = (amount: string | number) => {
+    const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+    
+    // Check if valid number
+    if (isNaN(numAmount)) {
+      return "0 ₫";
+    }
+    
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
-    }).format(typeof amount === "string" ? parseFloat(amount) : amount);
+    }).format(numAmount);
   };
 
   const formatDate = (dateString: string) => {
@@ -545,37 +563,79 @@ export function OrderDetailModal({
               </div>
             </div>
 
-            {/* Transaction Info */}
-            <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-              <div className="mb-3 flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-slate-500" />
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                  Transaction
-                </h3>
+            {/* Payment Info */}
+            {order.payment && order.payment.totalAmount ? (
+              <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+                <div className="mb-3 flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-slate-500" />
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                    Payment
+                  </h3>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Payment ID:</span>
+                    <span className="font-mono text-slate-900 dark:text-slate-100">
+                      {order.paymentId && typeof order.paymentId === 'string' 
+                        ? order.paymentId.slice(0, 12) + '...' 
+                        : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Status:</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                      {order.payment.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-200 pt-2 dark:border-slate-800">
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                      Total Amount:
+                    </span>
+                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      {formatCurrency(parseFloat(order.payment.totalAmount))}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Transaction ID:</span>
-                  <span className="font-mono text-slate-900 dark:text-slate-100">
-                    {order.transactionId.slice(0, 12)}...
-                  </span>
+            ) : (
+              /* Order Total (if no payment) */
+              <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+                <div className="mb-3 flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-slate-500" />
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                    Order Total
+                  </h3>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Status:</span>
-                  <span className="font-medium text-slate-900 dark:text-slate-100">
-                    {order.transaction.status}
-                  </span>
-                </div>
-                <div className="flex justify-between border-t border-slate-200 pt-2 dark:border-slate-800">
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">
-                    Total Amount:
-                  </span>
-                  <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                    {formatCurrency(order.transaction.totalAmount)}
-                  </span>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Payment Status:</span>
+                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                      Pending Payment
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-200 pt-2 dark:border-slate-800">
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                      Total Amount:
+                    </span>
+                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      {(() => {
+                        const total = order.orderItems.reduce(
+                          (sum, item) => {
+                            const price = parseFloat(item.priceAtTime);
+                            const qty = item.quantity;
+                            return sum + (price * qty);
+                          },
+                          0
+                        );
+                        console.log('Order Items:', order.orderItems);
+                        console.log('Calculated Total:', total);
+                        return formatCurrency(total);
+                      })()}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Dates */}
             <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">

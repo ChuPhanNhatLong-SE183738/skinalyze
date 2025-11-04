@@ -32,15 +32,15 @@ export interface OrderItem {
 
 export interface Customer {
   customerId: string;
-  userId: string;
-  aiUsageAmount: number;
-  analysisId: string[];
-  purchaseHistory: string[];
+  aiUsageAmount?: number;
+  allergicTo?: any;
+  pastDermatologicalHistory?: any;
+  purchaseHistory?: any[];
   createdAt: string;
   updatedAt: string;
 }
 
-export interface Transaction {
+export interface Payment {
   transactionId: string;
   status: "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED";
   totalAmount: string;
@@ -52,8 +52,8 @@ export interface Order {
   orderId: string;
   customer: Customer;
   customerId: string;
-  transaction: Transaction;
-  transactionId: string;
+  payment: Payment | null;
+  paymentId: string | null;
   status:
     | "PENDING"
     | "CONFIRMED"

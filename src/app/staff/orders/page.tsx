@@ -142,11 +142,17 @@ export default function StaffOrdersPage() {
     loadOrders();
   };
 
-  const formatCurrency = (amount: string) => {
+  const formatCurrency = (amount: string | number) => {
+    const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+    
+    if (isNaN(numAmount)) {
+      return "0 ₫";
+    }
+    
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
-    }).format(parseFloat(amount));
+    }).format(numAmount);
   };
 
   const formatDate = (dateString: string) => {
@@ -328,7 +334,15 @@ export default function StaffOrdersPage() {
                             {order.orderItems.length} item(s)
                           </td>
                           <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                            {formatCurrency(order.transaction.totalAmount)}
+                            {order.payment && order.payment.totalAmount
+                              ? formatCurrency(order.payment.totalAmount)
+                              : formatCurrency(
+                                  order.orderItems.reduce(
+                                    (sum, item) => sum + (parseFloat(item.priceAtTime) * item.quantity),
+                                    0
+                                  )
+                                )
+                            }
                           </td>
                           <td className="px-6 py-4">
                             <span
