@@ -56,7 +56,7 @@ export class OrdersController {
   @ApiOperation({ summary: 'Get my orders (Customer only)' })
   async getMyOrders(@Req() req) {
     const userId = req.user.userId;
-    // Get customer from userId
+    console.log('🔍 DEBUG - userId:', userId);
     const customer = await this.ordersService.getCustomerByUserId(userId);
     if (!customer) {
       return ResponseHelper.notFound('Customer not found');

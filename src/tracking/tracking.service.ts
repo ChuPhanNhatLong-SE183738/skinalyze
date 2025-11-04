@@ -236,6 +236,8 @@ export class TrackingService {
    */
   async getTrackingInfo(orderId: string): Promise<TrackingInfo | null> {
     try {
+      this.logger.log(`🔍 Getting tracking info for order: ${orderId}`);
+      
       // Find active shipping log with relations
       const shippingLog = await this.shippingLogRepository.findOne({
         where: {
@@ -255,6 +257,8 @@ export class TrackingService {
         return null;
       }
 
+      this.logger.log(`📦 Found shipping log: ${shippingLog.shippingLogId}, status: ${shippingLog.status}`);
+
       // Build shipper info
       let shipperInfo: { userId: string; fullName: string; phone: string } | null = null;
       if (shippingLog.shippingStaff) {
@@ -263,25 +267,35 @@ export class TrackingService {
           fullName: shippingLog.shippingStaff.fullName,
           phone: shippingLog.shippingStaff.phone,
         };
+        this.logger.log(`👤 Shipper: ${shipperInfo.fullName} (${shipperInfo.userId})`);
       }
 
       // Get cached shipper location (only if within 5 minutes)
+      this.logger.log(`📍 Checking cache... Total cached locations: ${this.shipperLocations.size}`);
+      this.logger.log(`📍 Cache keys: ${Array.from(this.shipperLocations.keys()).join(', ')}`);
+      
       const cachedLocation = this.shipperLocations.get(orderId);
       let currentLocation: { lat: number; lng: number; timestamp: Date } | null = null;
+      
       if (cachedLocation) {
         const ageMinutes =
           (Date.now() - cachedLocation.timestamp.getTime()) / 1000 / 60;
+        this.logger.log(`📍 Found cached location, age: ${ageMinutes.toFixed(2)} minutes`);
+        
         if (ageMinutes <= 5) {
           currentLocation = {
             lat: cachedLocation.lat,
             lng: cachedLocation.lng,
             timestamp: cachedLocation.timestamp,
           };
+          this.logger.log(`✅ Using cached location: ${currentLocation.lat}, ${currentLocation.lng}`);
         } else {
           this.logger.log(
             `⏰ Cached location for order ${orderId} is stale (${ageMinutes.toFixed(1)} min old)`,
           );
         }
+      } else {
+        this.logger.log(`❌ No cached location found for order ${orderId}`);
       }
 
       // Get customer location
