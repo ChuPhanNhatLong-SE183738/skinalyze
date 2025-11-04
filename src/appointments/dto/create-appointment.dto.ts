@@ -25,7 +25,10 @@ export class CreateAppointmentDto {
    * Bắt buộc phải có nếu 'appointmentType' là 'NEW_PROBLEM'.
    * Đây là ID của 'Skin_Analysis' (lần quét da) mà buổi hẹn này sẽ khám.
    */
-  @ValidateIf((o) => o.appointmentType === AppointmentType.NEW_PROBLEM)
+  @ValidateIf(
+    (object: CreateAppointmentDto) =>
+      object.appointmentType === AppointmentType.NEW_PROBLEM,
+  )
   @IsUUID()
   analysisId: string;
 
@@ -33,7 +36,10 @@ export class CreateAppointmentDto {
    * Bắt buộc phải có nếu 'appointmentType' là 'FOLLOW_UP'.
    * Đây là ID của 'Treatment_Routine' mà buổi hẹn này sẽ theo dõi.
    */
-  @ValidateIf((o) => o.appointmentType === AppointmentType.FOLLOW_UP)
+  @ValidateIf(
+    (object: CreateAppointmentDto) =>
+      object.appointmentType === AppointmentType.FOLLOW_UP,
+  )
   @IsUUID()
   trackingRoutineId: string;
 

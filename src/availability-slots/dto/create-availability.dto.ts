@@ -4,6 +4,7 @@ import {
   IsDateString,
   IsNotEmpty,
   IsNumber,
+  IsOptional,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -34,6 +35,17 @@ export class SlotBlockDto {
   @IsNumber()
   @Min(5)
   slotDurationInMinutes: number;
+
+  @ApiProperty({
+    example: 350000,
+    description:
+      "Optional: Price for each slot in this block. If not provided, the dermatologist's default price will be used.",
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  price?: number;
 }
 
 export class CreateAvailabilityDto {

@@ -7,6 +7,7 @@ import { CustomersModule } from '../customers/customers.module';
 import { DermatologistsModule } from '../dermatologists/dermatologists.module';
 import { TransactionsModule } from '../transactions/transactions.module';
 import { AvailabilitySlotsModule } from '../availability-slots/availability-slots.module';
+import { PaymentsModule } from 'src/payments/payments.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AvailabilitySlotsModule } from '../availability-slots/availability-slot
     DermatologistsModule,
     TransactionsModule,
     AvailabilitySlotsModule,
+    PaymentsModule,
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],

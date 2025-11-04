@@ -51,9 +51,12 @@ export class AvailabilitySlotsController {
     description: 'Availability slots created successfully',
   })
   async createSlots(@GetUser() user: User, @Body() dto: CreateAvailabilityDto) {
-    const dermatologistId = await this.getDermatologistId(user.userId);
+    const dermatologist = await this.dermatologistsService.findByUserId(
+      user.userId,
+    );
     const result = await this.availabilitySlotsService.createMySlots(
-      dermatologistId,
+      dermatologist.dermatologistId,
+      dermatologist.defaultSlotPrice,
       dto,
     );
     return ResponseHelper.created(result.message, result);
