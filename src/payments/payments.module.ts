@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 import { CartModule } from '../cart/cart.module';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
+import { AppointmentsModule } from 'src/appointments/appointments.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PaymentsService } from './payments.service';
     TransactionsModule,
     UsersModule,
     forwardRef(() => CartModule), // For clearing cart after payment
+    forwardRef(() => AppointmentsModule),
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],

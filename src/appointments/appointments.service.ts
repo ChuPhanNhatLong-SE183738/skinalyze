@@ -1,12 +1,14 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, Between, IsNull } from 'typeorm';
-import { Appointment, AppointmentStatus } from './entities/appointment.entity';
+import { Appointment } from './entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
 import { CustomersService } from '../customers/customers.service';
@@ -20,8 +22,12 @@ import { AvailabilitySlotsService } from '../availability-slots/availability-slo
 import { PaymentsService } from 'src/payments/payments.service';
 import { PaymentType } from 'src/payments/entities/payment.entity';
 import { GoogleMeetService } from 'src/google-meet/google-meet.service';
-import { addMinutes } from 'date-fns';
+import { addMinutes, differenceInHours } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import {
+  AppointmentStatus,
+  TerminationReason,
+} from './types/appointment.types';
 
 export interface AppointmentReservationResult {
   appointmentId: string;
@@ -39,9 +45,11 @@ export class AppointmentsService {
     private readonly customersService: CustomersService,
     private readonly dermatologistsService: DermatologistsService,
     private readonly availabilitySlotsService: AvailabilitySlotsService,
-    private readonly paymentsService: PaymentsService,
     private readonly googleMeetService: GoogleMeetService,
     private readonly entityManager: EntityManager,
+
+    @Inject(forwardRef(() => PaymentsService))
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async createReservation(
@@ -197,7 +205,138 @@ export class AppointmentsService {
     return meetLink;
   }
 
-  @Cron(CronExpression.EVERY_MINUTE) // Run every minute
+  async cancelMyAppointment(userId: string, appointmentId: string) {
+    const customer = await this.customersService.findByUserId(userId);
+    if (!customer) {
+      throw new NotFoundException('Customer profile not found.');
+    }
+
+    // 2. Safe Transaction
+    return this.entityManager.transaction(async (manager) => {
+      const appointmentRepo = manager.getRepository(Appointment);
+
+      // 3. Tìm cuộc hẹn VÀ xác thực chủ sở hữu
+      const appointment = await appointmentRepo.findOne({
+        where: {
+          appointmentId: appointmentId,
+          customer: { customerId: customer.customerId },
+        },
+        relations: ['payment', 'availabilitySlot'],
+      });
+
+      if (!appointment) {
+        throw new NotFoundException(
+          'Appointment not found or you do not own it.',
+        );
+      }
+
+      // 4. Kiểm tra trạng thái
+      if (appointment.appointmentStatus !== AppointmentStatus.SCHEDULED) {
+        throw new BadRequestException(
+          `Cannot cancel an appointment with status: ${appointment.appointmentStatus}`,
+        );
+      }
+
+      // 5. TÍNH TOÁN THỜI GIAN 
+      const now = new Date();
+      const hoursBefore = differenceInHours(appointment.startTime, now);
+
+      let refundProcessed = false;
+      let notificationMessage = '';
+
+      if (hoursBefore >= 24) {
+        //  Cancel Early (Refund 100%)
+        this.logger.log(
+          `Processing BR-014 (Early Cancel) for Appt: ${appointmentId}`,
+        );
+
+        appointment.appointmentStatus = AppointmentStatus.CANCELLED;
+        appointment.terminatedReason =
+          TerminationReason.CUSTOMER_CANCELLED_EARLY;
+
+        // Xử lý hoàn tiền (nếu có thanh toán)
+        if (appointment.payment) {
+          // await this.paymentsService.processRefund(
+          //   appointment.payment,
+          //   manager,
+          // );
+          refundProcessed = true;
+        }
+        notificationMessage = 'Đã hủy lịch. Bạn sẽ được hoàn 100% chi phí.';
+      } else {
+        appointment.appointmentStatus = AppointmentStatus.CANCELLED;
+        appointment.terminatedReason =
+          TerminationReason.CUSTOMER_CANCELLED_LATE;
+        notificationMessage =
+          'Đã hủy lịch. Không áp dụng hoàn tiền do hủy muộn.';
+      }
+
+      // Always release the slot
+      if (appointment.availabilitySlot) {
+        await this.availabilitySlotsService.releaseSlot(
+          appointment.availabilitySlot.slotId,
+          manager,
+        );
+      }
+
+      // 8. Lưu lại thay đổi
+      await appointmentRepo.save(appointment);
+
+      // 9. Gửi thông báo (TODO)
+      // await this.notificationsService.sendNotification(
+      //   customer.userId,
+      //   `Hủy lịch thành công: ${notificationMessage}`
+      // );
+      // await this.notificationsService.sendNotification(
+      //   appointment.dermatologist.userId,
+      //   `Lịch hẹn ${appointmentId} đã bị khách hàng hủy.`
+      // );
+
+      return {
+        message: notificationMessage,
+        refundProcessed: refundProcessed,
+        hoursBefore: hoursBefore,
+      };
+    });
+  }
+
+  /**
+   * Được gọi bởi PaymentsService (Cron Job) khi một thanh toán bị hết hạn.
+   * Hàm này PHẢI chạy bên trong một transaction do PaymentsService khởi tạo.
+   */
+  async cancelExpiredReservation(
+    appointmentId: string,
+    manager: EntityManager,
+  ): Promise<void> {
+    this.logger.log(
+      `Cancelling expired reservation for Appt: ${appointmentId}`,
+    );
+
+    const appRepo = manager.getRepository(Appointment);
+
+    // 1. Update Appointment -> CANCELLED
+    await appRepo.update(appointmentId, {
+      appointmentStatus: AppointmentStatus.CANCELLED,
+      terminatedReason: TerminationReason.PAYMENT_TIMEOUT,
+    });
+
+    // 2. Find Appointment (with Slot)
+    const appointment = await appRepo.findOne({
+      where: { appointmentId },
+      relations: ['availabilitySlot'],
+    });
+
+    // 3. Release Slot
+    if (appointment?.availabilitySlot) {
+      await this.availabilitySlotsService.releaseSlot(
+        appointment.availabilitySlot.slotId,
+        manager,
+      );
+    }
+  }
+
+  // Cron Job: Run every minute to check for appointments needing Meet links
+  // @Cron(CronExpression.EVERY_MINUTE)
   async handleGenerateMeetLinksCron() {
     this.logger.log(
       'Running Cron Job: Check for appointments needing Meet links...',
@@ -248,7 +387,7 @@ export class AppointmentsService {
           `Generated Meet link for appointment ${appointment.appointmentId}`,
         );
       } catch (error) {
-        // Ghi log lỗi cho từng cuộc hẹn nhưng không dừng vòng lặp
+        // Log the error but continue processing other appointments
         this.logger.error(
           `Failed to process appointment ${appointment.appointmentId}: ${error.message}`,
         );

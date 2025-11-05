@@ -6,7 +6,7 @@ import {
   IsEnum,
   ValidateIf,
 } from 'class-validator';
-import { AppointmentType } from '../entities/appointment.entity';
+import { AppointmentType } from '../types/appointment.types';
 
 export class CreateAppointmentDto {
   @IsUUID()

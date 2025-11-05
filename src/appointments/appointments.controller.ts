@@ -72,6 +72,22 @@ export class AppointmentsController {
     return this.appointmentsService.remove(id);
   }
 
+  @Patch('my/:id/cancel')
+  @Roles(UserRole.CUSTOMER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancel my appointment (Customer only)' })
+  async cancelMyAppointment(
+    @GetUser() user: User,
+    @Param('id', new ParseUUIDPipe()) appointmentId: string,
+  ) {
+    const result = await this.appointmentsService.cancelMyAppointment(
+      user.userId,
+      appointmentId,
+    );
+
+    return ResponseHelper.success('Appointment cancelled successfully', result);
+  }
+
   @Patch(':appointmentId/generate-meet-link')
   @Roles(UserRole.DERMATOLOGIST)
   @HttpCode(HttpStatus.OK)

@@ -7,7 +7,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, LessThan, Repository } from 'typeorm';
 import {
   Payment,
   PaymentStatus,
@@ -20,14 +20,10 @@ import { OrdersService } from '../orders/orders.service';
 import { OrderStatus } from '../orders/entities/order.entity';
 import { UsersService } from '../users/users.service';
 import { CartService } from '../cart/cart.service';
-import {
-  Appointment,
-  AppointmentStatus,
-} from '../appointments/entities/appointment.entity';
-import {
-  AvailabilitySlot,
-  SlotStatus,
-} from '../availability-slots/entities/availability-slot.entity';
+import { Appointment } from '../appointments/entities/appointment.entity';
+import { AppointmentsService } from 'src/appointments/appointments.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { AppointmentStatus } from 'src/appointments/types/appointment.types';
 
 interface PaymentProcessingResult {
   success: boolean;
@@ -46,11 +42,14 @@ export class PaymentsService {
     private readonly entityManager: EntityManager,
     @InjectRepository(Payment)
     private readonly paymentRepository: Repository<Payment>,
-    @Inject(forwardRef(() => OrdersService))
-    private readonly ordersService: OrdersService,
     private readonly usersService: UsersService,
+
     @Inject(forwardRef(() => CartService))
     private readonly cartService: CartService,
+    @Inject(forwardRef(() => AppointmentsService))
+    private readonly appointmentsService: AppointmentsService,
+    @Inject(forwardRef(() => OrdersService))
+    private readonly ordersService: OrdersService,
   ) {}
 
   /**
@@ -345,12 +344,10 @@ export class PaymentsService {
     // Bắt đầu một transaction MỚI, riêng biệt
     // để đảm bảo Cập nhật Hẹn và Cập nhật Slot xảy ra đồng bộ
     return this.entityManager.transaction(async (manager) => {
-      // Dùng 'manager' để lấy các repository cho transaction này
       const paymentRepo = manager.getRepository(Payment);
       const appointmentRepo = manager.getRepository(Appointment);
-      const slotRepo = manager.getRepository(AvailabilitySlot);
 
-      // 1. Tìm Payment (bằng ID)
+      // 1. Find Payment
       const payment = await paymentRepo.findOne({
         where: { paymentId },
       });
@@ -360,9 +357,8 @@ export class PaymentsService {
         throw new NotFoundException('Payment not found after commit');
       }
 
-      // 2. Tìm Appointment liên quan
-      // (Giả sử Appointment đã được tạo và liên kết 'paymentId'
-      // trong luồng "Giữ Chỗ" ban đầu)
+      // 2. Find Appointment related to this Payment
+
       const appointment = await appointmentRepo.findOne({
         where: { payment: { paymentId: paymentId } },
         relations: ['availabilitySlot'],
@@ -375,25 +371,27 @@ export class PaymentsService {
         throw new NotFoundException('Appointment not found for this payment');
       }
 
-      // 3. Cập nhật trạng thái Appointment
-      if (appointment.appointmentStatus === AppointmentStatus.PENDING_PAYMENT) {
-        appointment.appointmentStatus = AppointmentStatus.SCHEDULED;
-      }
-      await appointmentRepo.save(appointment);
+      if (appointment.appointmentStatus !== AppointmentStatus.PENDING_PAYMENT) {
+        this.logger.error(
+          `[CRITICAL_BUSINESS_EXCEPTION] Payment ${paymentId} (Code: ${payment.paymentCode}) confirmed, 
+         but Appointment ${appointment.appointmentId} was already in state: ${appointment.appointmentStatus}. 
+         MANUAL INTERVENTION REQUIRED.`,
+        );
 
-      // 4. Cập nhật trạng thái Slot
-      if (appointment.availabilitySlot) {
-        await slotRepo.update(appointment.availabilitySlot.slotId, {
-          status: SlotStatus.BOOKED,
-          appointmentId: appointment.appointmentId,
-        });
+        // Ném lỗi này sẽ kích hoạt 'catch' của postProcess trong hàm handleSepayWebhook
+        throw new BadRequestException(
+          `Payment was successful, but the appointment (ID: ${appointment.appointmentId}) was already ${appointment.appointmentStatus}. This requires manual intervention.`,
+        );
       }
+
+      // 4. Update Appointment status to SCHEDULED
+      appointment.appointmentStatus = AppointmentStatus.SCHEDULED;
+      await appointmentRepo.save(appointment);
 
       this.logger.log(
         `✅ Booking confirmed for Appointment ${appointment.appointmentId}`,
       );
 
-      // 5. Trả về kết quả
       return {
         success: true,
         message: 'Booking payment processed successfully',
@@ -632,22 +630,62 @@ export class PaymentsService {
     };
   }
 
-  /**
-   * Cancel expired payments (chạy bằng cron job)
-   */
+  // @Cron(CronExpression.EVERY_5_MINUTES)
   async cancelExpiredPayments(): Promise<number> {
-    const expiredPayments = await this.paymentRepository
-      .createQueryBuilder('payment')
-      .where('payment.status = :status', { status: PaymentStatus.PENDING })
-      .andWhere('payment.expiredAt < :now', { now: new Date() })
-      .getMany();
+    const expiredPayments = await this.paymentRepository.find({
+      where: {
+        status: PaymentStatus.PENDING,
+        expiredAt: LessThan(new Date()),
+      },
+      relations: ['order', 'appointment'],
+    });
 
-    for (const payment of expiredPayments) {
-      payment.status = PaymentStatus.EXPIRED;
-      await this.paymentRepository.save(payment);
+    if (expiredPayments.length === 0) {
+      this.logger.log('No expired payments found.');
+      return 0;
     }
 
-    this.logger.log(`🕐 Expired ${expiredPayments.length} payments`);
-    return expiredPayments.length;
+    let processedCount = 0;
+
+    for (const payment of expiredPayments) {
+      try {
+        // Transaction to handle each payment expiration
+        await this.entityManager.transaction(async (manager) => {
+          switch (payment.paymentType) {
+            case PaymentType.BOOKING:
+              if (payment.appointment) {
+                await this.appointmentsService.cancelExpiredReservation(
+                  payment.appointment.appointmentId,
+                  manager,
+                );
+              }
+              break;
+
+            case PaymentType.ORDER:
+              if (payment.order) {
+                //  GIAO VIỆC CHO ORDERS SERVICE
+                // await this.ordersService.cancelExpiredOrder(
+                //   payment.order.orderId,
+                //   manager,
+                // );
+              }
+              break;
+
+            case PaymentType.TOPUP:
+              break;
+          }
+
+          // Always update payment status to EXPIRED
+          payment.status = PaymentStatus.EXPIRED;
+          await manager.save(payment);
+        });
+        processedCount++;
+      } catch (error) {
+        // ... (xử lý lỗi)
+      }
+    }
+
+    this.logger.log(`🕐 Processed ${processedCount} expired payments.`);
+    return processedCount;
   }
 }

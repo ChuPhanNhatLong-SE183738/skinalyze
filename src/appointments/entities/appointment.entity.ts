@@ -10,27 +10,16 @@ import {
 } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
 import { Dermatologist } from '../../dermatologists/entities/dermatologist.entity';
-import { Transaction } from '../../transactions/entities/transaction.entity';
 import { TreatmentRoutine } from '../../treatment-routines/entities/treatment-routine.entity';
 import { SkinAnalysis } from '../../skin-analysis/entities/skin-analysis.entity'; // Import SkinAnalysis
 import { AvailabilitySlot } from 'src/availability-slots/entities/availability-slot.entity';
 import { Payment } from 'src/payments/entities/payment.entity';
 import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
-
-export enum AppointmentStatus {
-  PENDING_PAYMENT = 'pending_payment',
-  SCHEDULED = 'scheduled',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
-  NO_SHOW = 'no_show',
-  INTERRUPTED = 'interrupted',
-}
-
-export enum AppointmentType {
-  NEW_PROBLEM = 'new_problem',
-  FOLLOW_UP = 'follow_up',
-}
+import {
+  AppointmentStatus,
+  AppointmentType,
+  TerminationReason,
+} from '../types/appointment.types';
 
 @Entity('appointments')
 export class Appointment {
@@ -73,8 +62,12 @@ export class Appointment {
   })
   appointmentStatus: AppointmentStatus;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  terminatedReason: string;
+  @Column({
+    type: 'enum',
+    enum: TerminationReason,
+    nullable: true,
+  })
+  terminatedReason: TerminationReason;
 
   @CreateDateColumn()
   createdAt: Date;

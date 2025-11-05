@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppointmentsController } from './appointments.controller';
 import { AppointmentsService } from './appointments.service';
@@ -17,10 +17,11 @@ import { GoogleMeetModule } from 'src/google-meet/google-meet.module';
     DermatologistsModule,
     TransactionsModule,
     AvailabilitySlotsModule,
-    PaymentsModule,
     GoogleMeetModule,
+    forwardRef(() => PaymentsModule),
   ],
   controllers: [AppointmentsController],
   providers: [AppointmentsService],
+  exports: [AppointmentsService],
 })
 export class AppointmentsModule {}
