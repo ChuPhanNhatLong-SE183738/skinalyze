@@ -78,25 +78,42 @@ export class ChatMessagesService {
         systemInstruction: {
           role: 'system',
           parts: [{ 
-            text: "You are Skinalyze AI, a friendly and knowledgeable skincare assistant. Provide helpful, personalized skincare advice and product recommendations based on the user's questions and concerns." 
+            text: `You are Skinalyze AI, a specialized skincare and dermatology assistant. Your expertise is strictly limited to:
+- Skincare products and ingredients
+- Acne treatment and prevention
+- Skincare routines and regimens
+- Dermatological conditions and concerns
+- Skin types and their specific needs
+- Product recommendations for skin concerns
+- General skincare advice and best practices
+
+IMPORTANT RULES:
+1. ONLY answer questions related to skincare, dermatology, and skin health.
+2. If a user asks about topics outside of skincare (like programming, math, general knowledge, etc.), politely decline and redirect them back to skincare topics.
+3. Use this exact response format for off-topic questions: "I apologize, but I'm specialized in skincare and dermatology advice only. I can help you with skin concerns, product recommendations, skincare routines, acne treatment, and other skin-related questions. Is there anything about skincare I can help you with today?"
+4. Always provide helpful, accurate, and personalized skincare advice within your domain.
+5. Recommend consulting a dermatologist for severe skin conditions or medical concerns.`
           }]
         }
       });
 
-      // Filter out the greeting message and build conversation history
-      // Gemini requires the first message to be from 'user', not 'model'
-      const conversationMessages = previousMessages.filter(msg => {
-        // Exclude the greeting message
-        const isGreeting = msg.sender === 'ai' && 
-          msg.messageContent === "Greeting, I'm Skinalyze AI, how can i help you today?";
-        return !isGreeting;
-      });
+      // Filter out the greeting message
+      const greetingMessage = "Greeting, I'm Skinalyze AI, how can i help you today?";
+      const conversationMessages = previousMessages.filter(msg => 
+        msg.messageContent !== greetingMessage
+      );
 
-      // Build history - only include if there are actual conversation messages
-      const history = conversationMessages.map((msg) => ({
+      // Build history and ensure it starts with 'user' role
+      let history = conversationMessages.map((msg) => ({
         role: msg.sender === 'user' ? 'user' : 'model',
         parts: [{ text: msg.messageContent }],
       }));
+
+      // If history exists and first message is from 'model', remove it
+      // This ensures the conversation always starts with a user message
+      while (history.length > 0 && history[0].role === 'model') {
+        history.shift();
+      }
 
       const chat = model.startChat({
         history: history.length > 0 ? history : undefined,
