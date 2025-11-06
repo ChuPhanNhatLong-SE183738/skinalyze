@@ -35,9 +35,9 @@ export class CustomersService {
       purchaseHistory: purchaseHistory ?? [],
       user: { userId } as User,
     });
-    
+
     (customer as any).userId = userId;
-    
+
     return await this.customerRepository.save(customer);
   }
 
@@ -60,11 +60,15 @@ export class CustomersService {
     return customer;
   }
 
-  async findByUserId(userId: string): Promise<Customer | null> {
-    return await this.customerRepository.findOne({
+  async findByUserId(userId: string): Promise<Customer> {
+    const customer = await this.customerRepository.findOne({
       where: { user: { userId } },
       relations: ['user'],
     });
+    if (!customer) {
+      throw new NotFoundException(`Customer with userId ${userId} not found`);
+    }
+    return customer;
   }
 
   async update(

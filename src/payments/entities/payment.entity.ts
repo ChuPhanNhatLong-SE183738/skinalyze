@@ -27,7 +27,7 @@ export enum PaymentMethod {
 }
 
 export enum PaymentType {
-  ORDER = 'order', // Thanh toán đơn hàng
+  ORDER = 'order',
   TOPUP = 'topup', // Nạp tiền vào ví
   BOOKING = 'booking',
   SUBSCRIPTION = 'subscription',
@@ -57,6 +57,9 @@ export class Payment {
 
   @Column({ type: 'varchar', length: 36, nullable: true })
   userId: string; // User ID cho topup
+
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  planId: string; // Plan ID cho subscription
 
   @Column({ type: 'decimal', precision: 15, scale: 2 })
   amount: number; // Số tiền cần thanh toán

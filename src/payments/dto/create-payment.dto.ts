@@ -29,6 +29,15 @@ export class CreatePaymentDto {
   userId?: string;
 
   @ApiProperty({
+    description: 'Plan ID (required for subscription)',
+    example: 'uuid-string',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  planId?: string;
+
+  @ApiProperty({
     description: 'Customer ID (for creating order after payment)',
     example: 'customer-uuid',
     required: false,

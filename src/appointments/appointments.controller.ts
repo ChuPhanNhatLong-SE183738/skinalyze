@@ -23,6 +23,8 @@ import { User, UserRole } from 'src/users/entities/user.entity';
 import { CreatedResponse, ResponseHelper } from 'src/utils/responses';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { ApiOperation } from '@nestjs/swagger';
+import { Appointment } from './entities/appointment.entity';
+import { CreateSubscriptionAppointmentDto } from './dto/create-subscription-appointment.dto';
 
 @Controller('appointments')
 @UseGuards(JwtAuthGuard)
@@ -30,6 +32,8 @@ export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) {}
 
   @Post()
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Create a reservation (Pay-as-you-go)' })
   async create(
     @Body() createAppointmentDto: CreateAppointmentDto,
     @GetUser() user: User,
@@ -43,6 +47,25 @@ export class AppointmentsController {
     return ResponseHelper.created(
       'Appointment reservation created. Please complete payment.',
       paymentDetails,
+    );
+  }
+
+  @Post('use-subscription')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Create an appointment using a subscription' })
+  async createWithSubscription(
+    @Body() createDto: CreateSubscriptionAppointmentDto,
+    @GetUser() user: User,
+  ): Promise<CreatedResponse<Appointment>> {
+    const appointment =
+      await this.appointmentsService.createSubscriptionAppointment(
+        user.userId,
+        createDto,
+      );
+
+    return ResponseHelper.created(
+      'Appointment created successfully using subscription.',
+      appointment,
     );
   }
 

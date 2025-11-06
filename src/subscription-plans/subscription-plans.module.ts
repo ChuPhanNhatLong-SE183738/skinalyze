@@ -9,5 +9,6 @@ import { DermatologistsModule } from '../dermatologists/dermatologists.module';
   imports: [TypeOrmModule.forFeature([SubscriptionPlan]), DermatologistsModule],
   controllers: [SubscriptionPlansController],
   providers: [SubscriptionPlansService],
+  exports: [SubscriptionPlansService],
 })
 export class SubscriptionPlansModule {}

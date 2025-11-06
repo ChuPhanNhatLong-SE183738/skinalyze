@@ -24,6 +24,7 @@ import { Appointment } from '../appointments/entities/appointment.entity';
 import { AppointmentsService } from 'src/appointments/appointments.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AppointmentStatus } from 'src/appointments/types/appointment.types';
+import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
 
 interface PaymentProcessingResult {
   success: boolean;
@@ -44,6 +45,8 @@ export class PaymentsService {
     private readonly paymentRepository: Repository<Payment>,
     private readonly usersService: UsersService,
 
+    @Inject(forwardRef(() => CustomerSubscriptionService))
+    private readonly customerSubscriptionService: CustomerSubscriptionService,
     @Inject(forwardRef(() => CartService))
     private readonly cartService: CartService,
     @Inject(forwardRef(() => AppointmentsService))
@@ -72,6 +75,7 @@ export class PaymentsService {
       amount,
       paymentMethod,
       paymentType,
+      planId,
     } = createPaymentDto;
 
     // Validate based on payment type
@@ -110,6 +114,12 @@ export class PaymentsService {
       if (!customerId) {
         throw new BadRequestException(
           'CustomerId ID is required for booking payment',
+        );
+      }
+    } else if (paymentType === PaymentType.SUBSCRIPTION) {
+      if (!customerId || !planId) {
+        throw new BadRequestException(
+          'CustomerId and PlanId are required for subscription payment',
         );
       }
     }
@@ -278,6 +288,14 @@ export class PaymentsService {
             );
           };
           break;
+        case PaymentType.SUBSCRIPTION:
+          postProcess = async () => {
+            responsePayload = await this.processSubscriptionPaymentAfterCommit(
+              payment.paymentId,
+              amountReceived,
+            );
+          };
+          break;
         case PaymentType.BOOKING:
           postProcess = async () => {
             responsePayload = await this.processBookingPaymentAfterCommit(
@@ -400,6 +418,45 @@ export class PaymentsService {
         amount: amountReceived,
         appointmentId: appointment.appointmentId,
         slotId: appointment.availabilitySlot?.slotId ?? null,
+      };
+    });
+  }
+
+  private async processSubscriptionPaymentAfterCommit(
+    paymentId: number,
+    amountReceived: number,
+  ): Promise<PaymentProcessingResult> {
+    return this.entityManager.transaction(async (manager) => {
+      const paymentRepo = manager.getRepository(Payment);
+      const payment = await paymentRepo.findOne({ where: { paymentId } });
+
+      if (!payment || !payment.planId || !payment.customerId) {
+        throw new NotFoundException(
+          'Payment data is missing for subscription activation',
+        );
+      }
+
+      const planId = payment.planId;
+      if (!planId) {
+        throw new BadRequestException('PlanID is missing from payment planId');
+      }
+
+      const subscription =
+        await this.customerSubscriptionService.activateSubscription(
+          payment.customerId,
+          planId,
+          payment,
+          payment.paidAt,
+          manager,
+        );
+
+      return {
+        success: true,
+        message: 'Subscription payment processed successfully',
+        paymentType: 'subscription',
+        paymentCode: payment.paymentCode,
+        customerSubscriptionId: subscription.id,
+        amount: amountReceived,
       };
     });
   }

@@ -6,10 +6,19 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
 import { SubscriptionPlansService } from './subscription-plans.service';
 import { CreateSubscriptionPlanDto } from './dto/create-subscription-plan.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -19,16 +28,25 @@ import { GetUser } from '../auth/decorators/get-user.decorator';
 import { User, UserRole } from '../users/entities/user.entity';
 import { UpdateSubscriptionPlanDto } from './dto/update-subscription-plan.dto';
 import { ResponseHelper } from '../utils/responses';
+import { FindSubscriptionPlansDto } from './dto/find-subscription-plan.dto';
 
+@ApiTags('Subscription Plans')
+@ApiBearerAuth()
 @Controller('subscription-plans')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.DERMATOLOGIST)
 export class SubscriptionPlansController {
   constructor(
     private readonly subscriptionPlansService: SubscriptionPlansService,
   ) {}
 
   @Post()
+  @Roles(UserRole.DERMATOLOGIST)
+  @ApiOperation({ summary: 'Create a new subscription plan (Dermatologist)' })
+  @ApiResponse({ status: 201, description: 'Creation successful.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. Dermatologist role required.',
+  })
   async create(
     @GetUser() user: User,
     @Body() createSubscriptionPlanDto: CreateSubscriptionPlanDto,
@@ -45,10 +63,10 @@ export class SubscriptionPlansController {
   }
 
   @Get()
-  async findAll(@GetUser() user: User) {
-    const subscriptions = await this.subscriptionPlansService.findAllForUser(
-      user.userId,
-    );
+  @ApiOperation({ summary: 'Get a list of subscription plans (Filter & Sort)' })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved list.' })
+  async findAll(@Query() filters: FindSubscriptionPlansDto) {
+    const subscriptions = await this.subscriptionPlansService.findAll(filters);
 
     return ResponseHelper.success(
       'Subscriptions retrieved successfully',
@@ -57,19 +75,39 @@ export class SubscriptionPlansController {
   }
 
   @Get(':id')
-  async findOne(@GetUser() user: User, @Param('id') id: string) {
-    const subscription = await this.subscriptionPlansService.findOneForUser(
-      user.userId,
-      id,
-    );
+  @ApiOperation({ summary: 'Get details of a single subscription plan' })
+  @ApiParam({
+    name: 'id',
+    description: 'Subscription Plan ID (UUID)',
+    type: String,
+    format: 'uuid',
+  })
+  @ApiResponse({ status: 200, description: 'Successfully retrieved detail.' })
+  @ApiResponse({ status: 404, description: 'Not found.' })
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    const subscription = await this.subscriptionPlansService.findOne(id);
 
     return ResponseHelper.success('Subscription retrieved', subscription);
   }
 
   @Patch(':id')
+  @Roles(UserRole.DERMATOLOGIST)
+  @ApiOperation({ summary: 'Update a subscription plan (Dermatologist)' })
+  @ApiParam({
+    name: 'id',
+    description: 'Subscription Plan ID (UUID)',
+    type: String,
+    format: 'uuid',
+  })
+  @ApiResponse({ status: 200, description: 'Update successful.' })
+  @ApiResponse({ status: 404, description: 'Not found.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. Dermatologist role required.',
+  })
   async update(
     @GetUser() user: User,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateSubscriptionPlanDto: UpdateSubscriptionPlanDto,
   ) {
     const subscription = await this.subscriptionPlansService.updateForUser(
@@ -82,8 +120,25 @@ export class SubscriptionPlansController {
   }
 
   @Delete(':id')
+  @Roles(UserRole.DERMATOLOGIST)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@GetUser() user: User, @Param('id') id: string) {
+  @ApiOperation({ summary: 'Delete a subscription plan (Dermatologist)' })
+  @ApiParam({
+    name: 'id',
+    description: 'Subscription Plan ID (UUID)',
+    type: String,
+    format: 'uuid',
+  })
+  @ApiResponse({
+    status: 204,
+    description: 'Deletion successful (No Content).',
+  })
+  @ApiResponse({ status: 404, description: 'Not found.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. Dermatologist role required.',
+  })
+  async remove(@GetUser() user: User, @Param('id', ParseUUIDPipe) id: string) {
     await this.subscriptionPlansService.removeForUser(user.userId, id);
   }
 }

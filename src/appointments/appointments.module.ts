@@ -9,6 +9,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
 import { AvailabilitySlotsModule } from '../availability-slots/availability-slots.module';
 import { PaymentsModule } from 'src/payments/payments.module';
 import { GoogleMeetModule } from 'src/google-meet/google-meet.module';
+import { CustomerSubscriptionModule } from 'src/customer-subscription/customer-subscription.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { GoogleMeetModule } from 'src/google-meet/google-meet.module';
     DermatologistsModule,
     TransactionsModule,
     AvailabilitySlotsModule,
+    CustomerSubscriptionModule,
     GoogleMeetModule,
     forwardRef(() => PaymentsModule),
   ],

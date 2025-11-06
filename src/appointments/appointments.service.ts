@@ -22,12 +22,14 @@ import { AvailabilitySlotsService } from '../availability-slots/availability-slo
 import { PaymentsService } from 'src/payments/payments.service';
 import { PaymentType } from 'src/payments/entities/payment.entity';
 import { GoogleMeetService } from 'src/google-meet/google-meet.service';
-import { addMinutes, differenceInHours } from 'date-fns';
+import { addMinutes } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   AppointmentStatus,
   TerminationReason,
 } from './types/appointment.types';
+import { CreateSubscriptionAppointmentDto } from './dto/create-subscription-appointment.dto';
+import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
 
 export interface AppointmentReservationResult {
   appointmentId: string;
@@ -47,6 +49,7 @@ export class AppointmentsService {
     private readonly availabilitySlotsService: AvailabilitySlotsService,
     private readonly googleMeetService: GoogleMeetService,
     private readonly entityManager: EntityManager,
+    private readonly customerSubscriptionService: CustomerSubscriptionService,
 
     @Inject(forwardRef(() => PaymentsService))
     private readonly paymentsService: PaymentsService,
@@ -124,6 +127,68 @@ export class AppointmentsService {
         // qrCodeUrl: `https"//img.vietqr.io/image/MB-YOUR_BANK_ACCOUNT-compact2.png?amount=${payment.amount}&addInfo=${payment.paymentCode}`,
       };
     }); // 9. KẾT THÚC TRANSACTION (Tự động Commit hoặc Rollback)
+  }
+
+  async createSubscriptionAppointment(
+    userId: string,
+    createDto: CreateSubscriptionAppointmentDto,
+  ): Promise<Appointment> {
+    const customer = await this.customersService.findByUserId(userId);
+    if (!customer) {
+      throw new NotFoundException('Customer profile not found for this user.');
+    }
+
+    return this.entityManager.transaction(async (manager) => {
+      const appointmentRepo = manager.getRepository(Appointment);
+
+      //  Reserve Slot
+      const reservedSlot = await this.availabilitySlotsService.reserveSlot(
+        createDto.dermatologistId,
+        createDto.startTime,
+        createDto.endTime,
+        manager,
+      );
+
+      //  -1 SESSION
+      const usedSubscription =
+        await this.customerSubscriptionService.useSession(
+          createDto.customerSubscriptionId,
+          customer.customerId,
+          manager,
+        );
+
+      // Create Appointment (Scheduled)
+      const appointment = appointmentRepo.create({
+        note: createDto.note,
+        appointmentType: createDto.appointmentType,
+        price: 0,
+        startTime: reservedSlot.startTime,
+        endTime: reservedSlot.endTime,
+        appointmentStatus: AppointmentStatus.SCHEDULED,
+        customerSubscription: usedSubscription,
+        availabilitySlot: reservedSlot,
+        customer: { customerId: customer.customerId } as Customer,
+        dermatologist: {
+          dermatologistId: createDto.dermatologistId,
+        } as Dermatologist,
+        skinAnalysis: createDto.analysisId
+          ? ({ analysisId: createDto.analysisId } as SkinAnalysis)
+          : undefined,
+        trackingRoutine: createDto.trackingRoutineId
+          ? ({ routineId: createDto.trackingRoutineId } as TreatmentRoutine)
+          : undefined,
+      });
+
+      const savedAppointment = await appointmentRepo.save(appointment);
+
+      await this.availabilitySlotsService.linkSlotToAppointment(
+        reservedSlot.slotId,
+        savedAppointment.appointmentId,
+        manager,
+      );
+
+      return savedAppointment;
+    });
   }
 
   async findAll(): Promise<Appointment[]> {
@@ -205,23 +270,116 @@ export class AppointmentsService {
     return meetLink;
   }
 
+  // async cancelMyAppointment(userId: string, appointmentId: string) {
+  //   const customer = await this.customersService.findByUserId(userId);
+  //   if (!customer) {
+  //     throw new NotFoundException('Customer profile not found.');
+  //   }
+
+  //   //  Safe Transaction
+  //   return this.entityManager.transaction(async (manager) => {
+  //     const appointmentRepo = manager.getRepository(Appointment);
+
+  //     const appointment = await appointmentRepo.findOne({
+  //       where: {
+  //         appointmentId: appointmentId,
+  //         customer: { customerId: customer.customerId }, // Ensure ownership customer
+  //       },
+  //       relations: ['payment', 'availabilitySlot'],
+  //     });
+
+  //     if (!appointment) {
+  //       throw new NotFoundException(
+  //         'Appointment not found or you do not own it.',
+  //       );
+  //     }
+
+  //     if (appointment.appointmentStatus !== AppointmentStatus.SCHEDULED) {
+  //       throw new BadRequestException(
+  //         `Cannot cancel an appointment with status: ${appointment.appointmentStatus}`,
+  //       );
+  //     }
+
+  //     // 5. Calculate time difference
+  //     const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
+
+  //     const now_ms = new Date().getTime();
+  //     const appointment_ms = appointment.startTime.getTime();
+
+  //     const msDifference = appointment_ms - now_ms;
+
+  //     let refundProcessed = false;
+  //     let notificationMessage = '';
+
+  //     if (msDifference > MS_IN_24_HOURS) {
+  //       //  Cancel Early (Refund 100%)
+  //       this.logger.log(
+  //         `Processing Early Cancel for appointment: ${appointmentId}`,
+  //       );
+
+  //       appointment.appointmentStatus = AppointmentStatus.CANCELLED;
+  //       appointment.terminatedReason =
+  //         TerminationReason.CUSTOMER_CANCELLED_EARLY;
+
+  //       // Refund if payment exists
+  //       if (appointment.payment) {
+  //         // await this.paymentsService.processRefund(
+  //         //   appointment.payment,
+  //         //   manager,
+  //         // );
+  //         refundProcessed = true;
+  //       }
+  //       notificationMessage = 'Đã hủy lịch. Bạn sẽ được hoàn 100% chi phí.';
+  //     } else {
+  //       appointment.appointmentStatus = AppointmentStatus.CANCELLED;
+  //       appointment.terminatedReason =
+  //         TerminationReason.CUSTOMER_CANCELLED_LATE;
+  //       notificationMessage =
+  //         'Đã hủy lịch. Không áp dụng hoàn tiền do hủy muộn.';
+  //     }
+
+  //     // Always release the slot
+  //     if (appointment.availabilitySlot) {
+  //       await this.availabilitySlotsService.releaseSlot(
+  //         appointment.availabilitySlot.slotId,
+  //         manager,
+  //       );
+  //     }
+
+  //     await appointmentRepo.save(appointment);
+
+  //     // 9. Send Notification (TODO)
+  //     // await this.notificationsService.sendNotification(
+  //     //   customer.userId,
+  //     //   `Hủy lịch thành công: ${notificationMessage}`
+  //     // );
+  //     // await this.notificationsService.sendNotification(
+  //     //   appointment.dermatologist.userId,
+  //     //   `Lịch hẹn ${appointmentId} đã bị khách hàng hủy.`
+  //     // );
+
+  //     return {
+  //       message: notificationMessage,
+  //       refundProcessed: refundProcessed,
+  //     };
+  //   });
+  // }
+
   async cancelMyAppointment(userId: string, appointmentId: string) {
     const customer = await this.customersService.findByUserId(userId);
     if (!customer) {
       throw new NotFoundException('Customer profile not found.');
     }
 
-    // 2. Safe Transaction
     return this.entityManager.transaction(async (manager) => {
       const appointmentRepo = manager.getRepository(Appointment);
 
-      // 3. Tìm cuộc hẹn VÀ xác thực chủ sở hữu
       const appointment = await appointmentRepo.findOne({
         where: {
           appointmentId: appointmentId,
           customer: { customerId: customer.customerId },
         },
-        relations: ['payment', 'availabilitySlot'],
+        relations: ['payment', 'availabilitySlot', 'customerSubscription'], // 👈 THÊM
       });
 
       if (!appointment) {
@@ -230,45 +388,67 @@ export class AppointmentsService {
         );
       }
 
-      // 4. Kiểm tra trạng thái
       if (appointment.appointmentStatus !== AppointmentStatus.SCHEDULED) {
         throw new BadRequestException(
           `Cannot cancel an appointment with status: ${appointment.appointmentStatus}`,
         );
       }
 
-      // 5. TÍNH TOÁN THỜI GIAN 
-      const now = new Date();
-      const hoursBefore = differenceInHours(appointment.startTime, now);
+      // Calculate time difference
+      const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
+      const now_ms = new Date().getTime();
+      const appointment_ms = appointment.startTime.getTime();
+      const msDifference = appointment_ms - now_ms;
 
-      let refundProcessed = false;
-      let notificationMessage = '';
+      let refundMessage = '';
 
-      if (hoursBefore >= 24) {
-        //  Cancel Early (Refund 100%)
+      if (msDifference > MS_IN_24_HOURS) {
         this.logger.log(
-          `Processing BR-014 (Early Cancel) for Appt: ${appointmentId}`,
+          `Processing Early Cancel for appointment: ${appointmentId}`,
         );
 
         appointment.appointmentStatus = AppointmentStatus.CANCELLED;
         appointment.terminatedReason =
           TerminationReason.CUSTOMER_CANCELLED_EARLY;
 
-        // Xử lý hoàn tiền (nếu có thanh toán)
+        // Refund if payment exists
         if (appointment.payment) {
-          // await this.paymentsService.processRefund(
+          // await this.paymentsService.requestRefund(
           //   appointment.payment,
+          //   Number(appointment.price),
           //   manager,
           // );
-          refundProcessed = true;
+          refundMessage =
+            'Đã hủy lịch. Yêu cầu hoàn 100% chi phí đang được xử lý.';
+        } else if (appointment.customerSubscription) {
+          await this.customerSubscriptionService.refundSession(
+            appointment.customerSubscription.id,
+            manager,
+          );
+          refundMessage =
+            'Đã hủy lịch. Một (1) lượt khám đã được hoàn lại vào gói của bạn.';
+        } else {
+          // C. Free (ADMIN CREATED)
+          refundMessage = 'Đã hủy lịch (miễn phí).';
         }
-        notificationMessage = 'Đã hủy lịch. Bạn sẽ được hoàn 100% chi phí.';
       } else {
+        // Late Cancel
+        this.logger.log(
+          `Processing Late Cancel for appointment: ${appointmentId}`,
+        );
+
         appointment.appointmentStatus = AppointmentStatus.CANCELLED;
         appointment.terminatedReason =
           TerminationReason.CUSTOMER_CANCELLED_LATE;
-        notificationMessage =
-          'Đã hủy lịch. Không áp dụng hoàn tiền do hủy muộn.';
+
+        if (appointment.payment) {
+          refundMessage = 'Đã hủy lịch. Không áp dụng hoàn tiền do hủy muộn.';
+        } else if (appointment.customerSubscription) {
+          refundMessage =
+            'Đã hủy lịch. Không áp dụng hoàn lại lượt khám do hủy muộn.';
+        } else {
+          refundMessage = 'Đã hủy lịch muộn (miễn phí).';
+        }
       }
 
       // Always release the slot
@@ -279,10 +459,9 @@ export class AppointmentsService {
         );
       }
 
-      // 8. Lưu lại thay đổi
       await appointmentRepo.save(appointment);
 
-      // 9. Gửi thông báo (TODO)
+      // 9. Send Notification (TODO)
       // await this.notificationsService.sendNotification(
       //   customer.userId,
       //   `Hủy lịch thành công: ${notificationMessage}`
@@ -293,9 +472,7 @@ export class AppointmentsService {
       // );
 
       return {
-        message: notificationMessage,
-        refundProcessed: refundProcessed,
-        hoursBefore: hoursBefore,
+        message: refundMessage,
       };
     });
   }
