@@ -31,6 +31,20 @@ export class CartService {
     return `cart:${userId}`;
   }
 
+  private calculateFinalPrice(
+    sellingPrice: number,
+    salePercentage: number | null,
+  ): number {
+    if (!salePercentage || salePercentage <= 0) {
+      return sellingPrice;
+    }
+
+    const discount = (sellingPrice * salePercentage) / 100;
+    const finalPrice = sellingPrice - discount;
+
+    return Math.round(finalPrice);
+  }
+
   async getCart(userId: string): Promise<Cart> {
     const cartKey = this.getCartKey(userId);
     const cart = await this.cacheManager.get<Cart>(cartKey);
@@ -71,20 +85,29 @@ export class CartService {
     // Get current cart
     const cart = await this.getCart(userId);
 
-    // Check if product already in cart
     const existingItemIndex = cart.items.findIndex(
       (item) => item.productId === productId,
+    );
+
+    const finalPrice = this.calculateFinalPrice(
+      product.sellingPrice,
+      product.salePercentage,
     );
 
     if (existingItemIndex > -1) {
       // Update quantity if product exists
       cart.items[existingItemIndex].quantity += quantity;
+      // Update price (trường hợp sale percentage thay đổi)
+      cart.items[existingItemIndex].price = finalPrice;
+      cart.items[existingItemIndex].originalPrice = product.sellingPrice;
+      cart.items[existingItemIndex].salePercentage = product.salePercentage || 0;
     } else {
-      // Add new item to cart
       const newItem: CartItem = {
         productId,
         productName: product.productName,
-        price: product.sellingPrice,
+        price: finalPrice,
+        originalPrice: product.sellingPrice,
+        salePercentage: product.salePercentage || 0,
         quantity,
         addedAt: new Date(),
       };

@@ -2,6 +2,8 @@ export interface CartItem {
   productId: string;
   productName?: string;
   price?: number;
+  originalPrice?: number;
+  salePercentage?: number;
   quantity: number;
   addedAt: Date;
 }
