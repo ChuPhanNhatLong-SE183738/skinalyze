@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   forwardRef,
   Inject,
   Injectable,
@@ -7,10 +8,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, EntityManager, Between, IsNull } from 'typeorm';
+import {
+  Repository,
+  EntityManager,
+  Between,
+  IsNull,
+  LessThan,
+  FindOneOptions,
+} from 'typeorm';
 import { Appointment } from './entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
-import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
+import {
+  InterruptAppointmentDto,
+  UpdateAppointmentStatusDto,
+} from './dto/update-appointment-status.dto';
 import { CustomersService } from '../customers/customers.service';
 import { DermatologistsService } from '../dermatologists/dermatologists.service';
 import { Customer } from '../customers/entities/customer.entity';
@@ -22,7 +33,7 @@ import { AvailabilitySlotsService } from '../availability-slots/availability-slo
 import { PaymentsService } from 'src/payments/payments.service';
 import { PaymentType } from 'src/payments/entities/payment.entity';
 import { GoogleMeetService } from 'src/google-meet/google-meet.service';
-import { addMinutes } from 'date-fns';
+import { addMinutes, subMinutes } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   AppointmentStatus,
@@ -30,6 +41,8 @@ import {
 } from './types/appointment.types';
 import { CreateSubscriptionAppointmentDto } from './dto/create-subscription-appointment.dto';
 import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
+import { UserRole } from 'src/users/entities/user.entity';
+import { CompleteAppointmentDto } from './dto/complete-appointment-dto';
 
 export interface AppointmentReservationResult {
   appointmentId: string;
@@ -37,10 +50,15 @@ export interface AppointmentReservationResult {
   amount: number;
   expiredAt: Date;
 }
+export interface AppointmentActionResult {
+  message: string;
+  [key: string]: any;
+}
 
 @Injectable()
 export class AppointmentsService {
   private readonly logger = new Logger(AppointmentsService.name);
+  private readonly GRACE_PERIOD_MS = 15 * 60 * 1000; // Waiting time for report NO_SHOW: 15 minutes
   constructor(
     @InjectRepository(Appointment)
     private readonly appointmentRepository: Repository<Appointment>,
@@ -64,11 +82,9 @@ export class AppointmentsService {
       throw new NotFoundException('Customer profile not found for this user.');
     }
 
-    // 2. Bọc toàn bộ logic trong một DB Transaction
     return this.entityManager.transaction(async (manager) => {
       const appointmentRepo = manager.getRepository(Appointment);
 
-      // 3. (Atomic) Khóa Khe Thời Gian
       const reservedSlot = await this.availabilitySlotsService.reserveSlot(
         createDto.dermatologistId,
         createDto.startTime,
@@ -76,7 +92,7 @@ export class AppointmentsService {
         manager,
       );
 
-      // 4. Create Pending Payment
+      // Create Pending Payment
       const payment = await this.paymentsService.createPayment(
         {
           paymentType: PaymentType.BOOKING,
@@ -87,7 +103,7 @@ export class AppointmentsService {
         manager,
       );
 
-      // 5. Create Pending Appointment
+      // Create Pending Appointment
       const appointment = appointmentRepo.create({
         note: createDto.note,
         appointmentType: createDto.appointmentType,
@@ -111,14 +127,14 @@ export class AppointmentsService {
 
       const savedAppointment = await appointmentRepo.save(appointment);
 
-      // 6. Update the reverse relationships (complete 1:1)
+      //  Update the reverse relationships (complete 1:1)
       await this.availabilitySlotsService.linkSlotToAppointment(
         reservedSlot.slotId,
         savedAppointment.appointmentId,
         manager,
       );
 
-      // 8. Return payment information to client
+      //  Return payment information to client
       return {
         appointmentId: savedAppointment.appointmentId,
         paymentCode: payment.paymentCode,
@@ -126,7 +142,7 @@ export class AppointmentsService {
         expiredAt: payment.expiredAt,
         // qrCodeUrl: `https"//img.vietqr.io/image/MB-YOUR_BANK_ACCOUNT-compact2.png?amount=${payment.amount}&addInfo=${payment.paymentCode}`,
       };
-    }); // 9. KẾT THÚC TRANSACTION (Tự động Commit hoặc Rollback)
+    });
   }
 
   async createSubscriptionAppointment(
@@ -188,6 +204,179 @@ export class AppointmentsService {
       );
 
       return savedAppointment;
+    });
+  }
+
+  async completeAppointment(
+    userId: string,
+    appointmentId: string,
+    dto: CompleteAppointmentDto,
+  ): Promise<Appointment> {
+    const dermatologist = await this.dermatologistsService.findByUserId(userId);
+
+    const appointment = await this.appointmentRepository.findOne({
+      where: {
+        appointmentId,
+        dermatologist: { dermatologistId: dermatologist.dermatologistId },
+      },
+    });
+
+    if (!appointment) {
+      throw new NotFoundException(
+        'Appointment not found or you do not own it.',
+      );
+    }
+
+    if (appointment.appointmentStatus !== AppointmentStatus.IN_PROGRESS) {
+      this.logger.warn(
+        `Attempted to complete an appointment not IN_PROGRESS (Status: ${appointment.appointmentStatus})`,
+      );
+      throw new BadRequestException(
+        'Appointment is not in a state to be completed (must be IN_PROGRESS).',
+      );
+    }
+
+    if (!appointment.customerJoinedAt) {
+      this.logger.warn(
+        `Attempted to complete appointment ${appointmentId} but customer has not joined.`,
+      );
+      throw new BadRequestException(
+        'Cannot complete: Customer has not joined the appointment. Mark as NO_SHOW instead.',
+      );
+    }
+
+    appointment.appointmentStatus = AppointmentStatus.COMPLETED;
+    appointment.note = dto.note;
+
+    const updatedAppointment =
+      await this.appointmentRepository.save(appointment);
+
+    // 5.
+    // (Notification do appointment review to customer)
+    // await this.notificationService.sendReviewRequest(appointment.customer.userId, appointmentId);
+
+    return updatedAppointment;
+  }
+
+  async recordCheckIn(appointmentId: string, userId: string, role: UserRole) {
+    const appointment = await this.findOne(appointmentId);
+
+    if (
+      appointment.appointmentStatus !== AppointmentStatus.SCHEDULED &&
+      appointment.appointmentStatus !== AppointmentStatus.IN_PROGRESS
+    ) {
+      throw new BadRequestException(
+        `Cannot check-in to an appointment with status ${appointment.appointmentStatus}`,
+      );
+    }
+
+    if (appointment.appointmentStatus === AppointmentStatus.SCHEDULED) {
+      appointment.appointmentStatus = AppointmentStatus.IN_PROGRESS;
+    }
+
+    // Check role and ownership
+    if (role === UserRole.CUSTOMER) {
+      if (appointment.customer.user.userId !== userId) {
+        throw new ForbiddenException('You do not own this appointment');
+      }
+      // First-time only
+      if (!appointment.customerJoinedAt) {
+        appointment.customerJoinedAt = new Date();
+      }
+    } else if (role === UserRole.DERMATOLOGIST) {
+      // Check dermatologist
+      if (appointment.dermatologist.user.userId !== userId) {
+        throw new ForbiddenException(
+          'You are not assigned to this appointment',
+        );
+      }
+      if (!appointment.dermatologistJoinedAt) {
+        appointment.dermatologistJoinedAt = new Date();
+      }
+    }
+
+    await this.appointmentRepository.save(appointment);
+  }
+
+  async interruptAppointment(
+    userId: string,
+    role: UserRole,
+    appointmentId: string,
+    dto: InterruptAppointmentDto,
+  ): Promise<AppointmentActionResult> {
+    return this.entityManager.transaction(async (manager) => {
+      const appointmentRepo = manager.getRepository(Appointment);
+      const appointment = await appointmentRepo.findOne({
+        where: { appointmentId },
+        relations: [
+          'customer',
+          'dermatologist',
+          'payment',
+          'customerSubscription',
+        ],
+      });
+
+      if (!appointment) {
+        throw new NotFoundException('Appointment not found');
+      }
+
+      if (appointment.appointmentStatus !== AppointmentStatus.IN_PROGRESS) {
+        throw new BadRequestException(
+          'Appointment is not in progress. Cannot interrupt.',
+        );
+      }
+
+      if (role === UserRole.CUSTOMER) {
+        const customer = await this.customersService.findByUserId(userId);
+        if (appointment.customer.customerId !== customer.customerId) {
+          throw new ForbiddenException('You do not own this appointment');
+        }
+      } else if (role === UserRole.DERMATOLOGIST) {
+        const dermatologist =
+          await this.dermatologistsService.findByUserId(userId);
+        if (
+          appointment.dermatologist.dermatologistId !==
+          dermatologist.dermatologistId
+        ) {
+          throw new ForbiddenException(
+            'You are not assigned to this appointment',
+          );
+        }
+      }
+
+      appointment.appointmentStatus = AppointmentStatus.INTERRUPTED;
+      appointment.terminatedReason = dto.reason;
+      appointment.terminationNote = dto.terminationNote;
+      await appointmentRepo.save(appointment);
+
+      const shouldRefund =
+        dto.reason === TerminationReason.DOCTOR_ISSUE ||
+        dto.reason === TerminationReason.PLATFORM_ISSUE;
+
+      let refundMessage = 'Đã báo cáo gián đoạn. Không áp dụng hoàn tiền/lượt.';
+
+      if (shouldRefund) {
+        if (appointment.payment) {
+          // await this.paymentsService.requestRefund(
+          //   appointment.payment,
+          //   Number(appointment.price),
+          //   manager,
+          // );
+          refundMessage = 'Yêu cầu hoàn tiền đang được xử lý.';
+        } else if (appointment.customerSubscription) {
+          await this.customerSubscriptionService.refundSession(
+            appointment.customerSubscription.id,
+            manager,
+          );
+          refundMessage = '1 lượt khám đã được hoàn lại vào gói của bạn.';
+        }
+      }
+
+      this.logger.warn(
+        `Appointment ${appointmentId} was INTERRUPTED. Reason: ${dto.reason}`,
+      );
+
+      return { message: refundMessage, refundTriggered: shouldRefund };
     });
   }
 
@@ -270,117 +459,76 @@ export class AppointmentsService {
     return meetLink;
   }
 
-  // async cancelMyAppointment(userId: string, appointmentId: string) {
-  //   const customer = await this.customersService.findByUserId(userId);
-  //   if (!customer) {
-  //     throw new NotFoundException('Customer profile not found.');
-  //   }
+  private async executeCancellation(
+    manager: EntityManager,
+    appointment: Appointment,
+    reason: TerminationReason,
+    shouldRefund: boolean,
+  ) {
+    const appointmentRepo = manager.getRepository(Appointment);
 
-  //   //  Safe Transaction
-  //   return this.entityManager.transaction(async (manager) => {
-  //     const appointmentRepo = manager.getRepository(Appointment);
+    appointment.appointmentStatus = AppointmentStatus.CANCELLED;
+    appointment.terminatedReason = reason;
+    await appointmentRepo.save(appointment);
 
-  //     const appointment = await appointmentRepo.findOne({
-  //       where: {
-  //         appointmentId: appointmentId,
-  //         customer: { customerId: customer.customerId }, // Ensure ownership customer
-  //       },
-  //       relations: ['payment', 'availabilitySlot'],
-  //     });
+    let refundMessage = '';
 
-  //     if (!appointment) {
-  //       throw new NotFoundException(
-  //         'Appointment not found or you do not own it.',
-  //       );
-  //     }
-
-  //     if (appointment.appointmentStatus !== AppointmentStatus.SCHEDULED) {
-  //       throw new BadRequestException(
-  //         `Cannot cancel an appointment with status: ${appointment.appointmentStatus}`,
-  //       );
-  //     }
-
-  //     // 5. Calculate time difference
-  //     const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
-
-  //     const now_ms = new Date().getTime();
-  //     const appointment_ms = appointment.startTime.getTime();
-
-  //     const msDifference = appointment_ms - now_ms;
-
-  //     let refundProcessed = false;
-  //     let notificationMessage = '';
-
-  //     if (msDifference > MS_IN_24_HOURS) {
-  //       //  Cancel Early (Refund 100%)
-  //       this.logger.log(
-  //         `Processing Early Cancel for appointment: ${appointmentId}`,
-  //       );
-
-  //       appointment.appointmentStatus = AppointmentStatus.CANCELLED;
-  //       appointment.terminatedReason =
-  //         TerminationReason.CUSTOMER_CANCELLED_EARLY;
-
-  //       // Refund if payment exists
-  //       if (appointment.payment) {
-  //         // await this.paymentsService.processRefund(
-  //         //   appointment.payment,
-  //         //   manager,
-  //         // );
-  //         refundProcessed = true;
-  //       }
-  //       notificationMessage = 'Đã hủy lịch. Bạn sẽ được hoàn 100% chi phí.';
-  //     } else {
-  //       appointment.appointmentStatus = AppointmentStatus.CANCELLED;
-  //       appointment.terminatedReason =
-  //         TerminationReason.CUSTOMER_CANCELLED_LATE;
-  //       notificationMessage =
-  //         'Đã hủy lịch. Không áp dụng hoàn tiền do hủy muộn.';
-  //     }
-
-  //     // Always release the slot
-  //     if (appointment.availabilitySlot) {
-  //       await this.availabilitySlotsService.releaseSlot(
-  //         appointment.availabilitySlot.slotId,
-  //         manager,
-  //       );
-  //     }
-
-  //     await appointmentRepo.save(appointment);
-
-  //     // 9. Send Notification (TODO)
-  //     // await this.notificationsService.sendNotification(
-  //     //   customer.userId,
-  //     //   `Hủy lịch thành công: ${notificationMessage}`
-  //     // );
-  //     // await this.notificationsService.sendNotification(
-  //     //   appointment.dermatologist.userId,
-  //     //   `Lịch hẹn ${appointmentId} đã bị khách hàng hủy.`
-  //     // );
-
-  //     return {
-  //       message: notificationMessage,
-  //       refundProcessed: refundProcessed,
-  //     };
-  //   });
-  // }
-
-  async cancelMyAppointment(userId: string, appointmentId: string) {
-    const customer = await this.customersService.findByUserId(userId);
-    if (!customer) {
-      throw new NotFoundException('Customer profile not found.');
+    if (shouldRefund) {
+      if (appointment.payment) {
+        // await this.paymentsService.requestRefund(
+        //   appointment.payment,
+        //   Number(appointment.price),
+        //   manager,
+        // );
+        refundMessage = 'Yêu cầu hoàn tiền 100% của bạn đang được xử lý.';
+      } else if (appointment.customerSubscription) {
+        await this.customerSubscriptionService.refundSession(
+          appointment.customerSubscription.id,
+          manager,
+        );
+        refundMessage = '1 lượt khám đã được hoàn lại vào gói của bạn.';
+      }
+    } else {
+      refundMessage =
+        'Đã hủy lịch. Không áp dụng hoàn tiền/hoàn lượt (do hủy muộn).';
     }
 
-    return this.entityManager.transaction(async (manager) => {
-      const appointmentRepo = manager.getRepository(Appointment);
+    if (appointment.availabilitySlot) {
+      await this.availabilitySlotsService.releaseSlot(
+        appointment.availabilitySlot.slotId,
+        manager,
+      );
+    }
 
-      const appointment = await appointmentRepo.findOne({
+    this.logger.log(
+      `Appointment ${appointment.appointmentId} cancelled. Reason: ${reason}`,
+    );
+
+    return {
+      message: refundMessage,
+      terminatedReason: reason,
+    };
+  }
+
+  private async processNoShowReport(
+    appointmentId: string,
+    entityId: string,
+    reportingRole: UserRole,
+  ): Promise<AppointmentActionResult> {
+    return this.entityManager.transaction(async (manager) => {
+      const appRepo = manager.getRepository(Appointment);
+
+      const findOptions: FindOneOptions<Appointment> = {
         where: {
           appointmentId: appointmentId,
-          customer: { customerId: customer.customerId },
+          ...(reportingRole === UserRole.CUSTOMER
+            ? { customer: { customerId: entityId } }
+            : { dermatologist: { dermatologistId: entityId } }),
         },
-        relations: ['payment', 'availabilitySlot', 'customerSubscription'], // 👈 THÊM
-      });
+        relations: ['payment', 'customerSubscription'],
+      };
+
+      const appointment = await appRepo.findOne(findOptions);
 
       if (!appointment) {
         throw new NotFoundException(
@@ -388,93 +536,202 @@ export class AppointmentsService {
         );
       }
 
-      if (appointment.appointmentStatus !== AppointmentStatus.SCHEDULED) {
+      if (appointment.appointmentStatus !== AppointmentStatus.IN_PROGRESS) {
         throw new BadRequestException(
-          `Cannot cancel an appointment with status: ${appointment.appointmentStatus}`,
+          'Can only report NO-SHOW for an in-progress appointment.',
         );
       }
 
-      // Calculate time difference
-      const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
-      const now_ms = new Date().getTime();
-      const appointment_ms = appointment.startTime.getTime();
-      const msDifference = appointment_ms - now_ms;
-
-      let refundMessage = '';
-
-      if (msDifference > MS_IN_24_HOURS) {
-        this.logger.log(
-          `Processing Early Cancel for appointment: ${appointmentId}`,
+      // Check waiting time (Grace Period)
+      if (
+        new Date().getTime() <
+        appointment.startTime.getTime() + this.GRACE_PERIOD_MS
+      ) {
+        throw new BadRequestException(
+          `Cannot mark NO-SHOW before grace period (${this.GRACE_PERIOD_MS / 60000} minutes) is over.`,
         );
+      }
 
-        appointment.appointmentStatus = AppointmentStatus.CANCELLED;
-        appointment.terminatedReason =
-          TerminationReason.CUSTOMER_CANCELLED_EARLY;
+      let terminatedReason: TerminationReason;
+      let refundMessage = '';
+      // BUSINESS LOGIC FOR NO-SHOW REPORTING DERMATOLOGIST
+      if (reportingRole === UserRole.CUSTOMER) {
+        if (!appointment.customerJoinedAt) {
+          throw new BadRequestException('You must check-in first.');
+        }
+        if (appointment.dermatologistJoinedAt) {
+          throw new BadRequestException(
+            'Dermatologist has already joined this appointment.',
+          );
+        }
 
-        // Refund if payment exists
+        terminatedReason = TerminationReason.DOCTOR_NO_SHOW;
+
         if (appointment.payment) {
           // await this.paymentsService.requestRefund(
           //   appointment.payment,
           //   Number(appointment.price),
+          //   TerminationReason.DOCTOR_NO_SHOW,
           //   manager,
           // );
           refundMessage =
-            'Đã hủy lịch. Yêu cầu hoàn 100% chi phí đang được xử lý.';
+            'Yêu cầu hoàn tiền 100% (do bác sĩ vắng mặt) đang được xử lý.';
         } else if (appointment.customerSubscription) {
           await this.customerSubscriptionService.refundSession(
             appointment.customerSubscription.id,
             manager,
           );
           refundMessage =
-            'Đã hủy lịch. Một (1) lượt khám đã được hoàn lại vào gói của bạn.';
-        } else {
-          // C. Free (ADMIN CREATED)
-          refundMessage = 'Đã hủy lịch (miễn phí).';
+            '1 lượt khám đã được hoàn lại vào gói của bạn (do bác sĩ vắng mặt).';
         }
       } else {
-        // Late Cancel
-        this.logger.log(
-          `Processing Late Cancel for appointment: ${appointmentId}`,
-        );
-
-        appointment.appointmentStatus = AppointmentStatus.CANCELLED;
-        appointment.terminatedReason =
-          TerminationReason.CUSTOMER_CANCELLED_LATE;
-
-        if (appointment.payment) {
-          refundMessage = 'Đã hủy lịch. Không áp dụng hoàn tiền do hủy muộn.';
-        } else if (appointment.customerSubscription) {
-          refundMessage =
-            'Đã hủy lịch. Không áp dụng hoàn lại lượt khám do hủy muộn.';
-        } else {
-          refundMessage = 'Đã hủy lịch muộn (miễn phí).';
+        // BUSINESS LOGIC FOR NO-SHOW REPORTING CUSTOMER
+        if (!appointment.dermatologistJoinedAt) {
+          throw new BadRequestException('You must check-in first.');
         }
+        if (appointment.customerJoinedAt) {
+          throw new BadRequestException(
+            'Customer has already joined this appointment.',
+          );
+        }
+
+        terminatedReason = TerminationReason.CUSTOMER_NO_SHOW;
+
+        refundMessage = 'Cuộc hẹn đã được ghi nhận là khách hàng vắng mặt.';
       }
 
-      // Always release the slot
-      if (appointment.availabilitySlot) {
-        await this.availabilitySlotsService.releaseSlot(
-          appointment.availabilitySlot.slotId,
-          manager,
-        );
-      }
+      appointment.appointmentStatus = AppointmentStatus.NO_SHOW;
+      appointment.terminatedReason = terminatedReason;
+      await appRepo.save(appointment);
 
-      await appointmentRepo.save(appointment);
+      this.logger.log(
+        `Appointment ${appointmentId} marked as ${terminatedReason} by ${reportingRole}.`,
+      );
 
-      // 9. Send Notification (TODO)
-      // await this.notificationsService.sendNotification(
-      //   customer.userId,
-      //   `Hủy lịch thành công: ${notificationMessage}`
-      // );
-      // await this.notificationsService.sendNotification(
-      //   appointment.dermatologist.userId,
-      //   `Lịch hẹn ${appointmentId} đã bị khách hàng hủy.`
-      // );
-
-      return {
-        message: refundMessage,
-      };
+      return { message: refundMessage };
     });
+  }
+  async reportCustomerNoShow(
+    userId: string, // userId of Dermatologist
+    appointmentId: string,
+  ): Promise<AppointmentActionResult> {
+    const dermatologist = await this.dermatologistsService.findByUserId(userId);
+
+    return this.processNoShowReport(
+      appointmentId,
+      dermatologist.dermatologistId,
+      UserRole.DERMATOLOGIST,
+    );
+  }
+
+  async reportDoctorNoShow(
+    userId: string, // userId of Customer
+    appointmentId: string,
+  ): Promise<AppointmentActionResult> {
+    const customer = await this.customersService.findByUserId(userId);
+    return this.processNoShowReport(
+      appointmentId,
+      customer.customerId,
+      UserRole.CUSTOMER,
+    );
+  }
+
+  async cancelMyAppointment(userId: string, appointmentId: string) {
+    try {
+      const customer = await this.customersService.findByUserId(userId);
+      return this.entityManager.transaction(async (manager) => {
+        const appointmentRepo = manager.getRepository(Appointment);
+
+        const appointment = await appointmentRepo.findOne({
+          where: {
+            appointmentId: appointmentId,
+            customer: { customerId: customer.customerId },
+          },
+          relations: ['payment', 'availabilitySlot', 'customerSubscription'],
+        });
+
+        if (!appointment) {
+          throw new NotFoundException(
+            'Appointment not found or you do not own it.',
+          );
+        }
+
+        if (appointment.appointmentStatus !== AppointmentStatus.SCHEDULED) {
+          throw new BadRequestException(
+            `Cannot cancel an appointment with status: ${appointment.appointmentStatus}`,
+          );
+        }
+
+        const MS_IN_24_HOURS = 24 * 60 * 60 * 1000;
+        const msDifference =
+          appointment.startTime.getTime() - new Date().getTime();
+
+        if (msDifference > MS_IN_24_HOURS) {
+          // Early Cancel
+          return this.executeCancellation(
+            manager,
+            appointment,
+            TerminationReason.CUSTOMER_CANCELLED_EARLY,
+            true,
+          );
+        } else {
+          // Late Cancel
+          return this.executeCancellation(
+            manager,
+            appointment,
+            TerminationReason.CUSTOMER_CANCELLED_LATE,
+            false,
+          );
+        }
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error cancelling appointment ${appointmentId} for user ${userId}: ${error.message}`,
+      );
+      throw error;
+    }
+  }
+
+  async cancelByDermatologist(userId: string, appointmentId: string) {
+    try {
+      const dermatologist =
+        await this.dermatologistsService.findByUserId(userId);
+
+      return this.entityManager.transaction(async (manager) => {
+        const appointmentRepo = manager.getRepository(Appointment);
+        const appointment = await appointmentRepo.findOne({
+          where: {
+            appointmentId: appointmentId,
+            dermatologist: { dermatologistId: dermatologist.dermatologistId },
+          },
+          relations: ['payment', 'availabilitySlot', 'customerSubscription'],
+        });
+
+        if (!appointment) {
+          throw new NotFoundException(
+            'Appointment not found or you do not own it.',
+          );
+        }
+
+        if (appointment.appointmentStatus !== AppointmentStatus.SCHEDULED) {
+          throw new BadRequestException(
+            `Cannot cancel an appointment with status: ${appointment.appointmentStatus}`,
+          );
+        }
+
+        return this.executeCancellation(
+          manager,
+          appointment,
+          TerminationReason.DOCTOR_CANCELLED,
+          true, //
+        );
+      });
+    } catch (error) {
+      this.logger.error(
+        `Error cancelling appointment ${appointmentId} by dermatologist ${userId}: ${error.message}`,
+      );
+      throw error;
+    }
   }
 
   /**
@@ -569,6 +826,112 @@ export class AppointmentsService {
           `Failed to process appointment ${appointment.appointmentId}: ${error.message}`,
         );
       }
+    }
+  }
+
+  @Cron(CronExpression.EVERY_30_MINUTES)
+  async handleCleanupEndedAppointments() {
+    this.logger.log(
+      'Running Cron Job: Cleaning up ended appointments (NO_SHOW check)...',
+    );
+
+    // Find appointments that ended more than 15 minutes ago and are still SCHEDULED or IN_PROGRESS
+    const fifteenMinutesAgo = subMinutes(new Date(), 15);
+
+    const stuckAppointments = await this.appointmentRepository.find({
+      select: [
+        'appointmentId',
+        'customerJoinedAt',
+        'dermatologistJoinedAt',
+        'appointmentStatus',
+      ],
+      where: [
+        {
+          appointmentStatus: AppointmentStatus.SCHEDULED,
+          endTime: LessThan(fifteenMinutesAgo),
+        },
+        {
+          appointmentStatus: AppointmentStatus.IN_PROGRESS,
+          endTime: LessThan(fifteenMinutesAgo),
+        },
+      ],
+    });
+
+    if (stuckAppointments.length === 0) {
+      this.logger.log('Cron Job (Cleanup): No stuck appointments found.');
+      return;
+    }
+
+    this.logger.log(
+      `Cron Job (Cleanup): Found ${stuckAppointments.length} appointments to process.`,
+    );
+
+    for (const stuckAppt of stuckAppointments) {
+      const hasCustomer = !!stuckAppt.customerJoinedAt;
+      const hasDoctor = !!stuckAppt.dermatologistJoinedAt;
+
+      await this.entityManager
+        .transaction(async (manager) => {
+          const appointment = await manager.findOne(Appointment, {
+            where: { appointmentId: stuckAppt.appointmentId },
+            relations: ['payment', 'customerSubscription'],
+          });
+
+          if (!appointment) {
+            this.logger.error(
+              `Failed to find full appointment for ID: ${stuckAppt.appointmentId}`,
+            );
+            return;
+          }
+          let shouldRefund = false;
+          let reason: TerminationReason;
+
+          if (hasCustomer && hasDoctor) {
+            appointment.appointmentStatus = AppointmentStatus.COMPLETED;
+            await manager.save(appointment);
+            return;
+          } else if (hasCustomer && !hasDoctor) {
+            reason = TerminationReason.DOCTOR_NO_SHOW;
+            shouldRefund = true;
+          } else if (!hasCustomer && hasDoctor) {
+            reason = TerminationReason.CUSTOMER_NO_SHOW;
+            shouldRefund = false;
+          }
+
+          // Both no-show
+          else {
+            reason = TerminationReason.CUSTOMER_NO_SHOW;
+            shouldRefund = false;
+          }
+
+          appointment.appointmentStatus = AppointmentStatus.NO_SHOW;
+          appointment.terminatedReason = reason;
+          await manager.save(appointment);
+
+          if (shouldRefund) {
+            if (appointment.payment) {
+              // await this.paymentsService.requestRefund(
+              //   appointment.payment,
+              //   Number(appointment.price),
+              //   manager,
+              // );
+            } else if (appointment.customerSubscription) {
+              await this.customerSubscriptionService.refundSession(
+                appointment.customerSubscription.id,
+                manager,
+              );
+            }
+          }
+
+          this.logger.log(
+            `Cleaned up Appt ${appointment.appointmentId}, final status: NO_SHOW, Reason: ${reason}`,
+          );
+        })
+        .catch((error) => {
+          this.logger.error(
+            `Failed to cleanup Appt ${stuckAppt.appointmentId}: ${error.message}`,
+          );
+        });
     }
   }
 }

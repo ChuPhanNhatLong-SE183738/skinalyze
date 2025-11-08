@@ -16,16 +16,21 @@ import {
   AppointmentReservationResult,
 } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
-import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
+import {
+  InterruptAppointmentDto,
+  UpdateAppointmentStatusDto,
+} from './dto/update-appointment-status.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User, UserRole } from 'src/users/entities/user.entity';
 import { CreatedResponse, ResponseHelper } from 'src/utils/responses';
 import { Roles } from 'src/auth/decorators/roles.decorator';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Appointment } from './entities/appointment.entity';
 import { CreateSubscriptionAppointmentDto } from './dto/create-subscription-appointment.dto';
+import { CompleteAppointmentDto } from './dto/complete-appointment-dto';
 
+@ApiTags('Appointments')
 @Controller('appointments')
 @UseGuards(JwtAuthGuard)
 export class AppointmentsController {
@@ -109,6 +114,141 @@ export class AppointmentsController {
     );
 
     return ResponseHelper.success('Appointment cancelled successfully', result);
+  }
+
+  @Patch('dermatologist/:id/report-no-show')
+  @Roles(UserRole.DERMATOLOGIST)
+  async reportCustomerNoShow(
+    @GetUser() user: User,
+    @Param('id', new ParseUUIDPipe()) appointmentId: string,
+  ) {
+    const result = await this.appointmentsService.reportCustomerNoShow(
+      user.userId,
+      appointmentId,
+    );
+    return ResponseHelper.success(result.message, result);
+  }
+
+  @Patch('my/:id/report-no-show')
+  @Roles(UserRole.CUSTOMER)
+  async reportDoctorNoShow(
+    @GetUser() user: User,
+    @Param('id', new ParseUUIDPipe()) appointmentId: string,
+  ) {
+    const result = await this.appointmentsService.reportDoctorNoShow(
+      user.userId,
+      appointmentId,
+    );
+    return ResponseHelper.success(result.message, result);
+  }
+
+  @Patch('dermatologist/:id/report-interrupt')
+  @Roles(UserRole.DERMATOLOGIST)
+  async interruptByDermatologist(
+    @GetUser() user: User,
+    @Param('id', new ParseUUIDPipe()) appointmentId: string,
+    @Body() dto: InterruptAppointmentDto,
+  ) {
+    const result = await this.appointmentsService.interruptAppointment(
+      user.userId,
+      UserRole.DERMATOLOGIST,
+      appointmentId,
+      dto,
+    );
+    return ResponseHelper.success(
+      'Appointment reported as INTERRUPTED',
+      result,
+    );
+  }
+
+  @Patch('my/:id/report-interrupt')
+  @Roles(UserRole.CUSTOMER)
+  async interruptByCustomer(
+    @GetUser() user: User,
+    @Param('id', new ParseUUIDPipe()) appointmentId: string,
+    @Body() dto: InterruptAppointmentDto,
+  ) {
+    const result = await this.appointmentsService.interruptAppointment(
+      user.userId,
+      UserRole.CUSTOMER,
+      appointmentId,
+      dto,
+    );
+    return ResponseHelper.success(
+      'Appointment reported as INTERRUPTED',
+      result,
+    );
+  }
+  @Patch('dermatologist/:id/cancel')
+  @Roles(UserRole.DERMATOLOGIST)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancel an appointment (Dermatologist only)' })
+  async cancelByDermatologist(
+    @GetUser() user: User,
+    @Param('id', new ParseUUIDPipe()) appointmentId: string,
+  ) {
+    const result = await this.appointmentsService.cancelByDermatologist(
+      user.userId,
+      appointmentId,
+    );
+    return ResponseHelper.success(
+      'Appointment cancelled by dermatologist',
+      result,
+    );
+  }
+
+  @Patch('dermatologist/:id/complete')
+  @Roles(UserRole.DERMATOLOGIST)
+  @ApiOperation({ summary: 'Mark appointment as COMPLETED (Doctor only)' })
+  @ApiOkResponse({ description: 'Appointment marked as COMPLETED' })
+  async completeAppointment(
+    @GetUser() user: User,
+    @Param('id', new ParseUUIDPipe()) appointmentId: string,
+    @Body() dto: CompleteAppointmentDto,
+  ) {
+    const updatedAppointment =
+      await this.appointmentsService.completeAppointment(
+        user.userId,
+        appointmentId,
+        dto,
+      );
+
+    return ResponseHelper.success(
+      'Appointment marked as COMPLETED',
+      updatedAppointment,
+    );
+  }
+
+  @Patch('my/:id/check-in')
+  @Roles(UserRole.CUSTOMER)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Check-in to my appointment (Customer only)' })
+  async checkInCustomer(
+    @GetUser() user: User,
+    @Param('id', new ParseUUIDPipe()) appointmentId: string,
+  ) {
+    await this.appointmentsService.recordCheckIn(
+      appointmentId,
+      user.userId,
+      UserRole.CUSTOMER,
+    );
+    return ResponseHelper.success('Customer check-in recorded');
+  }
+
+  @Patch('dermatologist/:id/check-in')
+  @Roles(UserRole.DERMATOLOGIST)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Check-in to an appointment (Dermatologist only)' })
+  async checkInDermatologist(
+    @GetUser() user: User,
+    @Param('id', new ParseUUIDPipe()) appointmentId: string,
+  ) {
+    await this.appointmentsService.recordCheckIn(
+      appointmentId,
+      user.userId,
+      UserRole.DERMATOLOGIST,
+    );
+    return ResponseHelper.success('Dermatologist check-in recorded');
   }
 
   @Patch(':appointmentId/generate-meet-link')
