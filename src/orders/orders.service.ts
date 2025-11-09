@@ -307,6 +307,32 @@ export class OrdersService {
       throw new BadRequestException('Cart is empty');
     }
 
+    // 2.5. ✅ VALIDATE INVENTORY TRƯỚC KHI TẠO ORDER
+    this.logger.log('🔍 Validating inventory for all cart items...');
+    for (const cartItem of cart.items) {
+      try {
+        // Kiểm tra xem có đủ reserved quantity không
+        const canConfirm = await this.inventoryService.canConfirmSale(
+          cartItem.productId,
+          cartItem.quantity,
+        );
+        
+        if (!canConfirm) {
+          throw new BadRequestException(
+            `Sản phẩm "${cartItem.productName}" không đủ hàng đã reserve. Vui lòng kiểm tra lại giỏ hàng.`,
+          );
+        }
+      } catch (error) {
+        this.logger.error(
+          `❌ Inventory validation failed for ${cartItem.productId}: ${error.message}`,
+        );
+        throw new BadRequestException(
+          `Không thể xác nhận tồn kho cho "${cartItem.productName}". ${error.message}`,
+        );
+      }
+    }
+    this.logger.log('✅ All inventory validated successfully');
+
     // 3. Tính total amount từ cart
     const totalAmount = cart.items.reduce(
       (sum, item) => sum + (item.price || 0) * item.quantity,
@@ -438,11 +464,29 @@ export class OrdersService {
     );
     await this.orderItemRepository.save(orderItems);
 
-    // 8. Confirm sale trong inventory (chuyển reserve → sold)
-    for (const cartItem of cart.items) {
-      await this.inventoryService.confirmSale(
-        cartItem.productId,
-        cartItem.quantity,
+    // 8. ✅ Confirm sale trong inventory (chuyển reserve → sold) với error handling
+    try {
+      this.logger.log('📦 Confirming sales in inventory...');
+      for (const cartItem of cart.items) {
+        await this.inventoryService.confirmSale(
+          cartItem.productId,
+          cartItem.quantity,
+        );
+        this.logger.log(
+          `✅ Confirmed ${cartItem.quantity}x ${cartItem.productName}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(`❌ Failed to confirm sales: ${error.message}`);
+      
+      // ⚠️ ROLLBACK: Xóa order và payment vừa tạo
+      this.logger.warn(`🔄 Rolling back order ${savedOrder.orderId}...`);
+      await this.orderItemRepository.delete({ orderId: savedOrder.orderId });
+      await this.orderRepository.delete({ orderId: savedOrder.orderId });
+      await this.paymentRepository.delete({ paymentId: savedPayment.paymentId });
+      
+      throw new BadRequestException(
+        `Không thể hoàn tất đơn hàng: ${error.message}. Vui lòng thử lại.`,
       );
     }
 

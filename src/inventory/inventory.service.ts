@@ -208,6 +208,22 @@ export class InventoryService {
   }
 
   /**
+   * ✅ Kiểm tra xem có thể confirm sale không (dùng để validate trước khi tạo order)
+   */
+  async canConfirmSale(productId: string, quantity: number): Promise<boolean> {
+    const inventory = await this.inventoryRepository.findOne({
+      where: { productId },
+    });
+
+    if (!inventory) {
+      return false;
+    }
+
+    // Check nếu có đủ reserved stock
+    return inventory.reservedStock >= quantity;
+  }
+
+  /**
    * 💳 Reduce stock directly (for paid orders without reservation)
    * Dùng khi order đã thanh toán, trừ stock trực tiếp
    */
