@@ -57,7 +57,8 @@ import { ChatMessage } from './chat-messages/entities/chat-message.entity';
 import { ChatSession } from './chat-sessions/entities/chat-session.entity';
 import { TrackingModule } from './tracking/tracking.module';
 import { ScheduleModule } from '@nestjs/schedule';
-
+import { ReviewsModule } from './reviews/reviews.module';
+import { Review } from './reviews/entities/review.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -98,6 +99,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         AvailabilitySlot,
         ChatMessage,
         ChatSession,
+        Review,
       ],
       synchronize: true, // Auto-create tables - disable after first deployment
       logging: process.env.NODE_ENV === 'development',
@@ -130,6 +132,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ChatSessionsModule,
     ChatMessagesModule,
     TrackingModule,
+    ReviewsModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],
