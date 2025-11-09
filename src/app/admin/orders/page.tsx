@@ -122,7 +122,9 @@ export default function AdminOrdersPage() {
           order.shippingAddress
             .toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
-          order.customerId.toLowerCase().includes(searchQuery.toLowerCase())
+          order.customerId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          order.customer?.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          order.customer?.user?.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -346,9 +348,16 @@ export default function AdminOrdersPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-slate-700">
-                              {order.customerId}
-                            </span>
+                            <div className="text-sm">
+                              <div className="font-medium text-slate-900">
+                                {order.customer?.user?.fullName || order.customer?.user?.email || 'N/A'}
+                              </div>
+                              {order.customer?.user?.fullName && order.customer?.user?.email && (
+                                <div className="text-slate-500 text-xs">
+                                  {order.customer.user.email}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-slate-600">

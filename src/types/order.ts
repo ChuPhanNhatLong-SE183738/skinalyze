@@ -32,6 +32,12 @@ export interface OrderItem {
 
 export interface Customer {
   customerId: string;
+  user?: {
+    userId: string;
+    email: string;
+    fullName?: string;
+    phoneNumber?: string;
+  };
   aiUsageAmount?: number;
   allergicTo?: any;
   pastDermatologicalHistory?: any;

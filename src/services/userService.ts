@@ -11,13 +11,10 @@ export class UserService {
    */
   async getUsers(page = 1, limit = 10): Promise<UsersResponse> {
     try {
-      const response = await fetch(
-        `/api/users?page=${page}&limit=${limit}`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      const response = await fetch(`/api/users?page=${page}&limit=${limit}`, {
+        method: "GET",
+        credentials: "include",
+      });
 
       if (!response.ok) {
         const error = await response.json();
@@ -25,37 +22,37 @@ export class UserService {
       }
 
       const result = await response.json();
-      
+
       // Handle backend response format: { data: [...], message, statusCode }
       if (result.data && Array.isArray(result.data)) {
         return {
           users: result.data,
           total: result.data.length,
           page: page,
-          limit: limit
+          limit: limit,
         };
       }
-      
+
       // Handle if backend returns array directly
       if (Array.isArray(result)) {
         return {
           users: result,
           total: result.length,
           page: page,
-          limit: limit
+          limit: limit,
         };
       }
-      
+
       // Handle if backend returns { users: [...] }
       if (result.users && Array.isArray(result.users)) {
         return {
           users: result.users,
           total: result.total || result.users.length,
           page: result.page || page,
-          limit: result.limit || limit
+          limit: result.limit || limit,
         };
       }
-      
+
       return result;
     } catch (error: any) {
       throw new Error(error.message || "Failed to fetch users");
@@ -113,10 +110,7 @@ export class UserService {
   /**
    * Update an existing user
    */
-  async updateUser(
-    userId: string,
-    data: UpdateUserRequest
-  ): Promise<User> {
+  async updateUser(userId: string, data: UpdateUserRequest): Promise<User> {
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: "PATCH",
@@ -155,6 +149,28 @@ export class UserService {
       }
     } catch (error: any) {
       throw new Error(error.message || "Failed to delete user");
+    }
+  }
+
+  /**
+   * Reset user password (admin only)
+   */
+  async resetPassword(userId: string): Promise<{ newPassword: string }> {
+    try {
+      const response = await fetch(`/api/users/${userId}/reset-password`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to reset password");
+      }
+
+      const result = await response.json();
+      return result.data || result;
+    } catch (error: any) {
+      throw new Error(error.message || "Failed to reset password");
     }
   }
 }

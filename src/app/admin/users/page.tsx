@@ -5,10 +5,23 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { UserFormModal } from "@/components/users/UserFormModal";
 import { userService } from "@/services/userService";
 import type { User, CreateUserRequest, UpdateUserRequest } from "@/types/user";
-import { Search, UserPlus, Pencil, Trash2, Users, UserCheck, Shield, Briefcase, UserCircle, Stethoscope } from "lucide-react";
+import {
+  Search,
+  UserPlus,
+  Pencil,
+  Trash2,
+  Users,
+  UserCheck,
+  Shield,
+  Briefcase,
+  UserCircle,
+  Stethoscope,
+  Key,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function UsersPage() {
@@ -21,6 +34,15 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
+
+  // Confirmation dialog states
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [resetPasswordConfirmOpen, setResetPasswordConfirmOpen] =
+    useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToResetPassword, setUserToResetPassword] = useState<User | null>(
+    null
+  );
 
   const fetchUsers = async (page = 1) => {
     try {
@@ -58,8 +80,6 @@ export default function UsersPage() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-
     try {
       await userService.deleteUser(userId);
       toast({
@@ -76,6 +96,34 @@ export default function UsersPage() {
         description: "Failed to delete user. Please try again.",
       });
     }
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    try {
+      const result = await userService.resetPassword(userId);
+      toast({
+        variant: "success",
+        title: "Password Reset Successful",
+        description: "The user's password has been reset successfully.",
+      });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      toast({
+        variant: "error",
+        title: "Error",
+        description: "Failed to reset password. Please try again.",
+      });
+    }
+  };
+
+  const confirmDeleteUser = (user: User) => {
+    setUserToDelete(user);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmResetPassword = (user: User) => {
+    setUserToResetPassword(user);
+    setResetPasswordConfirmOpen(true);
   };
 
   const handleSubmit = async (data: CreateUserRequest | UpdateUserRequest) => {
@@ -101,7 +149,9 @@ export default function UsersPage() {
       toast({
         variant: "error",
         title: "Error",
-        description: `Failed to ${modalMode === "create" ? "create" : "update"} user. Please try again.`,
+        description: `Failed to ${
+          modalMode === "create" ? "create" : "update"
+        } user. Please try again.`,
       });
       throw error;
     }
@@ -118,7 +168,8 @@ export default function UsersPage() {
     active: (users || []).filter((u) => u.isActive).length,
     admins: (users || []).filter((u) => u.role === "admin").length,
     staff: (users || []).filter((u) => u.role === "staff").length,
-    dermatologists: (users || []).filter((u) => u.role === "dermatologist").length,
+    dermatologists: (users || []).filter((u) => u.role === "dermatologist")
+      .length,
     customers: (users || []).filter((u) => u.role === "customer").length,
   };
 
@@ -140,8 +191,12 @@ export default function UsersPage() {
       <div className="p-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">User Management</h1>
-            <p className="text-slate-600 mt-1">Manage system users and their roles</p>
+            <h1 className="text-3xl font-bold text-slate-900">
+              User Management
+            </h1>
+            <p className="text-slate-600 mt-1">
+              Manage system users and their roles
+            </p>
           </div>
           <Button
             onClick={handleAddUser}
@@ -161,7 +216,9 @@ export default function UsersPage() {
               </div>
               <div>
                 <p className="text-sm text-slate-600">Total Users</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+                <p className="text-2xl font-bold text-slate-900">
+                  {stats.total}
+                </p>
               </div>
             </div>
           </Card>
@@ -173,7 +230,9 @@ export default function UsersPage() {
               </div>
               <div>
                 <p className="text-sm text-slate-600">Active</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.active}</p>
+                <p className="text-2xl font-bold text-slate-900">
+                  {stats.active}
+                </p>
               </div>
             </div>
           </Card>
@@ -185,7 +244,9 @@ export default function UsersPage() {
               </div>
               <div>
                 <p className="text-sm text-slate-600">Admins</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.admins}</p>
+                <p className="text-2xl font-bold text-slate-900">
+                  {stats.admins}
+                </p>
               </div>
             </div>
           </Card>
@@ -197,7 +258,9 @@ export default function UsersPage() {
               </div>
               <div>
                 <p className="text-sm text-slate-600">Staff</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.staff}</p>
+                <p className="text-2xl font-bold text-slate-900">
+                  {stats.staff}
+                </p>
               </div>
             </div>
           </Card>
@@ -209,7 +272,9 @@ export default function UsersPage() {
               </div>
               <div>
                 <p className="text-sm text-slate-600">Dermatologists</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.dermatologists}</p>
+                <p className="text-2xl font-bold text-slate-900">
+                  {stats.dermatologists}
+                </p>
               </div>
             </div>
           </Card>
@@ -221,7 +286,9 @@ export default function UsersPage() {
               </div>
               <div>
                 <p className="text-sm text-slate-600">Customers</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.customers}</p>
+                <p className="text-2xl font-bold text-slate-900">
+                  {stats.customers}
+                </p>
               </div>
             </div>
           </Card>
@@ -274,17 +341,24 @@ export default function UsersPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {filteredUsers.map((user) => (
-                    <tr key={user.userId} className="hover:bg-slate-50 transition-colors">
+                    <tr
+                      key={user.userId}
+                      className="hover:bg-slate-50 transition-colors"
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-slate-900">
                           {user.fullName}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-600">{user.email}</div>
+                        <div className="text-sm text-slate-600">
+                          {user.email}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-600">{user.phone || "N/A"}</div>
+                        <div className="text-sm text-slate-600">
+                          {user.phone || "N/A"}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -316,7 +390,14 @@ export default function UsersPage() {
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteUser(user.userId)}
+                            onClick={() => confirmResetPassword(user)}
+                            className="text-blue-600 hover:text-blue-700 transition-colors"
+                            title="Reset Password"
+                          >
+                            <Key className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => confirmDeleteUser(user)}
                             className="text-red-600 hover:text-red-700 transition-colors"
                             title="Delete User"
                           >
@@ -332,7 +413,9 @@ export default function UsersPage() {
               {filteredUsers.length === 0 && (
                 <div className="text-center py-12">
                   <Users className="mx-auto h-12 w-12 text-slate-400" />
-                  <h3 className="mt-2 text-sm font-medium text-slate-900">No users found</h3>
+                  <h3 className="mt-2 text-sm font-medium text-slate-900">
+                    No users found
+                  </h3>
                   <p className="mt-1 text-sm text-slate-500">
                     {searchTerm
                       ? "Try adjusting your search"
@@ -378,6 +461,37 @@ export default function UsersPage() {
           onSubmit={handleSubmit}
           user={selectedUser}
           mode={modalMode}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          open={deleteConfirmOpen}
+          onOpenChange={setDeleteConfirmOpen}
+          title="Delete User"
+          description={`Are you sure you want to delete ${
+            userToDelete?.fullName || "this user"
+          }? This action cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          variant="destructive"
+          onConfirm={() =>
+            userToDelete && handleDeleteUser(userToDelete.userId)
+          }
+        />
+
+        {/* Reset Password Confirmation Dialog */}
+        <ConfirmDialog
+          open={resetPasswordConfirmOpen}
+          onOpenChange={setResetPasswordConfirmOpen}
+          title="Reset Password"
+          description={`Are you sure you want to reset the password for ${userToResetPassword?.email}? A new temporary password will be generated.`}
+          confirmLabel="Reset Password"
+          cancelLabel="Cancel"
+          variant="default"
+          onConfirm={() =>
+            userToResetPassword &&
+            handleResetPassword(userToResetPassword.userId)
+          }
         />
       </div>
     </AdminLayout>

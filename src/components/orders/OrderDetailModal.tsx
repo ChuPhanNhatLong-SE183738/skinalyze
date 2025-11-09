@@ -32,6 +32,12 @@ interface Order {
   orderId: string;
   customer: {
     customerId: string;
+    user?: {
+      userId: string;
+      email: string;
+      fullName?: string;
+      phoneNumber?: string;
+    };
     aiUsageAmount?: number;
     allergicTo?: any;
     pastDermatologicalHistory?: any;
@@ -482,12 +488,38 @@ export function OrderDetailModal({
                 </h3>
               </div>
               <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-slate-500">Customer ID:</span>{" "}
-                  <span className="font-mono text-slate-900 dark:text-slate-100">
-                    {order.customerId.slice(0, 12)}...
-                  </span>
-                </div>
+                {order.customer?.user?.fullName && (
+                  <div>
+                    <span className="text-slate-500">Name:</span>{" "}
+                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                      {order.customer.user.fullName}
+                    </span>
+                  </div>
+                )}
+                {order.customer?.user?.email && (
+                  <div>
+                    <span className="text-slate-500">Email:</span>{" "}
+                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                      {order.customer.user.email}
+                    </span>
+                  </div>
+                )}
+                {order.customer?.user?.phoneNumber && (
+                  <div>
+                    <span className="text-slate-500">Phone:</span>{" "}
+                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                      {order.customer.user.phoneNumber}
+                    </span>
+                  </div>
+                )}
+                {order.customerId && (
+                  <div>
+                    <span className="text-slate-500">Customer ID:</span>{" "}
+                    <span className="font-mono text-xs text-slate-600 dark:text-slate-400">
+                      {order.customerId.slice(0, 12)}...
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
