@@ -116,6 +116,7 @@ export class OrdersService {
     return await this.orderRepository.find({
       relations: [
         'customer',
+        'customer.user',
         'payment',
         'orderItems',
         'orderItems.product',
@@ -464,7 +465,6 @@ export class OrdersService {
     );
     await this.orderItemRepository.save(orderItems);
 
-    // 8. ✅ Confirm sale trong inventory (chuyển reserve → sold) với error handling
     try {
       this.logger.log('📦 Confirming sales in inventory...');
       for (const cartItem of cart.items) {
@@ -489,11 +489,7 @@ export class OrdersService {
         `Không thể hoàn tất đơn hàng: ${error.message}. Vui lòng thử lại.`,
       );
     }
-
-    // 9. 💳 PAYMENT INFO (KHÔNG CẦN TẠO PAYMENT CHO BANKING NỮA - ĐÃ TẠO Ở TRÊN)
-    // COD & WALLET không cần payment info vì đã xử lý rồi
-
-    // 10. Xóa cart sau khi checkout thành công (CHỈ COD & WALLET)
+    
     await this.cartService.clearCart(userId);
 
     // 11. Trả về order (CHỈ COD & WALLET)

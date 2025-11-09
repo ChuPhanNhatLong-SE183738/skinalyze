@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { ChatSession } from '../../chat-sessions/entities/chat-session.entity';
+import { Review } from '../../reviews/entities/review.entity';
 
 export enum UserRole {
   CUSTOMER = 'customer',
@@ -76,4 +77,7 @@ export class User {
 
   @OneToMany(() => ChatSession, (chatSession) => chatSession.user)
   chatSessions: ChatSession[];
+
+  @OneToMany(() => Review, (review) => review.user)
+  reviews: Review[];
 }

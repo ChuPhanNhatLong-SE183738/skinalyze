@@ -127,6 +127,37 @@ export class UsersController {
     return this.usersService.remove(id);
   }
 
+  @Post(':id/reset-password')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Reset user password and send email notification (Admin only)',
+    description:
+      'Generates a random password and sends it to user via email. If email fails, returns the password to admin.',
+  })
+  @ApiParam({ name: 'id', type: String, description: 'User UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        temporaryPassword: {
+          type: 'string',
+          description: 'Only present if email delivery failed',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async resetPassword(@Param('id') id: string) {
+    return this.usersService.adminResetPassword(id);
+  }
+
   @Post('topup')
   @Roles(UserRole.CUSTOMER, UserRole.STAFF, UserRole.ADMIN)
   @HttpCode(HttpStatus.OK)

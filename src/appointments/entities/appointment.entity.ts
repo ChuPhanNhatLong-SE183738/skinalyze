@@ -29,6 +29,12 @@ export class Appointment {
   @Column({ type: 'varchar', nullable: true })
   paymentId: string;
 
+  @Column({ type: 'datetime', nullable: true })
+  customerJoinedAt: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  dermatologistJoinedAt: Date;
+
   @Column({ type: 'datetime' })
   startTime: Date;
 
@@ -68,6 +74,9 @@ export class Appointment {
     nullable: true,
   })
   terminatedReason: TerminationReason;
+
+  @Column({ type: 'text', nullable: true })
+  terminationNote?: string;
 
   @CreateDateColumn()
   createdAt: Date;
