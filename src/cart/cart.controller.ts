@@ -248,47 +248,7 @@ export class CartController {
     await this.cartService.clearCart(user.userId);
     return ResponseHelper.success('Cart cleared successfully');
   }
-
-  @Post('sync')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Sync cart with inventory',
-    description:
-      'Synchronize cart with inventory by releasing and re-reserving stock. Use this if cart and inventory reservations are out of sync.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Cart synced successfully',
-    schema: {
-      example: {
-        statusCode: 200,
-        message: 'Cart synced with inventory successfully',
-        data: {
-          userId: '550e8400-e29b-41d4-a716-446655440000',
-          items: [
-            {
-              productId: '831bd72a-a89f-462e-b85b-96f3dd318249',
-              productName: 'Tian Tian',
-              quantity: 4,
-              price: 199.99,
-              subtotal: 799.96,
-            },
-          ],
-          totalItems: 4,
-          totalPrice: 799.96,
-          finalPrice: 799.96,
-        },
-        timestamp: '2025-10-06T10:35:00.000Z',
-      },
-    },
-  })
-  @ApiResponse({ status: 400, description: 'Insufficient stock' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async syncCart(@GetUser() user: User) {
-    const cart = await this.cartService.syncCartReservations(user.userId);
-    return ResponseHelper.success('Cart synced with inventory successfully', cart);
-  }
-
+  
   @Get('count')
   @ApiOperation({
     summary: 'Get cart item count',

@@ -257,43 +257,4 @@ export class CartService {
     const cart = await this.getCart(userId);
     return cart.totalItems;
   }
-
-  // 🔄 Sync cart with inventory reservations
-  async syncCartReservations(userId: string): Promise<Cart> {
-    const cart = await this.getCart(userId);
-
-    if (!cart || cart.items.length === 0) {
-      return cart;
-    }
-
-    for (const item of cart.items) {
-      // Release any existing reservation (ignore errors if nothing reserved)
-      try {
-        await this.inventoryService.releaseReservation(
-          item.productId,
-          item.quantity,
-        );
-      } catch (error) {
-        // Ignore - nothing was reserved
-        console.log(
-          `No reservation to release for product ${item.productId}`,
-        );
-      }
-
-      // Re-reserve correct amount from cart
-      const reserveResult = await this.inventoryService.reserveStock(
-        item.productId,
-        item.quantity,
-      );
-
-      if (!reserveResult.success) {
-        throw new BadRequestException(
-          `Cannot reserve ${item.quantity} of ${item.productName}. Insufficient stock available. Please adjust quantity.`,
-        );
-      }
-    }
-
-    console.log(`✅ Synced reservations for cart ${userId}`);
-    return cart;
-  }
 }
