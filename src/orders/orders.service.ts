@@ -116,6 +116,7 @@ export class OrdersService {
     return await this.orderRepository.find({
       relations: [
         'customer',
+        'customer.user',
         'payment',
         'orderItems',
         'orderItems.product',
@@ -440,20 +441,25 @@ export class OrdersService {
 
     // 8. Confirm sale trong inventory (chuyển reserve → sold)
     for (const cartItem of cart.items) {
-      await this.inventoryService.confirmSale(
-        cartItem.productId,
-        cartItem.quantity,
+      this.logger.log(
+        `Confirming sale: Product ${cartItem.productId}, Quantity ${cartItem.quantity}`,
       );
-    }
-
-        await this.orderItemRepository.save(orderItems);
-
-    // 8. Confirm sale trong inventory (chuyển reserve → sold)
-    for (const cartItem of cart.items) {
-      await this.inventoryService.confirmSale(
-        cartItem.productId,
-        cartItem.quantity,
-      );
+      try {
+        await this.inventoryService.confirmSale(
+          cartItem.productId,
+          cartItem.quantity,
+        );
+      } catch (error) {
+        this.logger.error(
+          `❌ Failed to confirm sale for product ${cartItem.productId}: ${error.message}`,
+        );
+        this.logger.error(
+          `Cart quantity: ${cartItem.quantity}. This might be a reservation mismatch.`,
+        );
+        throw new BadRequestException(
+          `Cannot process checkout. Product stock reservation mismatch. Please refresh your cart and try again.`,
+        );
+      }
     }
 
     // 9. 💳 PAYMENT INFO (KHÔNG CẦN TẠO PAYMENT CHO BANKING NỮA - ĐÃ TẠO Ở TRÊN)

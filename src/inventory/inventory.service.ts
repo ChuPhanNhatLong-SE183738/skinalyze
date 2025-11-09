@@ -195,15 +195,25 @@ export class InventoryService {
       throw new NotFoundException('Inventory not found');
     }
 
+    console.log(
+      `📦 confirmSale called: productId=${productId}, requested=${quantity}, reserved=${inventory.reservedStock}, current=${inventory.currentStock}`,
+    );
+
     if (inventory.reservedStock < quantity) {
+      console.error(
+        `❌ RESERVATION MISMATCH: Reserved=${inventory.reservedStock}, Requested=${quantity}, Shortfall=${quantity - inventory.reservedStock}`,
+      );
       throw new BadRequestException(
-        'Cannot confirm sale for more than reserved',
+        `Cannot confirm sale for more than reserved. Reserved: ${inventory.reservedStock}, Requested: ${quantity}`,
       );
     }
 
     inventory.currentStock -= quantity;
     inventory.reservedStock -= quantity;
     await this.inventoryRepository.save(inventory);
+    console.log(
+      `✅ Sale confirmed: New currentStock=${inventory.currentStock}, New reservedStock=${inventory.reservedStock}`,
+    );
     await this.syncProductStock(productId);
   }
 

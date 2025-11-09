@@ -10,12 +10,15 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { TopupBalanceDto } from './dto/topup-balance.dto';
 import { User } from './entities/user.entity';
 import { ResponseHelper } from '../utils/responses';
+import { EmailService } from '../email/email.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly emailService: EmailService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -30,7 +33,14 @@ export class UsersService {
       );
     }
 
-    const user = this.userRepository.create(createUserDto);
+    // Hash password before saving
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+
+    const user = this.userRepository.create({
+      ...createUserDto,
+      password: hashedPassword,
+    });
+
     return await this.userRepository.save(user);
   }
 
@@ -60,6 +70,12 @@ export class UsersService {
 
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
+
+    // If password is being updated, hash it
+    if (updateUserDto.password) {
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
+    }
+
     Object.assign(user, updateUserDto);
     return await this.userRepository.save(user);
   }
@@ -67,6 +83,50 @@ export class UsersService {
   async remove(id: string): Promise<void> {
     const user = await this.findOne(id);
     await this.userRepository.remove(user);
+  }
+
+  /**
+   * Admin reset password - generates random password and sends email to user
+   */
+  async adminResetPassword(
+    userId: string,
+  ): Promise<{ message: string; temporaryPassword?: string }> {
+    const user = await this.findOne(userId);
+
+    // Generate random 16-character password
+    const newPassword =
+      Math.random().toString(36).slice(-8) +
+      Math.random().toString(36).slice(-8).toUpperCase();
+
+    // Hash password
+    user.password = await bcrypt.hash(newPassword, 10);
+    await this.userRepository.save(user);
+
+    // Try to send email notification to user
+    let emailSent = false;
+    try {
+      await this.emailService.sendAdminPasswordResetEmail(
+        user.email,
+        user.fullName,
+        newPassword,
+      );
+      emailSent = true;
+    } catch (error) {
+      // Log error but don't fail the reset
+      console.error('Failed to send password reset email:', error.message);
+    }
+
+    // Return password to admin if email failed
+    if (emailSent) {
+      return {
+        message: `Password has been reset and sent to ${user.email}`,
+      };
+    } else {
+      return {
+        message: `Password has been reset but email delivery failed. Please provide this password to the user manually.`,
+        temporaryPassword: newPassword,
+      };
+    }
   }
 
   async topupBalance(userId: string, topupDto: TopupBalanceDto) {

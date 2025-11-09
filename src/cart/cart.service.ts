@@ -72,7 +72,14 @@ export class CartService {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
-    // 🔥 RESERVE INVENTORY (simple - no batch tracking)
+    // Get current cart first to check if product exists
+    const cart = await this.getCart(userId);
+
+    const existingItemIndex = cart.items.findIndex(
+      (item) => item.productId === productId,
+    );
+
+    // 🔥 RESERVE INVENTORY (only reserve the NEW quantity being added)
     const reserveResult = await this.inventoryService.reserveStock(
       productId,
       quantity,
@@ -81,13 +88,6 @@ export class CartService {
     if (!reserveResult.success) {
       throw new BadRequestException('Không đủ hàng trong kho');
     }
-
-    // Get current cart
-    const cart = await this.getCart(userId);
-
-    const existingItemIndex = cart.items.findIndex(
-      (item) => item.productId === productId,
-    );
 
     const finalPrice = this.calculateFinalPrice(
       product.sellingPrice,
@@ -256,5 +256,44 @@ export class CartService {
   async getCartItemCount(userId: string): Promise<number> {
     const cart = await this.getCart(userId);
     return cart.totalItems;
+  }
+
+  // 🔄 Sync cart with inventory reservations
+  async syncCartReservations(userId: string): Promise<Cart> {
+    const cart = await this.getCart(userId);
+
+    if (!cart || cart.items.length === 0) {
+      return cart;
+    }
+
+    for (const item of cart.items) {
+      // Release any existing reservation (ignore errors if nothing reserved)
+      try {
+        await this.inventoryService.releaseReservation(
+          item.productId,
+          item.quantity,
+        );
+      } catch (error) {
+        // Ignore - nothing was reserved
+        console.log(
+          `No reservation to release for product ${item.productId}`,
+        );
+      }
+
+      // Re-reserve correct amount from cart
+      const reserveResult = await this.inventoryService.reserveStock(
+        item.productId,
+        item.quantity,
+      );
+
+      if (!reserveResult.success) {
+        throw new BadRequestException(
+          `Cannot reserve ${item.quantity} of ${item.productName}. Insufficient stock available. Please adjust quantity.`,
+        );
+      }
+    }
+
+    console.log(`✅ Synced reservations for cart ${userId}`);
+    return cart;
   }
 }

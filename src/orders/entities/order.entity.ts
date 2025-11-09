@@ -9,6 +9,7 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Customer } from '../../customers/entities/customer.entity';
 import { Payment } from '../../payments/entities/payment.entity';
 import { OrderItem } from './order-item.entity';
@@ -34,6 +35,7 @@ export class Order {
   @JoinColumn({ name: 'customerId' })
   customer: Customer;
 
+  @Exclude()
   @Column({ type: 'uuid' })
   customerId: string;
 
@@ -44,6 +46,7 @@ export class Order {
   @JoinColumn({ name: 'paymentId' })
   payment: Payment;
 
+  @Exclude()
   @Column({ type: 'int', nullable: true })
   paymentId: number;
 

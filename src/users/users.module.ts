@@ -7,9 +7,10 @@ import { User } from './entities/user.entity';
 import { DeviceToken } from './entities/device-token.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { EmailModule } from '../email/email.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, DeviceToken])],
+  imports: [TypeOrmModule.forFeature([User, DeviceToken]), EmailModule],
   controllers: [UsersController],
   providers: [UsersService, DeviceTokensService, JwtAuthGuard, RolesGuard],
   exports: [UsersService, DeviceTokensService],

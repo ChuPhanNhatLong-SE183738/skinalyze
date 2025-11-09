@@ -76,6 +76,21 @@ export class EmailService {
     );
   }
 
+  async sendAdminPasswordResetEmail(
+    email: string,
+    fullName: string,
+    newPassword: string,
+  ): Promise<void> {
+    const html = this.createAdminPasswordResetTemplate(fullName, newPassword);
+    const subject = '🔐 Mật khẩu của bạn đã được đặt lại - Skinalyze';
+    await this.sendEmail(
+      email,
+      subject,
+      html,
+      `Mật khẩu tạm thời của bạn là: ${newPassword}. Vui lòng đổi mật khẩu sau khi đăng nhập.`,
+    );
+  }
+
   private async sendEmail(
     to: string,
     subject: string,
@@ -83,6 +98,8 @@ export class EmailService {
     text: string,
   ) {
     try {
+      this.logger.log(`📧 Attempting to send email to: ${to}`);
+
       const result = await this.resend.emails.send({
         from: this.fromEmail,
         to,
@@ -90,17 +107,25 @@ export class EmailService {
         html,
         text,
       });
+
       if (result.error) {
         this.logger.error(
-          `❌ Failed to send email to ${to}:`,
-          result.error.message,
+          `❌ Resend API error for ${to}:`,
+          JSON.stringify(result.error),
         );
-        throw new Error(result.error.message);
+        throw new Error(`Resend API error: ${result.error.message}`);
       }
-      this.logger.log(`✅ Email sent to: ${to}`);
+
+      this.logger.log(
+        `✅ Email sent successfully to: ${to} (ID: ${result.data?.id})`,
+      );
     } catch (error) {
-      this.logger.error(`❌ Failed to send email to ${to}:`, error.message);
-      throw error;
+      this.logger.error(
+        `❌ Email send failed to ${to}:`,
+        error.message,
+        error.stack,
+      );
+      throw new Error(`Failed to send email: ${error.message}`);
     }
   }
 
@@ -399,6 +424,76 @@ export class EmailService {
                 <span style="margin: 0 10px; color: #27AE60;">📧</span>
                 <span style="margin: 0 10px; color: #27AE60;">📱</span>
                 <span style="margin: 0 10px; color: #27AE60;">🌐</span>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+  }
+
+  private createAdminPasswordResetTemplate(
+    fullName: string,
+    newPassword: string,
+  ): string {
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+                <h1 style="color: #FFFFFF; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    🔐 Đặt Lại Mật Khẩu
+                </h1>
+                <p style="color: #F0E6FF; margin: 10px 0 0 0; font-size: 16px;">
+                    Mật khẩu tài khoản của bạn đã được quản trị viên đặt lại
+                </p>
+            </div>
+            <div style="padding: 40px 30px;">
+                <p style="color: #2C3E50; font-size: 18px; line-height: 1.8; margin: 0 0 20px 0;">
+                    Xin chào <strong style="color: #667eea;">${fullName}</strong>,
+                </p>
+                <p style="color: #34495E; font-size: 16px; line-height: 1.8; margin: 0 0 25px 0;">
+                    Quản trị viên đã đặt lại mật khẩu cho tài khoản của bạn. Đây là mật khẩu tạm thời của bạn:
+                </p>
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; text-align: center; margin: 30px 0; box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);">
+                    <p style="color: #FFFFFF; font-size: 14px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">
+                        Mật Khẩu Tạm Thời
+                    </p>
+                    <p style="color: #FFFFFF; font-size: 32px; font-weight: 800; margin: 0; font-family: 'Courier New', monospace; letter-spacing: 4px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        ${newPassword}
+                    </p>
+                </div>
+                <div style="background: #FFF3CD; border-left: 4px solid #FFC107; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                    <p style="color: #856404; margin: 0; font-size: 15px; line-height: 1.6;">
+                        <strong>⚠️ Lưu ý quan trọng:</strong><br>
+                        Vui lòng đổi mật khẩu ngay sau khi đăng nhập để bảo mật tài khoản của bạn.
+                    </p>
+                </div>
+                <div style="background: #E8F5E9; border-left: 4px solid #4CAF50; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                    <p style="color: #2C3E50; margin: 0 0 15px 0; font-weight: 600; font-size: 16px;">📋 Hướng dẫn:</p>
+                    <ol style="margin: 0; padding-left: 25px; color: #2C3E50; line-height: 1.8;">
+                        <li>Đăng nhập bằng mật khẩu tạm thời ở trên</li>
+                        <li>Vào phần <strong>Cài đặt tài khoản</strong></li>
+                        <li>Chọn <strong>Đổi mật khẩu</strong></li>
+                        <li>Nhập mật khẩu mới của bạn</li>
+                    </ol>
+                </div>
+                <div style="background: #FFF3E0; border-left: 4px solid #FF9800; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                    <p style="color: #2C3E50; margin: 0 0 15px 0; font-weight: 600; font-size: 16px;">🔒 Bảo mật:</p>
+                    <ul style="margin: 0; padding-left: 25px; color: #2C3E50; line-height: 1.8;">
+                        <li>Không chia sẻ mật khẩu này với bất kỳ ai</li>
+                        <li>Đổi mật khẩu ngay sau lần đăng nhập đầu tiên</li>
+                        <li>Sử dụng mật khẩu mạnh: ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt</li>
+                    </ul>
+                </div>
+            </div>
+            <div style="text-align: center; padding: 30px 20px; color: #95A5A6; font-size: 14px; background: #ECF0F1; border-radius: 0 0 15px 15px;">
+                <p style="margin: 0 0 8px 0;"><strong style="color: #667eea;">Skinalyze</strong> - AI-Powered Skincare Platform</p>
+                <p style="margin: 0; font-size: 12px;">© 2025 Skinalyze. All rights reserved.</p>
             </div>
         </div>
     </body>
