@@ -152,6 +152,29 @@ export class CartService {
       );
     }
 
+    const oldQuantity = cart.items[itemIndex].quantity;
+    const quantityDiff = quantity - oldQuantity;
+
+    // Adjust inventory reservation based on quantity change
+    if (quantityDiff > 0) {
+      // Need to reserve MORE stock
+      const reserveResult = await this.inventoryService.reserveStock(
+        productId,
+        quantityDiff,
+      );
+      if (!reserveResult.success) {
+        throw new BadRequestException(
+          `Cannot increase quantity. Only ${oldQuantity} available in stock.`,
+        );
+      }
+    } else if (quantityDiff < 0) {
+      // Need to release SOME stock
+      await this.inventoryService.releaseReservation(
+        productId,
+        Math.abs(quantityDiff),
+      );
+    }
+
     // Update quantity
     cart.items[itemIndex].quantity = quantity;
 

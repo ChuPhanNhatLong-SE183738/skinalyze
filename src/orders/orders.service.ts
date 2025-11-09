@@ -446,6 +446,16 @@ export class OrdersService {
       );
     }
 
+        await this.orderItemRepository.save(orderItems);
+
+    // 8. Confirm sale trong inventory (chuyển reserve → sold)
+    for (const cartItem of cart.items) {
+      await this.inventoryService.confirmSale(
+        cartItem.productId,
+        cartItem.quantity,
+      );
+    }
+
     // 9. 💳 PAYMENT INFO (KHÔNG CẦN TẠO PAYMENT CHO BANKING NỮA - ĐÃ TẠO Ở TRÊN)
     // COD & WALLET không cần payment info vì đã xử lý rồi
 
