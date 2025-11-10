@@ -37,11 +37,19 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CUSTOMER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '🛒 Checkout cart - Convert cart items to order' })
+  @ApiOperation({ 
+    summary: '🛒 Checkout cart - Convert selected cart items to order',
+    description: `
+      Checkout only the items that are marked as selected in the cart.
+      - Validates inventory availability for selected items
+      - Creates order with payment record
+      - Removes selected items from cart (unselected items remain)
+      - Throws error if no items are selected
+      - Automatically rolls back if inventory confirmation fails
+    `
+  })
   async checkout(@Req() req, @Body() checkoutDto: CheckoutCartDto) {
-    console.log('🔍 DEBUG - req.user:', req.user); // Debug log
-    const userId = req.user.userId; // Lấy userId từ JWT token
-    console.log('🔍 DEBUG - userId:', userId); // Debug log
+    const userId = req.user.userId;
     const order = await this.ordersService.checkoutCart(userId, checkoutDto);
     return ResponseHelper.success(
       'Cart checkout successfully, order created',

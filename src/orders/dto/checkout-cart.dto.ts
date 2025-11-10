@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEnum, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsBoolean, IsArray } from 'class-validator';
 
 export enum PaymentMethod {
   WALLET = 'wallet', // Thanh toán bằng balance
@@ -15,6 +15,16 @@ export class CheckoutCartDto {
   @ApiProperty({ example: '123 Nguyen Hue, District 1, HCMC' })
   @IsString()
   shippingAddress: string;
+
+  @ApiProperty({
+    example: ['550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002'],
+    description: 'Optional: Specific product IDs to checkout. If not provided, checkout all items with selected=true in cart',
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  selectedProductIds?: string[];
 
   @ApiProperty({
     example: 'cod',

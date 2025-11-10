@@ -275,4 +275,59 @@ export class CartController {
       count,
     });
   }
+
+  @Patch('select/:productId')
+  @ApiOperation({
+    summary: '✅ Select/unselect item trong cart',
+    description: 'Toggle select item để user chọn sản phẩm nào muốn checkout',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        selected: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Item selection updated successfully',
+  })
+  async toggleSelectItem(
+    @GetUser() user: User,
+    @Param('productId') productId: string,
+    @Body('selected') selected: boolean,
+  ) {
+    const cart = await this.cartService.toggleSelectItem(
+      user.userId,
+      productId,
+      selected,
+    );
+    return ResponseHelper.success('Item selection updated', cart);
+  }
+
+  @Patch('select-all')
+  @ApiOperation({
+    summary: '✅ Select/unselect tất cả items',
+    description: 'Chọn hoặc bỏ chọn tất cả sản phẩm trong cart',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        selected: { type: 'boolean', example: true },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'All items selection updated successfully',
+  })
+  async toggleSelectAll(
+    @GetUser() user: User,
+    @Body('selected') selected: boolean,
+  ) {
+    const cart = await this.cartService.toggleSelectAll(user.userId, selected);
+    return ResponseHelper.success('All items selection updated', cart);
+  }
 }
