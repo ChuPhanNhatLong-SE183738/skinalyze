@@ -1,4 +1,3 @@
-import { apiClient } from "@/lib/api";
 import type { OrdersResponse } from "@/types/order";
 
 export class OrderService {

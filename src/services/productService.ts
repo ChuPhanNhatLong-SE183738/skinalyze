@@ -1,9 +1,7 @@
-import { apiClient } from "@/lib/api";
 import type {
   Product,
   ProductsResponse,
   CreateProductRequest,
-  UpdateProductRequest,
 } from "@/types/product";
 
 export class ProductService {

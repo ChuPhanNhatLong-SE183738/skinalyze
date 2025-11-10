@@ -1,66 +1,134 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import envConfig from "@/config";
+import { NextRequest, NextResponse } from "next/server";
+
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
+  envConfig.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000/api/v1";
 
-export class ApiClient {
-  private baseURL: string;
+class BackendApiError extends Error {
+  status: number;
+  response: any;
 
-  constructor(baseURL: string = API_BASE_URL) {
-    this.baseURL = baseURL;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options?: RequestInit
-  ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
-
-    const config: RequestInit = {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-      },
-    };
-
-    const response = await fetch(url, config);
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return data;
-  }
-
-  async get<T>(endpoint: string, token?: string): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: "GET",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-  }
-
-  async post<T>(endpoint: string, data?: any, token?: string): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: "POST",
-      body: JSON.stringify(data),
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-  }
-
-  async put<T>(endpoint: string, data?: any, token?: string): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: "PUT",
-      body: JSON.stringify(data),
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-  }
-
-  async delete<T>(endpoint: string, token?: string): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: "DELETE",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+  constructor(message: string, status: number, response: any) {
+    super(message);
+    this.name = "BackendApiError";
+    this.status = status;
+    this.response = response;
   }
 }
 
-export const apiClient = new ApiClient();
+async function baseRequest(
+  endpoint: string,
+  options: RequestInit = {},
+  req?: NextRequest // (optional)
+) {
+  let token: string | undefined;
+
+  if (req) {
+    token = req.cookies.get("access_token")?.value;
+  }
+
+  const defaultHeaders = new Headers(options.headers as HeadersInit);
+  defaultHeaders.set("Content-Type", "application/json");
+
+  if (token) {
+    defaultHeaders.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: defaultHeaders,
+  });
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    data = { error: "Backend API did not return JSON" };
+  }
+  if (!response.ok) {
+    throw new BackendApiError(
+      data.message || data.error || "Backend API request failed",
+      response.status,
+      data
+    );
+  }
+  return data;
+}
+
+interface ApiConfig {
+  options?: RequestInit;
+  req?: NextRequest;
+}
+
+export const api = {
+  /**
+   * @param endpoint
+   * @param config - (Optional) Include 'options' and/or 'req'
+   */
+  get: (endpoint: string, config: ApiConfig = {}) => {
+    const { options = {}, req } = config;
+    return baseRequest(endpoint, { ...options, method: "GET" }, req);
+  },
+
+  /**
+   * @param endpoint
+   * @param body
+   * @param config
+   */
+  post: (endpoint: string, body: any, config: ApiConfig = {}) => {
+    const { options = {}, req } = config;
+    return baseRequest(
+      endpoint,
+      {
+        ...options,
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+      req
+    );
+  },
+
+  /**
+   * @param endpoint
+   * @param body
+   * @param config
+   */
+  put: (endpoint: string, body: any, config: ApiConfig = {}) => {
+    const { options = {}, req } = config;
+    return baseRequest(
+      endpoint,
+      {
+        ...options,
+        method: "PUT",
+        body: JSON.stringify(body),
+      },
+      req
+    );
+  },
+
+  /**
+   * @param endpoint
+   * @param config
+   */
+  delete: (endpoint: string, config: ApiConfig = {}) => {
+    const { options = {}, req } = config;
+    return baseRequest(endpoint, { ...options, method: "DELETE" }, req);
+  },
+};
+
+export function handleApiError(error: unknown): NextResponse {
+  if (error instanceof BackendApiError) {
+    return NextResponse.json(
+      { error: error.message, details: error.response },
+      { status: error.status }
+    );
+  }
+
+  console.error("Unknown API route error:", error);
+  return NextResponse.json(
+    { error: "An internal server error occurred" },
+    { status: 500 }
+  );
+}
