@@ -90,14 +90,11 @@ export class AuthService {
       throw new BadRequestException('Full name is required');
     }
 
-    // Hash password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(registerDto.password, saltRounds);
-
     // Create user data with explicit field mapping
+    // Password will be hashed by usersService.create()
     const userData = {
       email: registerDto.email,
-      password: hashedPassword,
+      password: registerDto.password, // Pass plain password, will be hashed in usersService
       fullName: registerDto.fullName,
       phone: registerDto.phone,
       dob: registerDto.dob,
