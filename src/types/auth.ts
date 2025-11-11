@@ -20,7 +20,7 @@ export interface User {
   photoUrl?: string;
   addresses?: Address[];
   balance?: number;
-  role: "customer" | "staff" | "admin";
+  role: "customer" | "staff" | "admin" | "dermatologist";
   isActive: boolean;
   isVerified: boolean;
   createdAt: string;

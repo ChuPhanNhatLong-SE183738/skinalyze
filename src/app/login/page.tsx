@@ -48,6 +48,9 @@ export default function LoginPage() {
         case "staff":
           router.push("/staff/dashboard");
           break;
+        case "dermatologist":
+          router.push("/dermatologist/availability");
+          break;
         case "customer":
           router.push("/");
           break;
@@ -80,12 +83,8 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-500 mb-4 shadow-lg">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">
-            Skinalyze
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Welcome back
-          </p>
+          <h1 className="text-3xl font-bold text-slate-900">Skinalyze</h1>
+          <p className="text-slate-600 mt-1">Welcome back</p>
         </div>
 
         {/* Login Card */}
@@ -128,7 +127,10 @@ export default function LoginPage() {
               {/* Password Field */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-slate-700 font-medium">
+                  <Label
+                    htmlFor="password"
+                    className="text-slate-700 font-medium"
+                  >
                     Password
                   </Label>
                   <button
@@ -203,11 +205,17 @@ export default function LoginPage() {
         <div className="mt-8 text-center text-xs text-slate-500">
           <p>
             By signing in, you agree to our{" "}
-            <a href="#" className="text-green-600 hover:text-green-700 hover:underline">
+            <a
+              href="#"
+              className="text-green-600 hover:text-green-700 hover:underline"
+            >
               Terms of Service
             </a>{" "}
             and{" "}
-            <a href="#" className="text-green-600 hover:text-green-700 hover:underline">
+            <a
+              href="#"
+              className="text-green-600 hover:text-green-700 hover:underline"
+            >
               Privacy Policy
             </a>
           </p>
