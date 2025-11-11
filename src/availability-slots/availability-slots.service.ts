@@ -5,7 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, EntityManager, FindOperator, In, Repository } from 'typeorm';
+import {
+  Between,
+  EntityManager,
+  FindOperator,
+  FindOptionsWhere,
+  LessThan,
+  MoreThan,
+  Repository,
+} from 'typeorm';
 import {
   AvailabilitySlot,
   SlotStatus,
@@ -13,6 +21,13 @@ import {
 import { CreateAvailabilityDto } from './dto/create-availability.dto';
 import { addMinutes, isBefore, isEqual } from 'date-fns';
 
+type NewSlotData = {
+  dermatologistId: string;
+  startTime: Date;
+  endTime: Date;
+  status: SlotStatus;
+  price: number;
+};
 @Injectable()
 export class AvailabilitySlotsService {
   constructor(
@@ -31,7 +46,7 @@ export class AvailabilitySlotsService {
     defaultSlotPrice: number,
     dto: CreateAvailabilityDto,
   ) {
-    const newSlotsToCreate: Partial<AvailabilitySlot>[] = [];
+    const newSlotsToCreate: NewSlotData[] = [];
     const startTimesToCheck: Date[] = [];
 
     for (const block of dto.blocks) {
@@ -73,21 +88,37 @@ export class AvailabilitySlotsService {
       throw new BadRequestException('No valid slots to create.');
     }
 
-    const existingSlots = await this.slotRepository.find({
-      where: {
-        dermatologistId,
-        startTime: In(startTimesToCheck),
-      },
+    //Check overlap: (OldStart < NewEnd) AND (OldEnd > NewStart)
+    const overlapConditions: FindOptionsWhere<AvailabilitySlot>[] =
+      newSlotsToCreate.map((newSlot) => {
+        return {
+          dermatologistId: dermatologistId,
+          startTime: LessThan(newSlot.endTime), // OldStart < NewEnd
+          endTime: MoreThan(newSlot.startTime), // OldEnd > NewStart
+        };
+      });
+
+    // Find slots that overlap with any of the new slots
+    const existingOverlaps = await this.slotRepository.find({
+      where: overlapConditions, // OR conditions (typeorm handles this automatically)
     });
 
-    if (existingSlots.length > 0) {
+    if (existingOverlaps.length > 0) {
       throw new ConflictException(
-        'One or more slots already exist at these times.',
+        'One or more new slots overlap with existing time slots.',
       );
     }
 
-    await this.slotRepository.insert(newSlotsToCreate);
-
+    try {
+      await this.slotRepository.insert(newSlotsToCreate);
+    } catch (error) {
+      if (error?.code === 'ER_DUP_ENTRY' || error?.number === 1062) {
+        throw new ConflictException(
+          'A race condition occurred. One or more slots already exist.',
+        );
+      }
+      throw error;
+    }
     return {
       message: `Successfully created ${newSlotsToCreate.length} new slots.`,
     };

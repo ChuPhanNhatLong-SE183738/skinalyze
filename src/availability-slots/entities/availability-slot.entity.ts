@@ -13,8 +13,8 @@ import { Dermatologist } from '../../dermatologists/entities/dermatologist.entit
 import { Appointment } from '../../appointments/entities/appointment.entity';
 
 export enum SlotStatus {
-  AVAILABLE = 'available',
-  BOOKED = 'booked',
+  AVAILABLE = 'AVAILABLE',
+  BOOKED = 'BOOKED',
 }
 
 @Entity('availability_slots')
