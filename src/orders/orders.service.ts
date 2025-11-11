@@ -116,6 +116,7 @@ export class OrdersService {
     return await this.orderRepository.find({
       relations: [
         'customer',
+        'customer.user',
         'payment',
         'orderItems',
         'orderItems.product',
@@ -307,8 +308,58 @@ export class OrdersService {
       throw new BadRequestException('Cart is empty');
     }
 
-    // 3. Tính total amount từ cart
-    const totalAmount = cart.items.reduce(
+    // 2.1. ✅ LỌC ITEMS DỰA TRÊN selectedProductIds HOẶC FIELD selected
+    let selectedItems;
+    
+    if (checkoutDto.selectedProductIds && checkoutDto.selectedProductIds.length > 0) {
+      selectedItems = cart.items.filter(item => 
+        checkoutDto.selectedProductIds!.includes(item.productId)
+      );
+      this.logger.log(`📦 Checkout from selectedProductIds: ${checkoutDto.selectedProductIds.join(', ')}`);
+    } else {
+      // Nếu không → dùng field selected=true trong cart
+      selectedItems = this.cartService.getSelectedItems(cart);
+      this.logger.log(`📦 Checkout from cart selection (selected=true)`);
+    }
+    
+    if (selectedItems.length === 0) {
+      throw new BadRequestException(
+        'Vui lòng chọn ít nhất một sản phẩm để thanh toán',
+      );
+    }
+
+    this.logger.log(
+      `📦 Checkout ${selectedItems.length}/${cart.items.length} selected items`,
+    );
+
+    // 2.5. ✅ VALIDATE INVENTORY CHỈ CHO SELECTED ITEMS
+    this.logger.log('🔍 Validating inventory for selected items...');
+    for (const cartItem of selectedItems) {
+      try {
+        // Kiểm tra xem có đủ reserved quantity không
+        const canConfirm = await this.inventoryService.canConfirmSale(
+          cartItem.productId,
+          cartItem.quantity,
+        );
+        
+        if (!canConfirm) {
+          throw new BadRequestException(
+            `Sản phẩm "${cartItem.productName}" không đủ hàng đã reserve. Vui lòng kiểm tra lại giỏ hàng.`,
+          );
+        }
+      } catch (error) {
+        this.logger.error(
+          `❌ Inventory validation failed for ${cartItem.productId}: ${error.message}`,
+        );
+        throw new BadRequestException(
+          `Không thể xác nhận tồn kho cho "${cartItem.productName}". ${error.message}`,
+        );
+      }
+    }
+    this.logger.log('✅ All inventory validated successfully');
+
+    // 3. Tính total amount CHỈ TỪ SELECTED ITEMS
+    const totalAmount = selectedItems.reduce(
       (sum, item) => sum + (item.price || 0) * item.quantity,
       0,
     );
@@ -322,16 +373,16 @@ export class OrdersService {
     if (paymentMethod === PaymentMethod.BANKING && !useWallet) {
       this.logger.log(`💳 BANKING checkout - Creating payment only`);
 
-      // Tạo payment với cart data
+      // Tạo payment với SELECTED items data
       const payment = await this.paymentsService.createPayment({
         paymentType: PaymentType.ORDER,
         customerId: customer.customerId,
         userId: userId,
-        cartData: cart.items,
+        cartData: selectedItems, // ✅ Chỉ lưu selected items
         shippingAddress: checkoutDto.shippingAddress,
         orderNotes: checkoutDto.notes,
         amount: totalAmount,
-        paymentMethod: PaymentEntityMethod.BANKING, // ✅ Sử dụng entity enum
+        paymentMethod: PaymentEntityMethod.BANKING,
       });
 
       // Generate QR code URL
@@ -427,8 +478,7 @@ export class OrdersService {
     });
     const savedOrder = await this.orderRepository.save(order);
 
-    // 7. Tạo order items từ cart items
-    const orderItems = cart.items.map((cartItem) =>
+    const orderItems = selectedItems.map((cartItem) =>
       this.orderItemRepository.create({
         orderId: savedOrder.orderId,
         productId: cartItem.productId,
@@ -438,19 +488,34 @@ export class OrdersService {
     );
     await this.orderItemRepository.save(orderItems);
 
-    // 8. Confirm sale trong inventory (chuyển reserve → sold)
-    for (const cartItem of cart.items) {
-      await this.inventoryService.confirmSale(
-        cartItem.productId,
-        cartItem.quantity,
+    try {
+      this.logger.log('📦 Confirming sales in inventory...');
+      for (const cartItem of selectedItems) {
+        await this.inventoryService.confirmSale(
+          cartItem.productId,
+          cartItem.quantity,
+        );
+        this.logger.log(
+          `✅ Confirmed ${cartItem.quantity}x ${cartItem.productName}`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(`❌ Failed to confirm sales: ${error.message}`);
+      
+      // ⚠️ ROLLBACK: Xóa order và payment vừa tạo
+      this.logger.warn(`🔄 Rolling back order ${savedOrder.orderId}...`);
+      await this.orderItemRepository.delete({ orderId: savedOrder.orderId });
+      await this.orderRepository.delete({ orderId: savedOrder.orderId });
+      await this.paymentRepository.delete({ paymentId: savedPayment.paymentId });
+      
+      throw new BadRequestException(
+        `Không thể hoàn tất đơn hàng: ${error.message}. Vui lòng thử lại.`,
       );
     }
-
-    // 9. 💳 PAYMENT INFO (KHÔNG CẦN TẠO PAYMENT CHO BANKING NỮA - ĐÃ TẠO Ở TRÊN)
-    // COD & WALLET không cần payment info vì đã xử lý rồi
-
-    // 10. Xóa cart sau khi checkout thành công (CHỈ COD & WALLET)
-    await this.cartService.clearCart(userId);
+    
+    // 10. Xóa items đã checkout khỏi cart
+    const productIdsToRemove = selectedItems.map(item => item.productId);
+    await this.cartService.removeItemsByProductIds(userId, productIdsToRemove);
 
     // 11. Trả về order (CHỈ COD & WALLET)
     const fullOrder = await this.findOne(savedOrder.orderId);

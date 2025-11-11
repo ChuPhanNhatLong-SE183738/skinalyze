@@ -6,8 +6,10 @@ import {
   UpdateDateColumn,
   ManyToMany,
   JoinTable,
+  OneToMany,
 } from 'typeorm';
 import { Category } from '../../categories/entities/category.entity';
+import { Review } from '../../reviews/entities/review.entity';
 
 @Entity('products')
 export class Product {
@@ -49,8 +51,8 @@ export class Product {
   @Column({ type: 'simple-array' })
   suitableFor: string[];
 
-  @Column({ type: 'json', nullable: true })
-  reviews: any[];
+  @OneToMany(() => Review, (review) => review.product)
+  reviews: Review[];
 
   @Column({
     type: 'decimal',

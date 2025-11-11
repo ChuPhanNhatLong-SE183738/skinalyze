@@ -6,6 +6,7 @@ export interface CartItem {
   salePercentage?: number;
   quantity: number;
   addedAt: Date;
+  selected?: boolean;
 }
 
 export interface Cart {

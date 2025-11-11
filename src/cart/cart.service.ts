@@ -72,7 +72,14 @@ export class CartService {
       throw new NotFoundException(`Product with ID ${productId} not found`);
     }
 
-    // 🔥 RESERVE INVENTORY (simple - no batch tracking)
+    // Get current cart first to check if product exists
+    const cart = await this.getCart(userId);
+
+    const existingItemIndex = cart.items.findIndex(
+      (item) => item.productId === productId,
+    );
+
+    // 🔥 RESERVE INVENTORY (only reserve the NEW quantity being added)
     const reserveResult = await this.inventoryService.reserveStock(
       productId,
       quantity,
@@ -81,13 +88,6 @@ export class CartService {
     if (!reserveResult.success) {
       throw new BadRequestException('Không đủ hàng trong kho');
     }
-
-    // Get current cart
-    const cart = await this.getCart(userId);
-
-    const existingItemIndex = cart.items.findIndex(
-      (item) => item.productId === productId,
-    );
 
     const finalPrice = this.calculateFinalPrice(
       product.sellingPrice,
@@ -110,6 +110,7 @@ export class CartService {
         salePercentage: product.salePercentage || 0,
         quantity,
         addedAt: new Date(),
+        selected: true, // ✅ Mặc định được chọn khi thêm vào cart
       };
       cart.items.push(newItem);
     }
@@ -149,6 +150,29 @@ export class CartService {
     if (itemIndex === -1) {
       throw new NotFoundException(
         `Product with ID ${productId} not found in cart`,
+      );
+    }
+
+    const oldQuantity = cart.items[itemIndex].quantity;
+    const quantityDiff = quantity - oldQuantity;
+
+    // Adjust inventory reservation based on quantity change
+    if (quantityDiff > 0) {
+      // Need to reserve MORE stock
+      const reserveResult = await this.inventoryService.reserveStock(
+        productId,
+        quantityDiff,
+      );
+      if (!reserveResult.success) {
+        throw new BadRequestException(
+          `Cannot increase quantity. Only ${oldQuantity} available in stock.`,
+        );
+      }
+    } else if (quantityDiff < 0) {
+      // Need to release SOME stock
+      await this.inventoryService.releaseReservation(
+        productId,
+        Math.abs(quantityDiff),
       );
     }
 
@@ -214,6 +238,86 @@ export class CartService {
     return cart;
   }
 
+  /**
+   * ✅ Toggle select/unselect item trong cart
+   */
+  async toggleSelectItem(
+    userId: string,
+    productId: string,
+    selected: boolean,
+  ): Promise<Cart> {
+    const cart = await this.getCart(userId);
+
+    const item = cart.items.find((item) => item.productId === productId);
+
+    if (!item) {
+      throw new NotFoundException('Product not found in cart');
+    }
+
+    item.selected = selected;
+    cart.updatedAt = new Date();
+
+    // Save to Redis
+    const cartKey = this.getCartKey(userId);
+    await this.cacheManager.set(cartKey, cart);
+
+    return cart;
+  }
+
+  /**
+   * ✅ Select/unselect tất cả items
+   */
+  async toggleSelectAll(userId: string, selected: boolean): Promise<Cart> {
+    const cart = await this.getCart(userId);
+
+    cart.items.forEach((item) => {
+      item.selected = selected;
+    });
+    cart.updatedAt = new Date();
+
+    // Save to Redis
+    const cartKey = this.getCartKey(userId);
+    await this.cacheManager.set(cartKey, cart);
+
+    return cart;
+  }
+
+  /**
+   * ✅ Lấy danh sách items đã chọn để checkout
+   */
+  getSelectedItems(cart: Cart): CartItem[] {
+    return cart.items.filter((item) => item.selected === true);
+  }
+
+  /**
+   * ✅ Xóa tất cả items đã chọn khỏi cart (sau khi checkout)
+   */
+  async removeSelectedItems(userId: string): Promise<Cart> {
+    const cart = await this.getCart(userId);
+
+    // Giữ lại các items CHƯA được chọn
+    cart.items = cart.items.filter((item) => item.selected !== true);
+
+    // Recalculate totals
+    cart.totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+    cart.totalPrice = cart.items.reduce(
+      (sum, item) => sum + (item.price || 0) * item.quantity,
+      0,
+    );
+    cart.updatedAt = new Date();
+
+    // Save to Redis
+    const cartKey = this.getCartKey(userId);
+    if (cart.items.length === 0) {
+      // Delete cart if empty
+      await this.cacheManager.del(cartKey);
+    } else {
+      await this.cacheManager.set(cartKey, cart);
+    }
+
+    return cart;
+  }
+
   async clearCart(userId: string): Promise<void> {
     // 🔥 RELEASE ALL RESERVATIONS before clearing
     const cart = await this.getCart(userId);
@@ -233,5 +337,41 @@ export class CartService {
   async getCartItemCount(userId: string): Promise<number> {
     const cart = await this.getCart(userId);
     return cart.totalItems;
+  }
+
+  /**
+   * Xóa các items cụ thể theo productIds
+   */
+  async removeItemsByProductIds(userId: string, productIds: string[]): Promise<Cart> {
+    const cart = await this.getCart(userId);
+
+    if (!cart.items || cart.items.length === 0) {
+      throw new NotFoundException('Cart is empty');
+    }
+
+    // Lọc bỏ items có productId trong danh sách
+    cart.items = cart.items.filter(
+      item => !productIds.includes(item.productId)
+    );
+
+    // Recalculate totals
+    cart.totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+    cart.totalPrice = cart.items.reduce(
+      (sum, item) => sum + (item.price || 0) * item.quantity,
+      0,
+    );
+
+    const cartKey = this.getCartKey(userId);
+
+    if (cart.items.length === 0) {
+      // Nếu cart rỗng → xóa luôn
+      await this.cacheManager.del(cartKey);
+      return { userId, items: [], totalPrice: 0, totalItems: 0, updatedAt: new Date() };
+    }
+
+    // Lưu lại cart đã update
+    cart.updatedAt = new Date();
+    await this.cacheManager.set(cartKey, cart, 86400000); // 24h TTL
+    return cart;
   }
 }
