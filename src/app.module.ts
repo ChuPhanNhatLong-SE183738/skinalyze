@@ -61,6 +61,7 @@ import { Review } from './reviews/entities/review.entity';
 import { CartModule } from './cart/cart.module';
 import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 import { WithdrawalRequest } from './withdrawals/entities/withdrawal-request.entity';
+import { WithdrawalOtpSession } from './withdrawals/entities/withdrawal-otp-session.entity';
 
 @Module({
   imports: [
@@ -104,6 +105,7 @@ import { WithdrawalRequest } from './withdrawals/entities/withdrawal-request.ent
         ChatSession,
         Review,
         WithdrawalRequest,
+        WithdrawalOtpSession,
       ],
       synchronize: true,
       logging: process.env.NODE_ENV === 'development',

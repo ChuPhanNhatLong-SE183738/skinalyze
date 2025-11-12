@@ -17,10 +17,8 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { WithdrawalsService } from './withdrawals.service';
-import {
-  CreateWithdrawalRequestDto,
-  VerifyOtpDto,
-} from './dto/create-withdrawal-request.dto';
+import { CreateWithdrawalRequestDto } from './dto/create-withdrawal-request.dto';
+import { RequestOtpDto } from './dto/request-otp.dto';
 import { UpdateWithdrawalStatusDto } from './dto/update-withdrawal-status.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -37,13 +35,34 @@ import { WithdrawalStatus } from './entities/withdrawal-request.entity';
 export class WithdrawalsController {
   constructor(private readonly withdrawalsService: WithdrawalsService) {}
 
+  @Post('request-otp')
+  @Roles(UserRole.DERMATOLOGIST)
+  @ApiOperation({
+    summary: '🔐 Step 1: Request OTP for withdrawal',
+    description: 'Request OTP code sent to email before creating withdrawal request. OTP valid for 10 minutes.',
+  })
+  @ApiResponse({ status: 200, description: 'OTP sent to email successfully' })
+  async requestOTP(
+    @GetUser() user: User,
+    @Body() requestOtpDto: RequestOtpDto,
+  ) {
+    const { sessionId } = await this.withdrawalsService.requestOTP(
+      user.userId,
+      requestOtpDto,
+    );
+    return ResponseHelper.success(
+      'OTP code sent to your email. Valid for 10 minutes.',
+      { sessionId },
+    );
+  }
+
   @Post()
   @Roles(UserRole.DERMATOLOGIST)
   @ApiOperation({
-    summary: 'Create withdrawal request (Dermatologist only)',
-    description: 'Creates a new withdrawal request and sends OTP to email for verification',
+    summary: 'Step 2: Create withdrawal request with OTP',
+    description: 'Creates withdrawal request after verifying OTP code. OTP will be verified automatically.',
   })
-  @ApiResponse({ status: 201, description: 'Withdrawal request created, OTP sent to email' })
+  @ApiResponse({ status: 201, description: 'Withdrawal request created successfully' })
   async createRequest(
     @GetUser() user: User,
     @Body() createDto: CreateWithdrawalRequestDto,
@@ -53,52 +72,13 @@ export class WithdrawalsController {
       createDto,
     );
     return ResponseHelper.created(
-      'Withdrawal request created. Please check your email for OTP code.',
+      'Withdrawal request created successfully. Waiting for admin approval.',
       {
         requestId: request.requestId,
         amount: request.amount,
         status: request.status,
       },
     );
-  }
-
-  @Post(':requestId/verify-otp')
-  @Roles(UserRole.DERMATOLOGIST)
-  @ApiOperation({
-    summary: 'Verify OTP for withdrawal request',
-    description: 'Verifies the OTP code sent to email',
-  })
-  @ApiResponse({ status: 200, description: 'OTP verified successfully' })
-  async verifyOTP(
-    @GetUser() user: User,
-    @Param('requestId') requestId: string,
-    @Body() verifyDto: VerifyOtpDto,
-  ) {
-    const request = await this.withdrawalsService.verifyOTP(
-      user.userId,
-      requestId,
-      verifyDto.otpCode,
-    );
-    return ResponseHelper.success('OTP verified successfully', {
-      requestId: request.requestId,
-      status: request.status,
-      verifiedAt: request.verifiedAt,
-    });
-  }
-
-  @Post(':requestId/resend-otp')
-  @Roles(UserRole.DERMATOLOGIST)
-  @ApiOperation({
-    summary: 'Resend OTP code',
-    description: 'Generates and sends a new OTP code to email',
-  })
-  @ApiResponse({ status: 200, description: 'New OTP sent to email' })
-  async resendOTP(
-    @GetUser() user: User,
-    @Param('requestId') requestId: string,
-  ) {
-    await this.withdrawalsService.resendOTP(user.userId, requestId);
-    return ResponseHelper.success('New OTP code sent to your email');
   }
 
   @Get('my-requests')

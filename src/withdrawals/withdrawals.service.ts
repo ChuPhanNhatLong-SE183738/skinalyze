@@ -5,12 +5,14 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, LessThan } from 'typeorm';
 import {
   WithdrawalRequest,
   WithdrawalStatus,
 } from './entities/withdrawal-request.entity';
+import { WithdrawalOtpSession } from './entities/withdrawal-otp-session.entity';
 import { CreateWithdrawalRequestDto } from './dto/create-withdrawal-request.dto';
+import { RequestOtpDto } from './dto/request-otp.dto';
 import { UpdateWithdrawalStatusDto } from './dto/update-withdrawal-status.dto';
 import { User } from '../users/entities/user.entity';
 import { EmailService } from '../email/email.service';
@@ -20,6 +22,8 @@ export class WithdrawalsService {
   constructor(
     @InjectRepository(WithdrawalRequest)
     private readonly withdrawalRepository: Repository<WithdrawalRequest>,
+    @InjectRepository(WithdrawalOtpSession)
+    private readonly otpSessionRepository: Repository<WithdrawalOtpSession>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly emailService: EmailService,
@@ -47,6 +51,56 @@ export class WithdrawalsService {
     return request;
   }
 
+  /**
+   * 🔐 Bước 1: Request OTP
+   */
+  async requestOTP(userId: string, requestOtpDto: RequestOtpDto): Promise<{ sessionId: string }> {
+    const user = await this.userRepository.findOne({
+      where: { userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.balance < requestOtpDto.amount) {
+      throw new BadRequestException(
+        `Insufficient balance. Current balance: ${user.balance} VND`,
+      );
+    }
+
+    // Xóa các OTP sessions cũ đã hết hạn của user này
+    await this.otpSessionRepository.delete({
+      userId,
+      otpExpiry: LessThan(new Date()),
+    });
+
+    const otpCode = this.generateOTP();
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
+
+    const session = this.otpSessionRepository.create({
+      userId,
+      otpCode,
+      otpExpiry,
+      amount: requestOtpDto.amount,
+      isVerified: false,
+    });
+
+    const savedSession = await this.otpSessionRepository.save(session);
+
+    await this.emailService.sendWithdrawalOTP(
+      user.email,
+      otpCode,
+      requestOtpDto.amount,
+    );
+
+    return { sessionId: savedSession.sessionId };
+  }
+
+  /**
+   * ✅ Bước 2: Tạo withdrawal request với OTP đã verify
+   */
   async createRequest(
     userId: string,
     createDto: CreateWithdrawalRequestDto,
@@ -59,16 +113,43 @@ export class WithdrawalsService {
       throw new NotFoundException('User not found');
     }
 
+    // 🔐 Tìm OTP session và verify
+    const otpSession = await this.otpSessionRepository.findOne({
+      where: {
+        userId,
+        otpCode: createDto.otpCode,
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!otpSession) {
+      throw new BadRequestException('Invalid OTP code');
+    }
+
+    if (otpSession.otpExpiry < new Date()) {
+      throw new BadRequestException('OTP has expired. Please request a new one.');
+    }
+
+    if (otpSession.isVerified) {
+      throw new BadRequestException('OTP has already been used');
+    }
+
+    // Verify số tiền phải khớp với OTP session
+    if (otpSession.amount !== createDto.amount) {
+      throw new BadRequestException('Amount does not match OTP request');
+    }
+
     if (user.balance < createDto.amount) {
       throw new BadRequestException(
         `Insufficient balance. Current balance: ${user.balance} VND`,
       );
     }
 
-    const otpCode = this.generateOTP();
-    const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
+    // Đánh dấu OTP session đã sử dụng
+    otpSession.isVerified = true;
+    await this.otpSessionRepository.save(otpSession);
 
+    // Tạo withdrawal request
     const request = this.withdrawalRepository.create({
       userId,
       fullName: createDto.fullName,
@@ -77,96 +158,14 @@ export class WithdrawalsService {
       bankName: createDto.bankName,
       accountNumber: createDto.accountNumber,
       notes: createDto.notes,
-      otpCode,
-      otpExpiry,
-      status: WithdrawalStatus.PENDING,
+      status: WithdrawalStatus.VERIFIED,
+      otpCode: null,
+      otpExpiry: null,
     });
 
     const saved = await this.withdrawalRepository.save(request);
 
-    await this.emailService.sendWithdrawalOTP(
-      user.email,
-      otpCode,
-      createDto.amount,
-      createDto.bankName,
-      createDto.accountNumber,
-    );
-
     return this.sanitizeRequest(saved);
-  }
-
-  async verifyOTP(
-    userId: string,
-    requestId: string,
-    otpCode: string,
-  ): Promise<WithdrawalRequest> {
-    const request = await this.withdrawalRepository.findOne({
-      where: { requestId, userId },
-    });
-
-    if (!request) {
-      throw new NotFoundException('Withdrawal request not found');
-    }
-
-    if (request.status !== WithdrawalStatus.PENDING) {
-      throw new BadRequestException(
-        'This request has already been processed',
-      );
-    }
-
-    if (!request.otpCode || !request.otpExpiry) {
-      throw new BadRequestException('OTP not found for this request');
-    }
-
-    if (new Date() > request.otpExpiry) {
-      throw new BadRequestException('OTP has expired');
-    }
-
-    if (request.otpCode !== otpCode) {
-      throw new BadRequestException('Invalid OTP code');
-    }
-
-    request.status = WithdrawalStatus.VERIFIED;
-    request.verifiedAt = new Date();
-    request.otpCode = null;
-    request.otpExpiry = null;
-
-    const saved = await this.withdrawalRepository.save(request);
-    return this.sanitizeRequest(saved);
-  }
-
-  async resendOTP(userId: string, requestId: string): Promise<void> {
-    const request = await this.withdrawalRepository.findOne({
-      where: { requestId, userId },
-      relations: ['user'],
-    });
-
-    if (!request) {
-      throw new NotFoundException('Withdrawal request not found');
-    }
-
-    if (request.status !== WithdrawalStatus.PENDING) {
-      throw new BadRequestException(
-        'Cannot resend OTP for this request status',
-      );
-    }
-
-    const otpCode = this.generateOTP();
-    const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 10);
-
-    request.otpCode = otpCode;
-    request.otpExpiry = otpExpiry;
-
-    await this.withdrawalRepository.save(request);
-
-    await this.emailService.sendWithdrawalOTP(
-      request.user.email,
-      otpCode,
-      request.amount,
-      request.bankName,
-      request.accountNumber,
-    );
   }
 
   async getMyRequests(userId: string): Promise<WithdrawalRequest[]> {

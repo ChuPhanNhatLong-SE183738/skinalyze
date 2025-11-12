@@ -11,6 +11,11 @@ import {
 import { WithdrawalType } from '../entities/withdrawal-request.entity';
 
 export class CreateWithdrawalRequestDto {
+  @ApiProperty({ example: '123456', description: 'OTP code sent to email' })
+  @IsNotEmpty()
+  @IsString()
+  otpCode: string;
+
   @ApiProperty({ example: 'Nguyen Van A' })
   @IsNotEmpty()
   @IsString()
@@ -46,11 +51,4 @@ export class CreateWithdrawalRequestDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
-}
-
-export class VerifyOtpDto {
-  @ApiProperty({ example: '123456' })
-  @IsNotEmpty()
-  @IsString()
-  otpCode: string;
 }

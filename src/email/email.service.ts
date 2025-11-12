@@ -538,10 +538,10 @@ export class EmailService {
     email: string,
     otpCode: string,
     amount: number,
-    bankName: string,
-    accountNumber: string,
+    bankName?: string,
+    accountNumber?: string,
   ): Promise<void> {
-    const censoredAccount = this.censorAccountNumber(accountNumber);
+    const censoredAccount = accountNumber ? this.censorAccountNumber(accountNumber) : 'Not provided yet';
     
     const html = `
     <!DOCTYPE html>
@@ -562,14 +562,6 @@ export class EmailService {
                 <h1 style="color: white; margin: 0; font-size: 48px; letter-spacing: 8px; font-weight: bold;">${otpCode}</h1>
             </div>
             <p style="color: #7F8C8D; font-size: 14px; text-align: center; margin: 20px 0;">This code will expire in 10 minutes</p>
-            <div style="background: #F8F9FA; padding: 25px; border-radius: 8px; margin: 25px 0;">
-                <h3 style="color: #2C3E50; margin: 0 0 15px 0;">Request Details:</h3>
-                <ul style="margin: 0; padding-left: 20px; color: #555;">
-                    <li>Amount: <strong>${amount.toLocaleString()} VND</strong></li>
-                    <li>Bank: <strong>${bankName}</strong></li>
-                    <li>Account: <strong>${censoredAccount}</strong></li>
-                </ul>
-            </div>
         </div>
     </body>
     </html>
