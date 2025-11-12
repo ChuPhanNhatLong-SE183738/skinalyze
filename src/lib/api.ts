@@ -107,6 +107,23 @@ export const api = {
       req
     );
   },
+  /**
+   * @param endpoint
+   * @param body
+   * @param config
+   */
+  patch: (endpoint: string, body: any, config: ApiConfig = {}) => {
+    const { options = {}, req } = config;
+    return baseRequest(
+      endpoint,
+      {
+        ...options,
+        method: "PATCH",
+        body: JSON.stringify(body),
+      },
+      req
+    );
+  },
 
   /**
    * @param endpoint
