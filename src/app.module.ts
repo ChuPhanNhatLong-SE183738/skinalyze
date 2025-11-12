@@ -18,7 +18,6 @@ import { Category } from './categories/entities/category.entity';
 import { InventoryModule } from './inventory/inventory.module';
 import { Inventory } from './inventory/entities/inventory.entity';
 import { InventoryAdjustment } from './inventory/entities/inventory-adjustment.entity';
-import { CartModule } from './cart/cart.module';
 import { CustomersModule } from './customers/customers.module';
 import { SkinAnalysisModule } from './skin-analysis/skin-analysis.module';
 import { OrdersModule } from './orders/orders.module';
@@ -59,6 +58,10 @@ import { TrackingModule } from './tracking/tracking.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ReviewsModule } from './reviews/reviews.module';
 import { Review } from './reviews/entities/review.entity';
+import { CartModule } from './cart/cart.module';
+import { WithdrawalsModule } from './withdrawals/withdrawals.module';
+import { WithdrawalRequest } from './withdrawals/entities/withdrawal-request.entity';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -100,8 +103,9 @@ import { Review } from './reviews/entities/review.entity';
         ChatMessage,
         ChatSession,
         Review,
+        WithdrawalRequest,
       ],
-      synchronize: true, // Auto-create tables - disable after first deployment
+      synchronize: true,
       logging: process.env.NODE_ENV === 'development',
     }),
     UsersModule,
@@ -133,6 +137,7 @@ import { Review } from './reviews/entities/review.entity';
     ChatMessagesModule,
     TrackingModule,
     ReviewsModule,
+    WithdrawalsModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

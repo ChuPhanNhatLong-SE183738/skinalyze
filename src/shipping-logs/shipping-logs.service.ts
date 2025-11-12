@@ -6,6 +6,7 @@ import { CreateShippingLogDto } from './dto/create-shipping-log.dto';
 import { UpdateShippingLogDto } from './dto/update-shipping-log.dto';
 import { ShippingStatus } from './entities/shipping-log.entity';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { Order, OrderStatus } from '../orders/entities/order.entity';
 
 @Injectable()
 export class ShippingLogsService {
@@ -14,8 +15,32 @@ export class ShippingLogsService {
   constructor(
     @InjectRepository(ShippingLog)
     private readonly shippingLogRepository: Repository<ShippingLog>,
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
+
+  private mapShippingStatusToOrderStatus(shippingStatus: ShippingStatus): OrderStatus {
+    const statusMap: Record<ShippingStatus, OrderStatus> = {
+      [ShippingStatus.PENDING]: OrderStatus.CONFIRMED,
+      [ShippingStatus.PICKED_UP]: OrderStatus.SHIPPING,
+      [ShippingStatus.IN_TRANSIT]: OrderStatus.SHIPPING,
+      [ShippingStatus.OUT_FOR_DELIVERY]: OrderStatus.SHIPPING,
+      [ShippingStatus.DELIVERED]: OrderStatus.DELIVERED,
+      [ShippingStatus.FAILED]: OrderStatus.PROCESSING,
+      [ShippingStatus.RETURNED]: OrderStatus.CANCELLED,
+    };
+    return statusMap[shippingStatus];
+  }
+
+  private async syncOrderStatus(orderId: string, shippingStatus: ShippingStatus): Promise<void> {
+    const newOrderStatus = this.mapShippingStatusToOrderStatus(shippingStatus);
+    await this.orderRepository.update(
+      { orderId },
+      { status: newOrderStatus }
+    );
+    this.logger.log(`✅ Order ${orderId} status synced: ${newOrderStatus}`);
+  }
 
   async create(createDto: CreateShippingLogDto): Promise<ShippingLog> {
     const log = this.shippingLogRepository.create(createDto);
@@ -133,7 +158,12 @@ export class ShippingLogsService {
     log.status = ShippingStatus.PICKED_UP;
     log.note = `Đơn hàng đã được nhận bởi staff vào ${new Date().toLocaleString('vi-VN')}`;
 
-    return await this.shippingLogRepository.save(log);
+    const savedLog = await this.shippingLogRepository.save(log);
+    
+    // 🔄 Đồng bộ Order status sang SHIPPING
+    await this.syncOrderStatus(log.orderId, ShippingStatus.PICKED_UP);
+    
+    return savedLog;
   }
 
   /**
@@ -160,7 +190,14 @@ export class ShippingLogsService {
       log.status = ShippingStatus.PICKED_UP;
     }
 
-    return await this.shippingLogRepository.save(log);
+    const savedLog = await this.shippingLogRepository.save(log);
+    
+    // 🔄 Đồng bộ Order status nếu status đã thay đổi
+    if (log.status === ShippingStatus.PICKED_UP) {
+      await this.syncOrderStatus(log.orderId, ShippingStatus.PICKED_UP);
+    }
+    
+    return savedLog;
   }
 
   async update(
@@ -168,8 +205,16 @@ export class ShippingLogsService {
     updateDto: UpdateShippingLogDto,
   ): Promise<ShippingLog> {
     const log = await this.findOne(id);
+    const oldStatus = log.status;
     Object.assign(log, updateDto);
-    return await this.shippingLogRepository.save(log);
+    const savedLog = await this.shippingLogRepository.save(log);
+    
+    // 🔄 Nếu status thay đổi, đồng bộ với Order
+    if (updateDto.status && updateDto.status !== oldStatus) {
+      await this.syncOrderStatus(log.orderId, updateDto.status);
+    }
+    
+    return savedLog;
   }
 
   /**
@@ -216,6 +261,9 @@ export class ShippingLogsService {
     log.deliveredDate = new Date();
 
     const updatedLog = await this.shippingLogRepository.save(log);
+    
+    // 🔄 Đồng bộ Order status sang DELIVERED
+    await this.syncOrderStatus(log.orderId, ShippingStatus.DELIVERED);
 
     this.logger.log(`✅ Uploaded ${pictureUrls.length} pictures successfully`);
 

@@ -21,6 +21,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { ConfirmOrderDto } from './dto/confirm-order.dto';
 import { CancelOrderDto } from './dto/cancel-order.dto';
+import { CompleteOrderDto } from './dto/complete-order.dto';
 import { CheckoutCartDto } from './dto/checkout-cart.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -138,6 +139,32 @@ export class OrdersController {
   ) {
     const order = await this.ordersService.confirmOrder(id, confirmDto.processedBy);
     return ResponseHelper.success('Order confirmed successfully', order);
+  }
+
+  @Post(':id/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.CUSTOMER)
+  @ApiBearerAuth()
+  @ApiOperation({ 
+    summary: '✅ Customer marks order as completed',
+    description: 'Customer can mark an order as COMPLETED only when it has been DELIVERED. Optional feedback can be provided.'
+  })
+  async complete(
+    @Req() req,
+    @Param('id') id: string,
+    @Body() completeDto: CompleteOrderDto,
+  ) {
+    const userId = req.user.userId;
+    const customer = await this.ordersService.getCustomerByUserId(userId);
+    if (!customer) {
+      return ResponseHelper.notFound('Customer not found');
+    }
+    const order = await this.ordersService.completeOrder(
+      id,
+      customer.customerId,
+      completeDto.feedback,
+    );
+    return ResponseHelper.success('Order marked as completed successfully', order);
   }
 
   @Delete(':id')

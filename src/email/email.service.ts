@@ -129,6 +129,17 @@ export class EmailService {
     }
   }
 
+  private censorAccountNumber(accountNumber: string): string {
+    if (!accountNumber || accountNumber.length < 4) {
+      return '****';
+    }
+    const visibleStart = accountNumber.substring(0, 2);
+    const visibleEnd = accountNumber.substring(accountNumber.length - 2);
+    const maskedLength = accountNumber.length - 4;
+    const masked = '*'.repeat(maskedLength);
+    return `${visibleStart}${masked}${visibleEnd}`;
+  }
+
   private createVerificationEmailTemplate(verificationUrl: string): string {
     return `
     <!DOCTYPE html>
@@ -521,7 +532,94 @@ export class EmailService {
     if (fullName) {
       this.logger.log(`👤 [PREVIEW] Full name: ${fullName}`);
     }
-    // Nếu muốn lưu ra file, có thể dùng fs.writeFileSync ở đây
-    // fs.writeFileSync(`preview-${email}.html`, htmlContent);
+  }
+
+  async sendWithdrawalOTP(
+    email: string,
+    otpCode: string,
+    amount: number,
+    bankName: string,
+    accountNumber: string,
+  ): Promise<void> {
+    const censoredAccount = this.censorAccountNumber(accountNumber);
+    
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>OTP Withdrawal Request - Skinalyze</title>
+    </head>
+    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 15px 15px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 32px;">Skinalyze</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Withdrawal Request OTP</p>
+        </div>
+        <div style="background: white; padding: 50px 40px; border-radius: 0 0 15px 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
+            <h2 style="color: #2C3E50; margin: 0 0 25px 0;">Your OTP Code</h2>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; text-align: center; margin: 30px 0;">
+                <p style="color: white; margin: 0 0 10px 0; font-size: 14px;">Your verification code:</p>
+                <h1 style="color: white; margin: 0; font-size: 48px; letter-spacing: 8px; font-weight: bold;">${otpCode}</h1>
+            </div>
+            <p style="color: #7F8C8D; font-size: 14px; text-align: center; margin: 20px 0;">This code will expire in 10 minutes</p>
+            <div style="background: #F8F9FA; padding: 25px; border-radius: 8px; margin: 25px 0;">
+                <h3 style="color: #2C3E50; margin: 0 0 15px 0;">Request Details:</h3>
+                <ul style="margin: 0; padding-left: 20px; color: #555;">
+                    <li>Amount: <strong>${amount.toLocaleString()} VND</strong></li>
+                    <li>Bank: <strong>${bankName}</strong></li>
+                    <li>Account: <strong>${censoredAccount}</strong></li>
+                </ul>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+    
+    const subject = 'OTP for Withdrawal Request - Skinalyze';
+    const text = `Your OTP code for withdrawal request is: ${otpCode}. This code will expire in 10 minutes.`;
+    
+    await this.sendEmail(email, subject, html, text);
+  }
+
+  async sendWithdrawalStatusUpdate(
+    email: string,
+    status: string,
+    amount: number,
+    bankName: string,
+    reason?: string,
+  ): Promise<void> {
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Withdrawal Request Update - Skinalyze</title>
+    </head>
+    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 15px 15px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 32px;">Skinalyze</h1>
+            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Withdrawal Request Update</p>
+        </div>
+        <div style="background: white; padding: 50px 40px; border-radius: 0 0 15px 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
+            <h2 style="color: #2C3E50; margin: 0 0 25px 0;">Status Update</h2>
+            <p style="font-size: 16px; color: #555;">Your withdrawal request has been updated to: <strong style="color: #667eea;">${status.toUpperCase()}</strong></p>
+            <div style="background: #F8F9FA; padding: 25px; border-radius: 8px; margin: 25px 0;">
+                <h3 style="color: #2C3E50; margin: 0 0 15px 0;">Request Details:</h3>
+                <ul style="margin: 0; padding-left: 20px; color: #555;">
+                    <li>Amount: <strong>${amount.toLocaleString()} VND</strong></li>
+                    <li>Bank: <strong>${bankName}</strong></li>
+                    <li>Status: <strong>${status}</strong></li>
+                    ${reason ? `<li>Reason: <strong>${reason}</strong></li>` : ''}
+                </ul>
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+    
+    const subject = `Withdrawal Request ${status} - Skinalyze`;
+    const text = `Your withdrawal request status has been updated to: ${status}. Amount: ${amount} VND.`;
+    
+    await this.sendEmail(email, subject, html, text);
   }
 }
