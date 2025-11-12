@@ -159,8 +159,6 @@ export class WithdrawalsService {
       accountNumber: createDto.accountNumber,
       notes: createDto.notes,
       status: WithdrawalStatus.VERIFIED,
-      otpCode: null,
-      otpExpiry: null,
     });
 
     const saved = await this.withdrawalRepository.save(request);

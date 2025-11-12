@@ -63,12 +63,6 @@ export class WithdrawalRequest {
   @Column({ type: 'text', nullable: true })
   rejectionReason: string | null;
 
-  @Column({ nullable: true })
-  otpCode: string | null;
-
-  @Column({ type: 'timestamp', nullable: true })
-  otpExpiry: Date | null;
-
   @Column({ type: 'timestamp', nullable: true })
   verifiedAt: Date;
 
