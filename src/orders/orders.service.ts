@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Order } from './entities/order.entity';
+import { Order, OrderStatus } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -224,6 +224,33 @@ export class OrdersService {
     }
 
     return savedOrder;
+  }
+
+  /**
+   * ✅ Customer đánh dấu đơn hàng là hoàn thành (COMPLETED)
+   * Chỉ có thể complete khi order đã DELIVERED
+   */
+  async completeOrder(id: string, customerId: string, feedback?: string): Promise<Order> {
+    const order = await this.findOne(id);
+
+    // Kiểm tra đơn hàng có thuộc về customer này không
+    if (order.customerId !== customerId) {
+      throw new BadRequestException('Bạn không có quyền thao tác với đơn hàng này');
+    }
+
+    // Chỉ có thể complete khi status là DELIVERED
+    if (order.status !== OrderStatus.DELIVERED) {
+      throw new BadRequestException('Chỉ có thể đánh dấu hoàn thành khi đơn hàng đã được giao');
+    }
+
+    order.status = OrderStatus.COMPLETED;
+    
+    // Lưu feedback nếu có (có thể thêm field feedback vào Order entity nếu cần)
+    if (feedback) {
+      order.rejectionReason = feedback; // Tạm dùng field này, hoặc tạo field mới
+    }
+
+    return await this.orderRepository.save(order);
   }
 
   async confirmOrder(id: string, processedBy: string): Promise<Order> {

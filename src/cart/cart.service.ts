@@ -65,69 +65,83 @@ export class CartService {
 
   async addToCart(userId: string, addToCartDto: AddToCartDto): Promise<Cart> {
     const { productId, quantity } = addToCartDto;
+    console.log('🔍 [DEBUG] Starting addToCart...', { userId, productId, quantity });
 
-    // Verify product exists
-    const product = await this.productsService.findOne(productId);
-    if (!product) {
-      throw new NotFoundException(`Product with ID ${productId} not found`);
-    }
+    try {
+      //redis connection testing
+      const testKey = `test:${Date.now()}`;
+      await this.cacheManager.set(testKey, 'test', 10000); // 10s
+      const testValue = await this.cacheManager.get(testKey);
+      console.log('[DEBUG] Redis connection test:', { testValue });
 
-    // Get current cart first to check if product exists
-    const cart = await this.getCart(userId);
+      // Verify product exists
+      const product = await this.productsService.findOne(productId);
+      if (!product) {
+        throw new NotFoundException(`Product with ID ${productId} not found`);
+      }
 
-    const existingItemIndex = cart.items.findIndex(
-      (item) => item.productId === productId,
-    );
+      // Get current cart first to check if product exists
+      const cart = await this.getCart(userId);
+      console.log('[DEBUG] Current cart:', cart);
 
-    // 🔥 RESERVE INVENTORY (only reserve the NEW quantity being added)
-    const reserveResult = await this.inventoryService.reserveStock(
-      productId,
-      quantity,
-    );
+      const existingItemIndex = cart.items.findIndex(
+        (item) => item.productId === productId,
+      );
 
-    if (!reserveResult.success) {
-      throw new BadRequestException('Không đủ hàng trong kho');
-    }
-
-    const finalPrice = this.calculateFinalPrice(
-      product.sellingPrice,
-      product.salePercentage,
-    );
-
-    if (existingItemIndex > -1) {
-      // Update quantity if product exists
-      cart.items[existingItemIndex].quantity += quantity;
-      // Update price (trường hợp sale percentage thay đổi)
-      cart.items[existingItemIndex].price = finalPrice;
-      cart.items[existingItemIndex].originalPrice = product.sellingPrice;
-      cart.items[existingItemIndex].salePercentage = product.salePercentage || 0;
-    } else {
-      const newItem: CartItem = {
+      //RESERVE INVENTORY (only reserve the NEW quantity being added)
+      const reserveResult = await this.inventoryService.reserveStock(
         productId,
-        productName: product.productName,
-        price: finalPrice,
-        originalPrice: product.sellingPrice,
-        salePercentage: product.salePercentage || 0,
         quantity,
-        addedAt: new Date(),
-        selected: true, // ✅ Mặc định được chọn khi thêm vào cart
-      };
-      cart.items.push(newItem);
+      );
+
+      if (!reserveResult.success) {
+        throw new BadRequestException('Không đủ hàng trong kho');
+      }
+
+      const finalPrice = this.calculateFinalPrice(
+        product.sellingPrice,
+        product.salePercentage,
+      );
+
+      if (existingItemIndex > -1) {
+        // Update quantity if product exists
+        cart.items[existingItemIndex].quantity += quantity;
+        // Update price (trường hợp sale percentage thay đổi)
+        cart.items[existingItemIndex].price = finalPrice;
+        cart.items[existingItemIndex].originalPrice = product.sellingPrice;
+        cart.items[existingItemIndex].salePercentage = product.salePercentage || 0;
+      } else {
+        const newItem: CartItem = {
+          productId,
+          productName: product.productName,
+          price: finalPrice,
+          originalPrice: product.sellingPrice,
+          salePercentage: product.salePercentage || 0,
+          quantity,
+          addedAt: new Date(),
+          selected: true, // Mặc định chọn khi thêm vào cart
+        };
+        cart.items.push(newItem);
+      }
+
+      // Recalculate totals
+      cart.totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+      cart.totalPrice = cart.items.reduce(
+        (sum, item) => sum + (item.price || 0) * item.quantity,
+        0,
+      );
+      cart.updatedAt = new Date();
+
+      // Save to Redis with TTL (24 hours)
+      const cartKey = this.getCartKey(userId);
+      await this.cacheManager.set(cartKey, cart, 86400000); // 24 hours in milliseconds
+      console.log('[DEBUG] Cart saved to Redis with key:', cartKey, 'Items:', cart.items.length);
+
+      return cart;
+    } catch (error) {
+      console.error('[DEBUG] Error in addToCart:', error);
+      throw error;
     }
-
-    // Recalculate totals
-    cart.totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
-    cart.totalPrice = cart.items.reduce(
-      (sum, item) => sum + (item.price || 0) * item.quantity,
-      0,
-    );
-    cart.updatedAt = new Date();
-
-    // Save to Redis
-    const cartKey = this.getCartKey(userId);
-    await this.cacheManager.set(cartKey, cart);
-
-    return cart;
   }
 
   async updateCartItem(
@@ -187,7 +201,7 @@ export class CartService {
     );
     cart.updatedAt = new Date();
 
-    // Save to Redis
+    // ✅ Save to Redis with TTL
     const cartKey = this.getCartKey(userId);
     await this.cacheManager.set(cartKey, cart);
 
@@ -226,13 +240,13 @@ export class CartService {
     );
     cart.updatedAt = new Date();
 
-    // Save to Redis
+    // ✅ Save to Redis
     const cartKey = this.getCartKey(userId);
     if (cart.items.length === 0) {
       // Delete cart if empty
       await this.cacheManager.del(cartKey);
     } else {
-      await this.cacheManager.set(cartKey, cart);
+      await this.cacheManager.set(cartKey, cart, 86400000); // 24 hours
     }
 
     return cart;
@@ -257,9 +271,9 @@ export class CartService {
     item.selected = selected;
     cart.updatedAt = new Date();
 
-    // Save to Redis
+    // ✅ Save to Redis with TTL
     const cartKey = this.getCartKey(userId);
-    await this.cacheManager.set(cartKey, cart);
+    await this.cacheManager.set(cartKey, cart, 86400000); // 24 hours
 
     return cart;
   }
@@ -275,9 +289,9 @@ export class CartService {
     });
     cart.updatedAt = new Date();
 
-    // Save to Redis
+    // ✅ Save to Redis with TTL
     const cartKey = this.getCartKey(userId);
-    await this.cacheManager.set(cartKey, cart);
+    await this.cacheManager.set(cartKey, cart, 86400000); // 24 hours
 
     return cart;
   }
@@ -306,13 +320,13 @@ export class CartService {
     );
     cart.updatedAt = new Date();
 
-    // Save to Redis
+    // ✅ Save to Redis
     const cartKey = this.getCartKey(userId);
     if (cart.items.length === 0) {
       // Delete cart if empty
       await this.cacheManager.del(cartKey);
     } else {
-      await this.cacheManager.set(cartKey, cart);
+      await this.cacheManager.set(cartKey, cart, 86400000); // 24 hours
     }
 
     return cart;
@@ -369,9 +383,9 @@ export class CartService {
       return { userId, items: [], totalPrice: 0, totalItems: 0, updatedAt: new Date() };
     }
 
-    // Lưu lại cart đã update
+    // ✅ Lưu lại cart đã update với TTL
     cart.updatedAt = new Date();
-    await this.cacheManager.set(cartKey, cart, 86400000); // 24h TTL
+    await this.cacheManager.set(cartKey, cart, 86400000); // 24 hours
     return cart;
   }
 }
