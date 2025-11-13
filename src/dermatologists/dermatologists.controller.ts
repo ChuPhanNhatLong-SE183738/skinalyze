@@ -32,6 +32,7 @@ import { ResponseHelper } from 'src/utils/responses';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { GetAvailabilitySummaryDto } from './dto/get-availability-summary.dto';
 
 @ApiTags('Dermatologists')
 @Controller('dermatologists')
@@ -43,7 +44,7 @@ export class DermatologistsController {
 
   // CRUD Operations for Dermatologist
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiOperation({ summary: 'Create a dermatologist profile' })
   @ApiCreatedResponse({ description: 'Dermatologist created successfully' })
   async create(
@@ -68,6 +69,30 @@ export class DermatologistsController {
     return ResponseHelper.success(
       'Dermatologists retrieved successfully',
       dermatologists,
+    );
+  }
+
+  @Get(':dermatologistId/availability-summary')
+  @ApiOperation({
+    summary:
+      'Get available dates summary for a dermatologist (for calendar view)',
+  })
+  @ApiOkResponse({
+    description: 'Returns an array of dates with available slots.',
+    example: ['2025-11-13', '2025-11-14', '2025-11-17'],
+  })
+  async getAvailabilitySummary(
+    @Param('dermatologistId', new ParseUUIDPipe()) dermatologistId: string,
+    @Query() query: GetAvailabilitySummaryDto,
+  ) {
+    const dates = await this.availabilitySlotsService.getAvailabilitySummary(
+      dermatologistId,
+      parseInt(query.month, 10),
+      parseInt(query.year, 10),
+    );
+    return ResponseHelper.success(
+      'Availability summary retrieved successfully',
+      dates,
     );
   }
 
@@ -99,13 +124,20 @@ export class DermatologistsController {
     return ResponseHelper.success('Available slots retrieved', slots);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get dermatologist details' })
-  @ApiOkResponse({ description: 'Dermatologist retrieved successfully' })
-  async findOne(@Param('id') id: string): Promise<unknown> {
-    const dermatologist = await this.dermatologistsService.findOne(id);
+  @Get('my-profile')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.DERMATOLOGIST)
+  @ApiOperation({ summary: 'Get my dermatologist profile' })
+  @ApiOkResponse({
+    description: 'Dermatologist profile retrieved successfully',
+  })
+  async getMyProfile(@GetUser() user: User): Promise<unknown> {
+    console.log('UserId', user.userId);
+    const dermatologist = await this.dermatologistsService.findByUserId(
+      user.userId,
+    );
     return ResponseHelper.success(
-      'Dermatologist retrieved successfully',
+      'Dermatologist profile retrieved successfully',
       dermatologist,
     );
   }
@@ -146,6 +178,17 @@ export class DermatologistsController {
     );
     return ResponseHelper.success(
       'Dermatologist updated successfully by admin',
+      dermatologist,
+    );
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get dermatologist details' })
+  @ApiOkResponse({ description: 'Dermatologist retrieved successfully' })
+  async findOne(@Param('id') id: string): Promise<unknown> {
+    const dermatologist = await this.dermatologistsService.findByDermaId(id);
+    return ResponseHelper.success(
+      'Dermatologist retrieved successfully',
       dermatologist,
     );
   }

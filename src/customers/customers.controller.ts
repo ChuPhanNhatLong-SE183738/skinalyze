@@ -43,15 +43,6 @@ export class CustomersController {
     );
   }
 
-  @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get a customer by ID' })
-  async findOne(@Param('id') id: string) {
-    const customer = await this.customersService.findOne(id);
-    return ResponseHelper.success('Customer retrieved successfully', customer);
-  }
-
   @Get('user/:userId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -71,6 +62,14 @@ export class CustomersController {
   ) {
     const customer = await this.customersService.update(id, updateCustomerDto);
     return ResponseHelper.success('Customer updated successfully', customer);
+  }
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a customer by ID' })
+  async findOne(@Param('id') id: string) {
+    const customer = await this.customersService.findOne(id);
+    return ResponseHelper.success('Customer retrieved successfully', customer);
   }
 
   @Delete(':id')

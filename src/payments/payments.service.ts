@@ -5,6 +5,7 @@ import {
   BadRequestException,
   Inject,
   forwardRef,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, LessThan, Repository } from 'typeorm';
@@ -25,6 +26,8 @@ import { AppointmentsService } from 'src/appointments/appointments.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { AppointmentStatus } from 'src/appointments/types/appointment.types';
 import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
+import { User } from 'src/users/entities/user.entity';
+import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
 
 interface PaymentProcessingResult {
   success: boolean;
@@ -38,7 +41,8 @@ interface PaymentProcessingResult {
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
-
+  private readonly BOOKING_FEE_RATE = 0.25; // 25% fee for booking
+  private readonly SUBSCRIPTION_FEE_RATE = 0.2; // 20% fee for subscription
   constructor(
     private readonly entityManager: EntityManager,
     @InjectRepository(Payment)
@@ -364,6 +368,7 @@ export class PaymentsService {
     return this.entityManager.transaction(async (manager) => {
       const paymentRepo = manager.getRepository(Payment);
       const appointmentRepo = manager.getRepository(Appointment);
+      const userRepo = manager.getRepository(User);
 
       // 1. Find Payment
       const payment = await paymentRepo.findOne({
@@ -379,7 +384,7 @@ export class PaymentsService {
 
       const appointment = await appointmentRepo.findOne({
         where: { payment: { paymentId: paymentId } },
-        relations: ['availabilitySlot'],
+        relations: ['availabilitySlot', 'dermatologist', 'dermatologist.user'],
       });
 
       if (!appointment) {
@@ -387,6 +392,15 @@ export class PaymentsService {
           `❌ Booking payment ${payment.paymentCode} missing appointment linkage`,
         );
         throw new NotFoundException('Appointment not found for this payment');
+      }
+
+      if (!appointment.dermatologist || !appointment.dermatologist.user) {
+        this.logger.error(
+          `❌ Payment ${payment.paymentCode} completed, but linked Appointment ${appointment.appointmentId} is missing Dermatologist User data. CANNOT credit wallet.`,
+        );
+        throw new InternalServerErrorException(
+          'Dermatologist user data is missing for this appointment.',
+        );
       }
 
       if (appointment.appointmentStatus !== AppointmentStatus.PENDING_PAYMENT) {
@@ -401,6 +415,24 @@ export class PaymentsService {
           `Payment was successful, but the appointment (ID: ${appointment.appointmentId}) was already ${appointment.appointmentStatus}. This requires manual intervention.`,
         );
       }
+
+      const doctorShare = amountReceived * (1 - this.BOOKING_FEE_RATE);
+      const systemShare = amountReceived - doctorShare;
+
+      const dermatologistUserId = appointment.dermatologist.user.userId;
+
+      await userRepo.increment(
+        { userId: dermatologistUserId },
+        'balance',
+        doctorShare,
+      );
+
+      this.logger.log(
+        `✅ Booking confirmed for Appt ${appointment.appointmentId}`,
+      );
+      this.logger.log(
+        `💰 Credited ${doctorShare} to User (Dermatologist) ${dermatologistUserId}. System fee: ${systemShare}`,
+      );
 
       // 4. Update Appointment status to SCHEDULED
       appointment.appointmentStatus = AppointmentStatus.SCHEDULED;
@@ -428,6 +460,8 @@ export class PaymentsService {
   ): Promise<PaymentProcessingResult> {
     return this.entityManager.transaction(async (manager) => {
       const paymentRepo = manager.getRepository(Payment);
+      const userRepo = manager.getRepository(User);
+
       const payment = await paymentRepo.findOne({ where: { paymentId } });
 
       if (!payment || !payment.planId || !payment.customerId) {
@@ -449,6 +483,37 @@ export class PaymentsService {
           payment.paidAt,
           manager,
         );
+
+      const fullSubscription = await manager
+        .getRepository(CustomerSubscription)
+        .findOne({
+          where: { id: subscription.id },
+          relations: ['subscriptionPlan.dermatologist.user'],
+        });
+
+      if (!fullSubscription?.subscriptionPlan?.dermatologist?.user) {
+        this.logger.error(
+          `CRITICAL: Cannot credit earning for Subscription ${subscription.id}. Missing dermatologist user data.`,
+        );
+        throw new InternalServerErrorException(
+          'Dermatologist user linkage missing.',
+        );
+      }
+
+      const doctorShare = amountReceived * (1 - this.SUBSCRIPTION_FEE_RATE); // 80%
+      const systemShare = amountReceived - doctorShare; // 20%
+      const dermatologistUserId =
+        fullSubscription.subscriptionPlan.dermatologist.user.userId;
+
+      await userRepo.increment(
+        { userId: dermatologistUserId },
+        'balance',
+        doctorShare,
+      );
+
+      this.logger.log(
+        `💰 Credited ${doctorShare} to User (Dermatologist) ${dermatologistUserId} for Subscription. System fee: ${systemShare}`,
+      );
 
       return {
         success: true,

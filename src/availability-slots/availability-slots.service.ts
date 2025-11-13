@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,7 +20,15 @@ import {
   SlotStatus,
 } from './entities/availability-slot.entity';
 import { CreateAvailabilityDto } from './dto/create-availability.dto';
-import { addMinutes, isBefore, isEqual } from 'date-fns';
+import {
+  addDays,
+  addMinutes,
+  endOfMonth,
+  isBefore,
+  isEqual,
+  parse,
+  startOfMonth,
+} from 'date-fns';
 
 type NewSlotData = {
   dermatologistId: string;
@@ -28,13 +37,15 @@ type NewSlotData = {
   status: SlotStatus;
   price: number;
 };
+
 @Injectable()
 export class AvailabilitySlotsService {
+  private readonly MAX_BOOKING_WINDOW_DAYS = 30;
   constructor(
     @InjectRepository(AvailabilitySlot)
     private readonly slotRepository: Repository<AvailabilitySlot>,
   ) {}
-
+  private readonly logger = new Logger(AvailabilitySlotsService.name);
   private getRepository(manager?: EntityManager) {
     return manager
       ? manager.getRepository(AvailabilitySlot)
@@ -48,6 +59,8 @@ export class AvailabilitySlotsService {
   ) {
     const newSlotsToCreate: NewSlotData[] = [];
     const startTimesToCheck: Date[] = [];
+    const now = new Date();
+    const maxAllowedDate = addDays(now, this.MAX_BOOKING_WINDOW_DAYS);
 
     for (const block of dto.blocks) {
       const start = this.parseDate(block.startTime, 'block start time');
@@ -59,12 +72,28 @@ export class AvailabilitySlotsService {
           'Block end time must be after block start time.',
         );
       }
+      if (isBefore(start, now)) {
+        throw new BadRequestException(
+          `Cannot create availability in the past. Block starts at ${start.toISOString()}`,
+        );
+      }
 
+      if (isBefore(maxAllowedDate, start)) {
+        throw new BadRequestException(
+          `Cannot create availability more than ${this.MAX_BOOKING_WINDOW_DAYS} days in advance. Block starts at ${start.toISOString()}`,
+        );
+      }
       let currentSlotStart = start;
 
       while (isBefore(currentSlotStart, blockEnd)) {
         const currentSlotEnd = addMinutes(currentSlotStart, duration);
 
+        if (isBefore(maxAllowedDate, currentSlotStart)) {
+          this.logger.warn(
+            `Skipping slot at ${currentSlotStart.toISOString()} for derm ${dermatologistId} as it is beyond the ${this.MAX_BOOKING_WINDOW_DAYS}-day limit.`,
+          );
+          break;
+        }
         if (
           isBefore(currentSlotEnd, blockEnd) ||
           isEqual(currentSlotEnd, blockEnd)
@@ -122,6 +151,44 @@ export class AvailabilitySlotsService {
     return {
       message: `Successfully created ${newSlotsToCreate.length} new slots.`,
     };
+  }
+
+  async getAvailabilitySummary(
+    dermatologistId: string,
+    month: number,
+    year: number,
+  ): Promise<string[]> {
+    if (month < 1 || month > 12) {
+      throw new BadRequestException('Invalid month. Must be between 1 and 12.');
+    }
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-01`;
+    const referenceDate = parse(dateStr, 'yyyy-MM-dd', new Date());
+    if (isNaN(referenceDate.getTime())) {
+      throw new BadRequestException('Invalid year or month.');
+    }
+
+    // Range of the month
+    const firstDay = startOfMonth(referenceDate);
+    const lastDay = endOfMonth(referenceDate);
+    const now = new Date();
+
+    const query = this.slotRepository
+      .createQueryBuilder('slot')
+      .select('DATE(slot.startTime) as date')
+      .where('slot.dermatologistId = :dermatologistId', { dermatologistId })
+      .andWhere('slot.status = :status', { status: SlotStatus.AVAILABLE })
+      .andWhere('slot.startTime >= :now', { now })
+      .andWhere('slot.startTime BETWEEN :firstDay AND :lastDay', {
+        firstDay,
+        lastDay,
+      })
+      .groupBy('date')
+      .orderBy('date', 'ASC');
+
+    // Get raw results
+    const rawResults: { date: string }[] = await query.getRawMany();
+
+    return rawResults.map((result) => result.date);
   }
 
   async getMySlots(

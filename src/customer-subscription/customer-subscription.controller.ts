@@ -34,10 +34,6 @@ export class CustomerSubscriptionController {
     private readonly customersService: CustomersService,
   ) {}
 
-  /**
-   * Endpoint cho khách hàng bắt đầu quá trình mua một gói.
-   * Create Payment PENDING.
-   */
   @Post()
   @Roles(UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Create a payment request for a subscription' })

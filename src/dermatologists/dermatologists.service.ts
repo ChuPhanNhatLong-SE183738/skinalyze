@@ -56,25 +56,28 @@ export class DermatologistsService {
     }
   }
 
-  async findOne(id: string): Promise<Dermatologist> {
+  async findByDermaId(dermaId: string): Promise<Dermatologist> {
     try {
       const dermatologist = await this.dermatologistRepository.findOne({
-        where: { dermatologistId: id },
+        where: { dermatologistId: dermaId },
         relations: ['user'],
       });
-
       if (!dermatologist) {
-        throw new NotFoundException(`Dermatologist with ID ${id} not found`);
+        throw new NotFoundException(
+          `Dermatologist with ID ${dermaId} not found 33`,
+        );
       }
 
       return dermatologist;
     } catch (error) {
-      this.handleError(error, `Failed to load dermatologist ${id}`);
+      this.handleError(error, `Failed to load dermatologist ${dermaId}`);
     }
   }
 
   async findByUserId(userId: string): Promise<Dermatologist> {
     try {
+      // console.log('Long log ID', userId);
+
       const dermatologist = await this.dermatologistRepository.findOne({
         where: { user: { userId } },
         relations: ['user'],
@@ -117,7 +120,7 @@ export class DermatologistsService {
     updateDermatologistDto: UpdateDermatologistDto,
   ): Promise<Dermatologist> {
     try {
-      const dermatologist = await this.findOne(dermatologistId);
+      const dermatologist = await this.findByDermaId(dermatologistId);
       Object.assign(dermatologist, updateDermatologistDto);
       return await this.dermatologistRepository.save(dermatologist);
     } catch (error) {
@@ -130,7 +133,7 @@ export class DermatologistsService {
 
   async remove(id: string): Promise<void> {
     try {
-      const dermatologist = await this.findOne(id);
+      const dermatologist = await this.findByDermaId(id);
       await this.dermatologistRepository.remove(dermatologist);
     } catch (error) {
       this.handleError(error, `Failed to remove dermatologist ${id}`);

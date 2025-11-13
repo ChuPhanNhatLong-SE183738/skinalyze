@@ -49,6 +49,7 @@ export interface AppointmentReservationResult {
   paymentCode: string;
   amount: number;
   expiredAt: Date;
+  qrCodeUrl: string;
 }
 export interface AppointmentActionResult {
   message: string;
@@ -140,7 +141,7 @@ export class AppointmentsService {
         paymentCode: payment.paymentCode,
         amount: payment.amount,
         expiredAt: payment.expiredAt,
-        // qrCodeUrl: `https"//img.vietqr.io/image/MB-YOUR_BANK_ACCOUNT-compact2.png?amount=${payment.amount}&addInfo=${payment.paymentCode}`,
+        qrCodeUrl: `https"//img.vietqr.io/image/MB-YOUR_BANK_ACCOUNT-compact2.png?amount=${payment.amount}&addInfo=${payment.paymentCode}`,
       };
     });
   }

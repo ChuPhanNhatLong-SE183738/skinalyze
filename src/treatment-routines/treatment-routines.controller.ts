@@ -21,7 +21,7 @@ import { ResponseHelper } from '../utils/responses';
 @ApiTags('Treatment Routines')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('treatment-Routines')
+@Controller('treatment-routines')
 export class TreatmentRoutinesController {
   constructor(
     private readonly treatmentRoutinesService: TreatmentRoutinesService,
