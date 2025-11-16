@@ -27,13 +27,13 @@ export function SubscriptionPlanList({
   onDelete,
 }: SubscriptionPlanListProps) {
   if (isLoading) {
-    return <div className="text-center p-8">Đang tải dữ liệu...</div>;
+    return <div className="p-8 text-center">Loading plans...</div>;
   }
 
   if (plans.length === 0) {
     return (
-      <div className="text-center p-8 text-muted-foreground">
-        Không tìm thấy gói nào (hoặc bạn chưa tạo gói nào).
+      <div className="p-8 text-center text-muted-foreground">
+        No subscription plans found yet.
       </div>
     );
   }
@@ -42,26 +42,26 @@ export function SubscriptionPlanList({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Tên Gói</TableHead>
-          <TableHead>Giá (VND)</TableHead>
-          <TableHead>Số Buổi</TableHead>
-          <TableHead>Thời Hạn (Ngày)</TableHead>
-          <TableHead>Trạng Thái</TableHead>
-          <TableHead className="text-right">Hành Động</TableHead>
+          <TableHead>Plan Name</TableHead>
+          <TableHead>Price (VND)</TableHead>
+          <TableHead>Sessions</TableHead>
+          <TableHead>Duration (days)</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {plans.map((plan) => (
           <TableRow key={plan.planId}>
             <TableCell className="font-medium">{plan.planName}</TableCell>
-            <TableCell>{plan.basePrice.toLocaleString("vi-VN")}</TableCell>
+            <TableCell>{plan.basePrice.toLocaleString("en-US")}</TableCell>
             <TableCell>{plan.totalSessions}</TableCell>
             <TableCell>{plan.durationInDays}</TableCell>
             <TableCell>
               {plan.isActive ? (
-                <Badge className="bg-green-400 text-black">Kích hoạt</Badge>
+                <Badge className="bg-green-400 text-black">Active</Badge>
               ) : (
-                <Badge variant="secondary">Ẩn</Badge>
+                <Badge variant="secondary">Hidden</Badge>
               )}
             </TableCell>
             <TableCell className="text-right space-x-2">

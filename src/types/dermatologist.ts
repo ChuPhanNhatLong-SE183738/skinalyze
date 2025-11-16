@@ -1,3 +1,5 @@
+import { User } from "./user";
+
 export interface Dermatologist {
   dermatologistId: string;
   userId: string;
@@ -5,4 +7,5 @@ export interface Dermatologist {
   defaultSlotPrice: number;
   createdAt: string;
   updatedAt: string;
+  user?: User;
 }

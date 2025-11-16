@@ -60,7 +60,7 @@ export function SubscriptionPlanToolbar({
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
-          placeholder="Tìm kiếm theo tên gói..."
+          placeholder="Search by plan name..."
           className="pl-10"
           value={localFilters.search || ""}
           onChange={(e) => handleFilterChange("search", e.target.value)}
@@ -85,12 +85,12 @@ export function SubscriptionPlanToolbar({
           }
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Lọc trạng thái" />
+            <SelectValue placeholder="Filter status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">Tất cả Trạng Thái</SelectItem>
-            <SelectItem value="true">Kích hoạt</SelectItem>
-            <SelectItem value="false">Ẩn</SelectItem>
+            <SelectItem value="ALL">All statuses</SelectItem>
+            <SelectItem value="true">Active</SelectItem>
+            <SelectItem value="false">Hidden</SelectItem>
           </SelectContent>
         </Select>
 
@@ -100,20 +100,20 @@ export function SubscriptionPlanToolbar({
           onValueChange={(value) => handleFilterChange("sortBy", value)}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Sắp xếp theo..." />
+            <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={SubscriptionPlanSortBy.CREATED_AT}>
-              Mới nhất
+              Newest first
             </SelectItem>
             <SelectItem value={SubscriptionPlanSortBy.PLAN_NAME}>
-              Tên (A-Z)
+              Plan name (A-Z)
             </SelectItem>
             <SelectItem value={SubscriptionPlanSortBy.BASE_PRICE}>
-              Giá
+              Price
             </SelectItem>
             <SelectItem value={SubscriptionPlanSortBy.TOTAL_SESSIONS}>
-              Số buổi
+              Sessions
             </SelectItem>
           </SelectContent>
         </Select>
@@ -129,14 +129,14 @@ export function SubscriptionPlanToolbar({
             ) : (
               <ArrowDown className="mr-2 h-4 w-4 text-muted-foreground" />
             )}
-            <SelectValue placeholder="Thứ tự..." />
+            <SelectValue placeholder="Order" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="DESC">
-              <span>Giảm dần</span>
+              <span>Descending</span>
             </SelectItem>
             <SelectItem value="ASC">
-              <span>Tăng dần</span>
+              <span>Ascending</span>
             </SelectItem>
           </SelectContent>
         </Select>

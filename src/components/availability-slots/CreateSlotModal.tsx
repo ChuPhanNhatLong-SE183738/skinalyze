@@ -5,7 +5,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFieldArray, useForm } from "react-hook-form";
 import { addWeeks } from "date-fns";
-import { vi } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 
 import { availabilityService } from "@/services/availabilityService";
 import type { CreateAvailabilityDto } from "@/types/availability-slot";
@@ -42,14 +42,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { PlusCircle, Trash2 } from "lucide-react";
 
 const workShiftSchema = z.object({
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Định dạng HH:mm"),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, "Định dạng HH:mm"),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid format (HH:mm)"),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid format (HH:mm)"),
 });
 
 const batchFormSchema = z.object({
-  selectedDays: z.array(z.date()).min(1, "Vui lòng chọn ít nhất 1 ngày."),
-  shifts: z.array(workShiftSchema).min(1, "Phải có ít nhất 1 ca làm việc"),
-  slotDurationInMinutes: z.coerce.number().min(5, "Thời lượng ít nhất 5 phút"),
+  selectedDays: z.array(z.date()).min(1, "Select at least one day."),
+  shifts: z.array(workShiftSchema).min(1, "Add at least one shift."),
+  slotDurationInMinutes: z.coerce.number().min(5, "Duration must be 5 minutes or more."),
   price: z.coerce.number().optional(),
   repeatWeeks: z.coerce.number().min(0).default(0),
 });
@@ -83,7 +83,6 @@ export function CreateSlotModal({
     },
   });
 
-  // Cập nhật form nếu ngày chọn (từ props) thay đổi
   useEffect(() => {
     form.reset({
       selectedDays: selectedDates.length > 0 ? selectedDates : [],
@@ -98,7 +97,6 @@ export function CreateSlotModal({
     name: "shifts",
   });
 
-  // Logic: Tự động vô hiệu hóa "Lặp lại"
   const selectedDays = form.watch("selectedDays");
   const allowRepeat = useMemo(() => {
     if (!selectedDays || selectedDays.length === 0) {
@@ -116,7 +114,6 @@ export function CreateSlotModal({
     return diffInDays < 7;
   }, [selectedDays]);
 
-  // Tự động reset "lặp lại" nếu bị vô hiệu hóa
   useEffect(() => {
     if (!allowRepeat) {
       form.setValue("repeatWeeks", 0);
@@ -156,17 +153,19 @@ export function CreateSlotModal({
 
       await availabilityService.createBatchSlots({ blocks: allBlocks });
       toast({
-        title: "Thành công",
-        description: `Đã tạo lịch rảnh thành công cho ${allBlocks.length} khối.`,
+        title: "Success",
+        description: `Created availability for ${allBlocks.length} block(s).`,
         variant: "success",
       });
       onSlotsCreated();
       onClose();
-    } catch (error: any) {
-      console.error("Lỗi khi tạo lịch hàng loạt:", error);
+    } catch (error: unknown) {
+      console.error("Failed to create availability:", error);
+      const message =
+        error instanceof Error ? error.message : "Unable to create availability.";
       toast({
-        title: "Lỗi",
-        description: error.message || "Tạo lịch rảnh thất bại.",
+        title: "Error",
+        description: message,
         variant: "error",
       });
     } finally {
@@ -178,9 +177,9 @@ export function CreateSlotModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Tạo Lịch Rảnh Hàng Loạt</DialogTitle>
+          <DialogTitle>Create Availability Slots</DialogTitle>
           <DialogDescription>
-            Thiết lập các ca làm việc cho các ngày đã chọn.
+            Configure working shifts for the selected days.
           </DialogDescription>
         </DialogHeader>
 
@@ -193,14 +192,14 @@ export function CreateSlotModal({
                 name="selectedDays"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Áp dụng cho các ngày</FormLabel>
+                    <FormLabel>Apply to dates</FormLabel>
                     <div className="flex justify-center">
                       <FormControl>
                         <Calendar
                           mode="multiple"
                           selected={field.value}
                           onSelect={field.onChange}
-                          locale={vi}
+                          locale={enUS}
                           className="rounded-md border p-0"
                           disabled={(date) =>
                             date < new Date(new Date().setHours(0, 0, 0, 0))
@@ -215,7 +214,7 @@ export function CreateSlotModal({
 
               {/* 2. Working Shifts (Field Array) */}
               <div className="space-y-4">
-                <FormLabel>Ca làm việc</FormLabel>
+                <FormLabel>Shifts</FormLabel>
                 {fields.map((field, index) => (
                   <div
                     key={field.id}
@@ -226,7 +225,7 @@ export function CreateSlotModal({
                       name={`shifts.${index}.startTime`}
                       render={({ field }) => (
                         <FormItem className="flex-1">
-                          <FormLabel>Từ (HH:mm)</FormLabel>
+                          <FormLabel>Start (HH:mm)</FormLabel>
                           <FormControl>
                             <Input type="time" {...field} />
                           </FormControl>
@@ -239,7 +238,7 @@ export function CreateSlotModal({
                       name={`shifts.${index}.endTime`}
                       render={({ field }) => (
                         <FormItem className="flex-1">
-                          <FormLabel>Đến (HH:mm)</FormLabel>
+                          <FormLabel>End (HH:mm)</FormLabel>
                           <FormControl>
                             <Input type="time" {...field} />
                           </FormControl>
@@ -268,7 +267,7 @@ export function CreateSlotModal({
                   }
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  Thêm Ca
+                  Add Shift
                 </Button>
               </div>
 
@@ -279,22 +278,22 @@ export function CreateSlotModal({
                   name="slotDurationInMinutes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Thời lượng mỗi buổi hẹn</FormLabel>
+                      <FormLabel>Appointment duration</FormLabel>
                       <Select
                         onValueChange={(value) => field.onChange(Number(value))}
                         defaultValue={String(field.value)}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Chọn thời lượng..." />
+                            <SelectValue placeholder="Select duration" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="15">15 phút</SelectItem>
-                          <SelectItem value="20">20 phút</SelectItem>
-                          <SelectItem value="30">30 phút</SelectItem>
-                          <SelectItem value="45">45 phút</SelectItem>
-                          <SelectItem value="60">60 phút</SelectItem>
+                          <SelectItem value="15">15 minutes</SelectItem>
+                          <SelectItem value="20">20 minutes</SelectItem>
+                          <SelectItem value="30">30 minutes</SelectItem>
+                          <SelectItem value="45">45 minutes</SelectItem>
+                          <SelectItem value="60">60 minutes</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -306,11 +305,11 @@ export function CreateSlotModal({
                   name="price"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Giá (Tùy chọn)</FormLabel>
+                      <FormLabel>Price (optional)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Mặc định (ví dụ: 300000)"
+                          placeholder="Default (e.g. 300000)"
                           {...field}
                           onChange={(e) =>
                             field.onChange(
@@ -350,7 +349,7 @@ export function CreateSlotModal({
                           !allowRepeat && "text-muted-foreground"
                         )}
                       >
-                        Lặp lại lịch này cho
+                        Repeat for
                       </label>
                       <Input
                         type="number"
@@ -368,13 +367,13 @@ export function CreateSlotModal({
                           !allowRepeat && "text-muted-foreground"
                         )}
                       >
-                        tuần tới
+                        week(s)
                       </span>
                     </div>
                     {!allowRepeat && (
                       <FormDescription>
-                        Không thể lặp lại khi dải ngày đã chọn dài hơn 1 tuần.
-                        Để lặp lại, vui lòng chỉ chọn các ngày trong 1 tuần.
+                        Repeating is disabled when the selected range spans more than one week.
+                        Select dates within the same week to enable repetition.
                       </FormDescription>
                     )}
                     <FormMessage />
@@ -387,14 +386,14 @@ export function CreateSlotModal({
 
         <DialogFooter className="pt-4 border-t">
           <Button type="button" variant="ghost" onClick={onClose}>
-            Hủy
+            Cancel
           </Button>
           <Button
             type="submit"
             disabled={isSubmitting}
             onClick={form.handleSubmit(onSubmit)}
           >
-            {isSubmitting ? "Đang xử lý..." : "Tạo Lịch"}
+            {isSubmitting ? "Saving..." : "Create Slots"}
           </Button>
         </DialogFooter>
       </DialogContent>

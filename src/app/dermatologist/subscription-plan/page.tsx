@@ -50,10 +50,14 @@ export default function SubscriptionPlansPage() {
 
         const data = await subscriptionService.getPlans(currentFilters);
         setPlans(data);
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to load subscription plans.";
         toast({
-          title: "Lỗi",
-          description: error.message || "Không thể tải danh sách gói.",
+          title: "Error",
+          description: message,
           variant: "error",
         });
       } finally {
@@ -99,16 +103,18 @@ export default function SubscriptionPlansPage() {
     try {
       await subscriptionService.deletePlan(planToDelete.planId);
       toast({
-        title: "Đã xóa",
-        description: "Đã xóa gói đăng ký thành công.",
+        title: "Deleted",
+        description: "Subscription plan removed successfully.",
         variant: "success",
       });
       setPlanToDelete(null);
       fetchMyPlans(filters);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete plan.";
       toast({
-        title: "Lỗi",
-        description: error.message || "Xóa gói thất bại.",
+        title: "Error",
+        description: message,
         variant: "error",
       });
     } finally {
@@ -121,13 +127,13 @@ export default function SubscriptionPlansPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Quản Lý Gói Đăng Ký</h1>
-          <p className="text-muted-foreground mt-2">
-            Tạo và quản lý các gói dịch vụ cho khách hàng.
+          <h1 className="text-3xl font-bold">Manage Subscription Plans</h1>
+          <p className="mt-2 text-muted-foreground">
+            Create, publish, and maintain subscription offerings for your patients.
           </p>
         </div>
         <Button onClick={handleOpenCreateModal}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Tạo Gói Mới
+          <PlusCircle className="mr-2 h-4 w-4" /> Create New Plan
         </Button>
       </div>
 
@@ -162,22 +168,22 @@ export default function SubscriptionPlansPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Bạn có chắc chắn?</AlertDialogTitle>
+            <AlertDialogTitle>Delete this plan?</AlertDialogTitle>
             <AlertDialogDescription>
-              Bạn có muốn xóa gói:{" "}
+              This will remove the plan
               <span className="font-bold">{planToDelete?.planName}</span>?
               <br />
-              Hành động này không thể hoàn tác.
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeletePlan}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Đang xóa..." : "Tiếp Tục Xóa"}
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

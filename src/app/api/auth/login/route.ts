@@ -26,10 +26,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const fullUser = result.data.user;
+
+    // Minimal object to set cookie (4KB size limit)
+    const minimalUser = {
+      userId: fullUser.userId,
+      email: fullUser.email,
+      fullName: fullUser.fullName,
+      role: fullUser.role,
+      // (Remove 'photoUrl', 'addresses', 'balance', 'createdAt', etc.)
+    };
+
     // Create response
     const res = NextResponse.json({
       success: true,
-      user: result.data.user,
+      user: fullUser,
     });
 
     // Set httpOnly cookie with access token
@@ -46,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Set user data in a separate cookie (not httpOnly, so client can read it)
     res.cookies.set({
       name: "user_data",
-      value: JSON.stringify(result.data.user),
+      value: JSON.stringify(minimalUser),
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

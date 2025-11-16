@@ -49,7 +49,7 @@ export default function LoginPage() {
           router.push("/staff/dashboard");
           break;
         case "dermatologist":
-          router.push("/dermatologist/availability");
+          router.push("/dermatologist/dashboard");
           break;
         case "customer":
           router.push("/");

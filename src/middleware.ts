@@ -41,7 +41,7 @@ export function middleware(request: NextRequest) {
           );
         case "dermatologist":
           return NextResponse.redirect(
-            new URL("/dermatologist/availability", request.url)
+            new URL("/dermatologist/dashboard", request.url)
           );
         case "customer":
           return NextResponse.redirect(new URL("/", request.url));

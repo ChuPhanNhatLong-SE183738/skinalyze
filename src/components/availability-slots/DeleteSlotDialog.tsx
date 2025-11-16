@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Loader2 } from "lucide-react"; 
+import { Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,15 +38,17 @@ export function DeleteSlotDialog({
     try {
       await availabilityService.deleteSlot(slot.slotId);
       toast({
-        title: "Thành công",
-        description: "Đã xóa slot thành công.",
+        title: "Success",
+        description: "Slot deleted successfully.",
         variant: "success",
       });
       onSlotDeleted(); // Notify parent about successful deletion
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete slot.";
       toast({
-        title: "Lỗi",
-        description: error.message || "Xóa slot thất bại.",
+        title: "Error",
+        description: message,
         variant: "error",
       });
     } finally {
@@ -58,21 +60,21 @@ export function DeleteSlotDialog({
     <AlertDialog open={!!slot} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Bạn có chắc chắn?</AlertDialogTitle>
+          <AlertDialogTitle>Delete this slot?</AlertDialogTitle>
           <AlertDialogDescription>
-            Bạn có muốn xóa slot: <br />
+            This will remove the slot scheduled at: <br />
             <span className="font-medium">
               {slot
                 ? format(new Date(slot.startTime), "HH:mm dd/MM/yyyy")
                 : "..."}
             </span>
-            ?
+            .
             <br />
-            Hành động này không thể hoàn tác.
+            This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Hủy</AlertDialogCancel>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
             onClick={handleDelete}
@@ -81,10 +83,10 @@ export function DeleteSlotDialog({
             {isDeleting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Đang xóa...
+                Deleting...
               </>
             ) : (
-              "Tiếp Tục Xóa"
+              "Delete"
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

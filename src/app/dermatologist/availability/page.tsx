@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { format, getDay, parse, startOfWeek, addDays } from "date-fns";
-import { vi } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import {
   Calendar as BigCalendar,
   dateFnsLocalizer,
@@ -28,6 +28,7 @@ import { PlusCircle, X, AlertTriangle } from "lucide-react";
 
 import { CreateSlotModal } from "@/components/availability-slots/CreateSlotModal";
 import { DeleteSlotDialog } from "@/components/availability-slots/DeleteSlotDialog";
+import { useRouter } from "next/navigation";
 
 export interface CalendarEvent {
   title: string;
@@ -41,7 +42,7 @@ export default function AvailabilityPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(true);
   const { toast } = useToast();
-
+  const router = useRouter();
   const detailCardRef = useRef<HTMLDivElement | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,8 +55,21 @@ export default function AvailabilityPage() {
     null
   );
 
-  // State for current calendar view(week, month, day)
   const [currentView, setCurrentView] = useState<View>(Views.WEEK);
+
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const localizer = useMemo(
+    () =>
+      dateFnsLocalizer({
+        format,
+        parse,
+        startOfWeek: () => startOfWeek(new Date(), { locale: enUS }),
+        getDay,
+        locales: { "en-US": enUS },
+      }),
+    []
+  );
 
   const fetchSlots = useCallback(async () => {
     setIsLoadingSlots(true);
@@ -65,10 +79,12 @@ export default function AvailabilityPage() {
         endDate: addDays(new Date(), 90).toISOString(),
       });
       setSlots(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Unable to load availability.";
       toast({
-        title: "Lỗi",
-        description: error.message || "Không thể tải danh sách slot.",
+        title: "Error",
+        description: message || "Unable to load slots.",
         variant: "error",
       });
     } finally {
@@ -95,7 +111,6 @@ export default function AvailabilityPage() {
     setEvents(calendarEvents);
   }, [slots, currentView]);
 
-  // Scroll to detail card slot
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
     const slot = event.resource;
     setSelectedSlot(slot);
@@ -108,7 +123,6 @@ export default function AvailabilityPage() {
       });
     }, 100);
   }, []);
-
   // Handle select range to create slots (onSelectSlot by calendar)
   const handleSelectRange = useCallback(
     (slotInfo: { start: Date; end: Date }) => {
@@ -158,13 +172,12 @@ export default function AvailabilityPage() {
 
       // Styles slot in calendar (override default CSS of react-big-calendar)
       const style = {
-        backgroundColor: isBooked ? "#fecaca" : "#dcfce7", // red-200 : green-200
-        color: isBooked ? "#991b1b" : "#166534", // red-800 : green-800
-        border: isBooked ? "2px solid #f87171" : "1px solid #4ade80", // red-400 : green-400
+        backgroundColor: isBooked ? "#fecaca" : "#dcfce7",
+        color: isBooked ? "#991b1b" : "#166534",
+        border: isBooked ? "2px solid #f87171" : "1px solid #4ade80",
         borderRadius: "4px",
         opacity: isPast ? 0.6 : 1,
       };
-
       // Style for month view to show border when selected
       const className = cn(
         "p-1 text-xs cursor-pointer",
@@ -179,7 +192,6 @@ export default function AvailabilityPage() {
     [selectedSlot]
   );
 
-  // Adjust parent day cell style (for past days)
   const dayPropGetter = useCallback((date: Date) => {
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     return {
@@ -187,16 +199,6 @@ export default function AvailabilityPage() {
     };
   }, []);
 
-  // Set up slot localizer
-  const localizer = dateFnsLocalizer({
-    format,
-    parse,
-    startOfWeek: () => startOfWeek(new Date(), { locale: vi }),
-    getDay,
-    locales: { vi },
-  });
-
-  // Color for slot status in detail card
   const getStatusColor = (status: SlotStatus) => {
     switch (status) {
       case "AVAILABLE":
@@ -208,14 +210,17 @@ export default function AvailabilityPage() {
     }
   };
 
+  const handleNavigate = useCallback((newDate: Date) => {
+    setCurrentDate(newDate);
+  }, []);
+
   return (
     <div className="container mx-auto p-4 md:p-8">
-      {/* 1. Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+      <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-3xl font-bold">Quản Lý Lịch Rảnh</h1>
-          <p className="text-muted-foreground mt-2">
-            Xem lịch, xóa slot hoặc kéo chuột trên lịch để tạo lịch rảnh mới.
+          <h1 className="text-3xl font-bold">Manage Availability</h1>
+          <p className="mt-2 text-muted-foreground">
+            Review your calendar, delete existing slots, or drag to create new availability.
           </p>
         </div>
         <Button
@@ -223,15 +228,15 @@ export default function AvailabilityPage() {
             setSelectedDates([]);
             setIsModalOpen(true);
           }}
-          className="mt-4 md:mt-0"
+          className="mt-2 md:mt-0"
         >
-          <PlusCircle className="mr-2 h-4 w-4" /> Tạo Lịch (Nâng Cao)
+          <PlusCircle className="mr-2 h-4 w-4" /> Create Availability (Advanced)
         </Button>
       </div>
 
-      {/* 2. Calendar */}
-      <div className="h-[75vh] bg-white p-4 rounded-lg shadow-sm border">
-        {isLoadingSlots && <div className="text-center">Đang tải lịch...</div>}
+      <div className="h-[75vh] rounded-lg border bg-white p-4 shadow-sm">
+        {isLoadingSlots && <div className="text-center">Loading availability...</div>}
+
         <BigCalendar
           localizer={localizer}
           events={events}
@@ -239,7 +244,7 @@ export default function AvailabilityPage() {
           endAccessor="end"
           defaultView={Views.WEEK}
           views={[Views.WEEK, Views.MONTH, Views.DAY]}
-          culture="vi"
+          culture="en-US"
           selectable
           onSelectEvent={handleSelectEvent}
           onSelectSlot={handleSelectRange}
@@ -247,60 +252,63 @@ export default function AvailabilityPage() {
           dayPropGetter={dayPropGetter}
           view={currentView}
           onView={setCurrentView}
+          date={currentDate}
+          onNavigate={handleNavigate}
           messages={{
-            next: "Sau",
-            previous: "Trước",
-            today: "Hôm nay",
-            month: "Tháng",
-            week: "Tuần",
-            day: "Ngày",
-            agenda: "Lịch trình",
-            noEventsInRange: "Không có lịch rảnh trong khung giờ này.",
+            next: "Next",
+            previous: "Previous",
+            today: "Today",
+            month: "Month",
+            week: "Week",
+            day: "Day",
+            agenda: "Agenda",
+            date: "Date",
+            time: "Time",
+            event: "Slot",
+            noEventsInRange: "No availability in this range.",
           }}
         />
       </div>
 
-      {/* 3. Slot Detail Card */}
       {selectedSlot && (
-        <Card
-          ref={detailCardRef}
-          className="mt-6 shadow-md relative  border-yellow-400 border-2"
-        >
+        <Card ref={detailCardRef} className="relative mt-6 border-2 border-yellow-400 shadow-md">
           <Button
             variant="ghost"
             size="sm"
-            className="absolute top-3 right-3 text-muted-foreground"
+            className="absolute right-3 top-3 text-muted-foreground"
             onClick={() => setSelectedSlot(null)}
           >
             <X className="h-4 w-4" />
           </Button>
           <CardHeader>
-            <CardTitle>Chi Tiết Slot</CardTitle>
+            <CardTitle>Slot Details</CardTitle>
             <CardDescription>
               {format(new Date(selectedSlot.startTime), "HH:mm, dd/MM/yyyy")}
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <span className="text-sm font-medium text-muted-foreground">
-                Thời gian:
+                Time
               </span>
               <p className="font-semibold">
-                {format(new Date(selectedSlot.startTime), "HH:mm")} -{" "}
-                {format(new Date(selectedSlot.endTime), "HH:mm")}
+                {format(new Date(selectedSlot.startTime), "HH:mm")} - {format(
+                  new Date(selectedSlot.endTime),
+                  "HH:mm"
+                )}
               </p>
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">
-                Giá:
+                Price
               </span>
               <p className="font-semibold">
-                {selectedSlot.price?.toLocaleString("vi-VN") || "Mặc định"} VND
+                {selectedSlot.price?.toLocaleString("en-US") || "Default"} VND
               </p>
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">
-                Trạng thái:
+                Status
               </span>
               <p
                 className={cn(
@@ -308,18 +316,7 @@ export default function AvailabilityPage() {
                   getStatusColor(selectedSlot.status)
                 )}
               >
-                {selectedSlot.status === "AVAILABLE"
-                  ? "Còn Trống"
-                  : "Đã Được Đặt"}
-              </p>
-            </div>
-
-            <div>
-              <span className="text-sm font-medium text-muted-foreground">
-                Mã cuộc hẹn:
-              </span>
-              <p className="font-semibold">
-                {selectedSlot.appointmentId || "Chưa có"}
+                {selectedSlot.status === "AVAILABLE" ? "Available" : "Booked"}
               </p>
             </div>
           </CardContent>
@@ -329,19 +326,31 @@ export default function AvailabilityPage() {
                 variant="destructive"
                 onClick={() => setSlotToDelete(selectedSlot)}
               >
-                Xóa Slot Này
+                Delete Slot
               </Button>
             ) : (
-              <p className="text-sm text-muted-foreground flex items-center border border-red-300 bg-red-50 rounded-md px-3 py-2  ">
-                <AlertTriangle className="h-4 w-4 mr-2 text-red-500 " />
-                Không thể xóa slot đã được đặt.
-              </p>
+              <>
+                <p className="mr-2 flex items-center rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-muted-foreground">
+                  <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
+                  Cannot delete a booked slot.
+                </p>
+                <Button
+                  variant="default"
+                  onClick={() =>
+                    router.push(
+                      `/dermatologist/appointment/${selectedSlot.appointmentId}`
+                    )
+                  }
+                  disabled={!selectedSlot.appointmentId}
+                >
+                  View Appointment Details
+                </Button>
+              </>
             )}
           </CardFooter>
         </Card>
       )}
 
-      {/* 4. Modal create slot */}
       <CreateSlotModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -349,7 +358,6 @@ export default function AvailabilityPage() {
         onSlotsCreated={onSlotsCreated}
       />
 
-      {/* 5. Delete slot Dialog */}
       <DeleteSlotDialog
         slot={slotToDelete}
         onClose={() => setSlotToDelete(null)}
