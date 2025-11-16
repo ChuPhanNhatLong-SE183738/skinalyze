@@ -1,11 +1,11 @@
-import Navbar from "@/components/navbar/Navbar";
-import HeroSection from "@/components/herosection/HeroSection";
+import Navbar from "../../components/navbar/Navbar";
+import HeroSection from "../../components/herosection/HeroSection";
 import HowItWorksSection from "@/components/howitworkssection/HowItWorksSection";
 import FeaturesSection from "@/components/featuresection/FeatureSection";
 import MedicalTeamSection from "@/components/medicalteam/MedicalTeamSection";
 import DownloadCTASection from "@/components/download-section/DownloadCTASection";
 
-export default function Home() {
+const Home = () => {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -16,4 +16,6 @@ export default function Home() {
       <DownloadCTASection />
     </div>
   );
-}
+};
+
+export default Home;
