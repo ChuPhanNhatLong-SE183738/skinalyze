@@ -5,7 +5,7 @@ import type { ComponentType, ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { appointmentService } from "@/services/appointmentService";
-import type { Appointment } from "@/types/appointment";
+import type { Appointment, CompleteAppointmentDto } from "@/types/appointment";
 import { AppointmentStatus } from "@/types/appointment";
 import { format } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -17,6 +17,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Loader2,
@@ -28,12 +29,28 @@ import {
   CalendarClock,
   Coins,
   ClipboardList,
+  ClipboardCheck,
   CheckCircle2,
+  Check,
+  XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
-import { Label } from "@radix-ui/react-label";
+import { Label } from "@/components/ui/label";
+import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { SkinAnalysisCard } from "@/components/skin-analysis/SkinAnalysisCard";
 
 const statusLabels: Record<AppointmentStatus, string> = {
   [AppointmentStatus.SCHEDULED]: "Scheduled",
@@ -69,6 +86,16 @@ const getStatusBadgeVariant = (
 export default function AppointmentDetailPage() {
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [isJoining, setIsJoining] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const [dialogOpen, setDialogOpen] = useState<"complete" | "cancel" | null>(
+    null
+  );
+  const [terminationNote, setTerminationNote] = useState("");
+
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -99,15 +126,110 @@ export default function AppointmentDetailPage() {
     fetchAppointment();
   }, [fetchAppointment]);
 
-  const handleJoinMeet = () => {
-    if (appointment?.meetingUrl) {
-      window.open(appointment.meetingUrl, "_blank");
-    } else {
+  const handleJoinMeet = async () => {
+    if (!appointment) return;
+
+    setIsJoining(true);
+    let meetLink = appointment.meetingUrl;
+
+    try {
+      if (!meetLink) {
+        toast({
+          title: "Creating meeting link...",
+          description: "Please wait a moment.",
+          variant: "default",
+        });
+
+        const response = await appointmentService.generateManualMeetLink(
+          appointment.appointmentId
+        );
+
+        meetLink = response.meetLink;
+
+        if (!meetLink) {
+          throw new Error("Unable to create meeting link.");
+        }
+      }
+
+      await appointmentService.checkInDermatologist(appointment.appointmentId);
+      toast({
+        title: "Checked In!",
+        description: "Your check-in has been recorded.",
+        variant: "success",
+      });
+
+      // Open link
+      window.open(meetLink, "_blank");
+
+      await fetchAppointment();
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Meeting link not found.",
+        description: error.message || "Failed to join meeting.",
         variant: "error",
       });
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!appointment) return;
+
+    setIsCompleting(true);
+    const dto: CompleteAppointmentDto = {
+      note: terminationNote || undefined,
+    };
+
+    try {
+      const updatedAppointment = await appointmentService.completeAppointment(
+        appointment.appointmentId,
+        dto
+      );
+      setAppointment(updatedAppointment);
+      toast({
+        title: "Success",
+        description: "Appointment marked as COMPLETED.",
+        variant: "success",
+      });
+      setDialogOpen(null);
+      setTerminationNote(""); // Reset note
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to complete appointment.",
+        variant: "error",
+      });
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!appointment) return;
+
+    if (!appointment) return;
+
+    setIsCancelling(true);
+    try {
+      await appointmentService.cancelByDermatologist(appointment.appointmentId);
+
+      toast({
+        title: "Success",
+        description: "Appointment has been cancelled.",
+        variant: "success",
+      });
+      setDialogOpen(null);
+
+      await fetchAppointment();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel appointment.",
+        variant: "error",
+      });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -172,14 +294,50 @@ export default function AppointmentDetailPage() {
     </div>
   );
 
+  const createdRoutineId = appointment.createdRoutine?.routineId;
+  const trackingRoutineId = appointment.trackingRoutine?.routineId;
+  const targetRoutineId = createdRoutineId || trackingRoutineId;
+
+  const routineButton = (
+    <Button asChild size="lg" className="w-full" variant="outline">
+      {targetRoutineId ? (
+        <Link href={`/dermatologist/routine/${targetRoutineId}`}>
+          <ClipboardCheck className="mr-2 h-5 w-5" />
+          View / Update Treatment Routine
+        </Link>
+      ) : (
+        <Link
+          href={{
+            pathname: "/dermatologist/routines/create",
+            query: {
+              appointmentId: appointment.appointmentId,
+              customerId: appointment.customer.customerId,
+              dermatologistId: appointment.dermatologist.dermatologistId,
+            },
+          }}
+        >
+          <ClipboardCheck className="mr-2 h-5 w-5" />
+          Create New Treatment Routine
+        </Link>
+      )}
+    </Button>
+  );
+
+  const isCancellable =
+    appointment.appointmentStatus === AppointmentStatus.SCHEDULED;
+  const isCompletable =
+    appointment.appointmentStatus === AppointmentStatus.SCHEDULED ||
+    appointment.appointmentStatus === AppointmentStatus.IN_PROGRESS;
+
   return (
-    <div className="container mx-auto p-4 md:p-8 max-w-4xl">
+    <div className="container mx-auto p-4 md:p-8 max-w-6xl">
       <Button variant="ghost" onClick={() => router.back()} className="mb-4">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Appointments
       </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Customer Information */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="shadow-lg">
             <CardHeader className="flex flex-row items-center gap-4">
@@ -228,26 +386,62 @@ export default function AppointmentDetailPage() {
               )}
             </CardContent>
           </Card>
+          {appointment.skinAnalysis && (
+            <SkinAnalysisCard analysis={appointment.skinAnalysis} />
+          )}
         </div>
 
+        {/* Right Column: Appointment Details */}
         <div className="lg:col-span-1 space-y-6">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl">Appointment Details</CardTitle>
               <CardDescription>ID: {appointment.appointmentId}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
+              {/* Main action buttons */}
               {canJoinMeet && (
                 <Button
                   size="lg"
                   className="w-full bg-green-600 hover:bg-green-700"
                   onClick={handleJoinMeet}
+                  disabled={isJoining}
                 >
-                  <Video className="mr-2 h-5 w-5" />
-                  Join Meeting
+                  {isJoining ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  ) : (
+                    <Video className="mr-2 h-5 w-5" />
+                  )}
+                  {appointment.appointmentStatus ===
+                  AppointmentStatus.IN_PROGRESS
+                    ? "Re-join Meeting"
+                    : "Join Meeting & Check-in"}
                 </Button>
               )}
-              <div className="space-y-4">
+
+              {/* Routine Button */}
+              {(appointment.appointmentStatus ===
+                AppointmentStatus.IN_PROGRESS ||
+                appointment.appointmentStatus === AppointmentStatus.COMPLETED ||
+                appointment.appointmentStatus ===
+                  AppointmentStatus.SCHEDULED) &&
+                routineButton}
+
+              {/* Complete Button */}
+              {isCompletable && (
+                <Button
+                  size="lg"
+                  className="w-full"
+                  variant="default"
+                  onClick={() => setDialogOpen("complete")}
+                >
+                  <Check className="mr-2 h-5 w-5" />
+                  Mark as Completed
+                </Button>
+              )}
+
+              {/* Appointment information  */}
+              <div className="space-y-4 pt-4 border-t">
                 <InfoRow
                   icon={CheckCircle2}
                   label="Status"
@@ -294,9 +488,87 @@ export default function AppointmentDetailPage() {
                 />
               </div>
             </CardContent>
+
+            {isCancellable && (
+              <CardFooter>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={() => setDialogOpen("cancel")}
+                >
+                  <XCircle className="mr-2 h-5 w-5" />
+                  Cancel Appointment
+                </Button>
+              </CardFooter>
+            )}
           </Card>
         </div>
       </div>
+
+      {/* --- Cancel Confirmation Dialog --- */}
+      <AlertDialog
+        open={dialogOpen === "cancel"}
+        onOpenChange={(open) => !open && setDialogOpen(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will cancel the appointment. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancel}
+              disabled={isCancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCancelling && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Confirm Cancel
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* --- Complete Confirmation Dialog --- */}
+      <AlertDialog
+        open={dialogOpen === "complete"}
+        onOpenChange={(open) => !open && setDialogOpen(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete Appointment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark the appointment as COMPLETED. You can add an
+              optional note.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label htmlFor="terminationNote" className="text-left">
+              Note (Optional)
+            </Label>
+            <Textarea
+              id="terminationNote"
+              placeholder="E.g., Patient completed the session..."
+              value={terminationNote}
+              onChange={(e) => setTerminationNote(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+            <AlertDialogAction onClick={handleComplete} disabled={isCompleting}>
+              {isCompleting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Confirm Complete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

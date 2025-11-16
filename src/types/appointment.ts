@@ -1,7 +1,8 @@
 import { Customer } from "./customer";
 import type { Dermatologist } from "./dermatologist";
+import { SkinAnalysis } from "./skin-analysis";
+import { TreatmentRoutine } from "./treatment-routine";
 
-// (Giả định type 'Payment' đơn giản)
 export interface Payment {
   paymentId: string;
   amount: number;
@@ -51,5 +52,20 @@ export interface Appointment {
 
   customer: Customer;
   dermatologist: Dermatologist;
+  skinAnalysis: SkinAnalysis | null;
   payment: Payment | null;
+
+
+  trackingRoutine: TreatmentRoutine | null;
+  createdRoutine: TreatmentRoutine | null;
+}
+
+export interface CompleteAppointmentDto {
+  note?: string;
+}
+
+export interface FindAppointmentsDto {
+  customerId?: string;
+  dermatologistId?: string;
+  status?: AppointmentStatus;
 }
