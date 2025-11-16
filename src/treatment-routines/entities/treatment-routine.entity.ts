@@ -16,9 +16,9 @@ import { RoutineDetail } from '../../routine-details/entities/routine-detail.ent
 import { SkinAnalysis } from 'src/skin-analysis/entities/skin-analysis.entity';
 
 export enum RoutineStatus {
-  ACTIVE = 'active',
-  COMPLETED = 'completed',
-  CANCELLED = 'cancelled',
+  ACTIVE = 'ACTIVE',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
 }
 
 @Entity('treatment_routines')

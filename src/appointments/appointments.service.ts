@@ -15,6 +15,7 @@ import {
   IsNull,
   LessThan,
   FindOneOptions,
+  FindOptionsWhere,
 } from 'typeorm';
 import { Appointment } from './entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
@@ -31,7 +32,12 @@ import { TreatmentRoutine } from '../treatment-routines/entities/treatment-routi
 
 import { AvailabilitySlotsService } from '../availability-slots/availability-slots.service';
 import { PaymentsService } from 'src/payments/payments.service';
-import { PaymentType } from 'src/payments/entities/payment.entity';
+import {
+  Payment,
+  PaymentMethod,
+  PaymentStatus,
+  PaymentType,
+} from 'src/payments/entities/payment.entity';
 import { GoogleMeetService } from 'src/google-meet/google-meet.service';
 import { addMinutes, subMinutes } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -42,15 +48,24 @@ import {
 import { CreateSubscriptionAppointmentDto } from './dto/create-subscription-appointment.dto';
 import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
 import { UserRole } from 'src/users/entities/user.entity';
-import { CompleteAppointmentDto } from './dto/complete-appointment-dto';
+import { CompleteAppointmentDto } from './dto/complete-appointment.dto';
+import { FindAppointmentsDto } from './dto/find-appointment.dto';
 
 export interface AppointmentReservationResult {
   appointmentId: string;
   paymentCode: string;
-  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentType: PaymentType;
   expiredAt: Date;
-  qrCodeUrl: string;
+  bankingInfo: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    amount: number;
+    qrCodeUrl: string;
+  };
 }
+
 export interface AppointmentActionResult {
   message: string;
   [key: string]: any;
@@ -135,13 +150,19 @@ export class AppointmentsService {
         manager,
       );
 
-      //  Return payment information to client
       return {
         appointmentId: savedAppointment.appointmentId,
-        paymentCode: payment.paymentCode,
-        amount: payment.amount,
+        paymentType: payment.paymentType,
+        paymentCode: payment.paymentCode, // Customer PHẢI nhập đúng code này
+        paymentMethod: payment.paymentMethod,
         expiredAt: payment.expiredAt,
-        qrCodeUrl: `https"//img.vietqr.io/image/MB-YOUR_BANK_ACCOUNT-compact2.png?amount=${payment.amount}&addInfo=${payment.paymentCode}`,
+        bankingInfo: {
+          bankName: 'MBBank',
+          accountNumber: '0347178790',
+          accountName: 'CHU PHAN NHAT LONG',
+          amount: payment.amount,
+          qrCodeUrl: `https://img.vietqr.io/image/MB-0347178790-compact2.png?amount=${payment.amount}&addInfo=${payment.paymentCode}`,
+        },
       };
     });
   }
@@ -278,7 +299,9 @@ export class AppointmentsService {
     // Check role and ownership
     if (role === UserRole.CUSTOMER) {
       if (appointment.customer.user.userId !== userId) {
-        throw new ForbiddenException('You do not own this appointment');
+        throw new ForbiddenException(
+          'Cannot check-in you do not own this appointment',
+        );
       }
       // First-time only
       if (!appointment.customerJoinedAt) {
@@ -288,7 +311,7 @@ export class AppointmentsService {
       // Check dermatologist
       if (appointment.dermatologist.user.userId !== userId) {
         throw new ForbiddenException(
-          'You are not assigned to this appointment',
+          'Cannot check-in you are not assigned to this appointment',
         );
       }
       if (!appointment.dermatologistJoinedAt) {
@@ -381,9 +404,30 @@ export class AppointmentsService {
     });
   }
 
-  async findAll(): Promise<Appointment[]> {
+  // async findAll(): Promise<Appointment[]> {
+  //   return this.appointmentRepository.find({
+  //     relations: ['customer', 'dermatologist', 'payment'],
+  //     order: { startTime: 'ASC' },
+  //   });
+  // }
+
+  async findAll(filters: FindAppointmentsDto): Promise<Appointment[]> {
+    const where: FindOptionsWhere<Appointment> = {};
+
+    if (filters.customerId) {
+      // TypeORM requires nested object for relations in where clause
+      where.customer = { customerId: filters.customerId };
+    }
+    if (filters.dermatologistId) {
+      where.dermatologist = { dermatologistId: filters.dermatologistId };
+    }
+
+    if (filters.status) {
+      where.appointmentStatus = filters.status;
+    }
     return this.appointmentRepository.find({
-      relations: ['customer', 'dermatologist', 'payment'],
+      where: where,
+      relations: ['customer.user', 'dermatologist.user', 'payment'],
       order: { startTime: 'ASC' },
     });
   }
@@ -391,7 +435,14 @@ export class AppointmentsService {
   async findOne(id: string): Promise<Appointment> {
     const appointment = await this.appointmentRepository.findOne({
       where: { appointmentId: id },
-      relations: ['customer', 'dermatologist', 'payment'],
+      relations: [
+        'customer.user',
+        'dermatologist.user',
+        'payment',
+        'trackingRoutine',
+        'createdRoutine',
+        'skinAnalysis',
+      ],
     });
 
     if (!appointment) {
@@ -735,6 +786,64 @@ export class AppointmentsService {
     }
   }
 
+  async cancelPendingPaymentReservationByUser(
+    appointmentId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
+    const customer = await this.customersService.findByUserId(userId);
+
+    return this.entityManager.transaction(async (manager) => {
+      const appRepo = manager.getRepository(Appointment);
+      const paymentRepo = manager.getRepository(Payment);
+
+      const appointment = await appRepo.findOne({
+        where: {
+          appointmentId: appointmentId,
+          customer: { customerId: customer.customerId },
+        },
+        relations: ['availabilitySlot', 'payment'],
+        lock: { mode: 'pessimistic_write' }, // Lock the row avoiding race conditions
+      });
+
+      if (!appointment) {
+        throw new NotFoundException(
+          'Pending appointment not found or user does not own it.',
+        );
+      }
+
+      if (appointment.appointmentStatus !== AppointmentStatus.PENDING_PAYMENT) {
+        throw new BadRequestException(
+          'This appointment is not in a pending payment state.',
+        );
+      }
+
+      appointment.appointmentStatus = AppointmentStatus.CANCELLED;
+      appointment.terminatedReason = TerminationReason.PAYMENT_TIMEOUT;
+
+      if (appointment.availabilitySlot) {
+        await this.availabilitySlotsService.releaseSlot(
+          appointment.availabilitySlot.slotId,
+          manager,
+        );
+      }
+
+      // Update Payment -> EXPIRED
+      // For cron job to skip processing
+      if (appointment.payment) {
+        appointment.payment.status = PaymentStatus.EXPIRED;
+        await paymentRepo.save(appointment.payment);
+      }
+
+      await appRepo.save(appointment);
+
+      this.logger.log(
+        `User ${userId} manually cancelled reservation for Appt: ${appointmentId}`,
+      );
+
+      return { message: 'Appointment reservation successfully cancelled.' };
+    });
+  }
+
   /**
    * Được gọi bởi PaymentsService (Cron Job) khi một thanh toán bị hết hạn.
    * Hàm này PHẢI chạy bên trong một transaction do PaymentsService khởi tạo.
@@ -748,20 +857,30 @@ export class AppointmentsService {
     );
 
     const appRepo = manager.getRepository(Appointment);
+    const updateResult = await appRepo.update(
+      {
+        appointmentId: appointmentId,
+        appointmentStatus: AppointmentStatus.PENDING_PAYMENT,
+      },
+      {
+        appointmentStatus: AppointmentStatus.CANCELLED,
+        terminatedReason: TerminationReason.PAYMENT_TIMEOUT,
+      },
+    );
 
-    // 1. Update Appointment -> CANCELLED
-    await appRepo.update(appointmentId, {
-      appointmentStatus: AppointmentStatus.CANCELLED,
-      terminatedReason: TerminationReason.PAYMENT_TIMEOUT,
-    });
+    // If updateResult.affected === 0 (appointment not found or not in PENDING_PAYMENT because user already cancelled manually)
+    if (updateResult.affected === 0) {
+      this.logger.log(
+        `Appt: ${appointmentId} was already cancelled (likely by user). Skipping slot release.`,
+      );
+      return;
+    }
 
-    // 2. Find Appointment (with Slot)
     const appointment = await appRepo.findOne({
       where: { appointmentId },
       relations: ['availabilitySlot'],
     });
 
-    // 3. Release Slot
     if (appointment?.availabilitySlot) {
       await this.availabilitySlotsService.releaseSlot(
         appointment.availabilitySlot.slotId,
@@ -771,20 +890,20 @@ export class AppointmentsService {
   }
 
   // Cron Job: Run every minute to check for appointments needing Meet links
-  // @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleGenerateMeetLinksCron() {
     this.logger.log(
       'Running Cron Job: Check for appointments needing Meet links...',
     );
 
     const now = new Date();
-    const targetTime = addMinutes(now, 10);
+    const targetTime = addMinutes(now, 60);
 
     const appointmentsToProcess = await this.appointmentRepository.find({
       where: {
         appointmentStatus: AppointmentStatus.SCHEDULED,
         meetingUrl: IsNull(),
-        startTime: Between(now, targetTime), // Start time in the next 10 minutes
+        startTime: Between(now, targetTime), // Start time in the next 60 minutes
       },
       relations: ['dermatologist', 'customer'], // Information for notifications
     });

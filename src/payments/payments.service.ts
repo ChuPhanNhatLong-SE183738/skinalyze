@@ -6,6 +6,7 @@ import {
   Inject,
   forwardRef,
   InternalServerErrorException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, LessThan, Repository } from 'typeorm';
@@ -28,6 +29,7 @@ import { AppointmentStatus } from 'src/appointments/types/appointment.types';
 import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
 import { User } from 'src/users/entities/user.entity';
 import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
+import { SlotStatus } from 'src/availability-slots/entities/availability-slot.entity';
 
 interface PaymentProcessingResult {
   success: boolean;
@@ -137,7 +139,7 @@ export class PaymentsService {
 
     // Set expiration (15 minutes for banking)
     const expiredAt = new Date();
-    expiredAt.setMinutes(expiredAt.getMinutes() + 15);
+    expiredAt.setMinutes(expiredAt.getMinutes() + 5);
 
     const paymentData: Partial<Payment> = {
       paymentCode,
@@ -229,19 +231,19 @@ export class PaymentsService {
       if (payment.status === PaymentStatus.COMPLETED) {
         this.logger.warn(`⚠️ Payment already completed: ${paymentCode}`);
         responsePayload = {
-          success: false,
+          success: true,
           message: 'Payment already completed',
         };
         return;
       }
 
-      if (payment.expiredAt && new Date() > payment.expiredAt) {
-        payment.status = PaymentStatus.EXPIRED;
-        await paymentRepo.save(payment);
-        this.logger.warn(`⚠️ Payment expired: ${paymentCode}`);
-        responsePayload = { success: false, message: 'Payment expired' };
-        return;
-      }
+      // if (payment.expiredAt && new Date() > payment.expiredAt) {
+      //   payment.status = PaymentStatus.EXPIRED;
+      //   await paymentRepo.save(payment);
+      //   this.logger.warn(`⚠️ Payment expired: ${paymentCode}`);
+      //   responsePayload = { success: false, message: 'Payment expired' };
+      //   return;
+      // }
 
       const amountReceived = webhookData.transferAmount;
       const amountExpected = Number(payment.amount);
@@ -262,6 +264,38 @@ export class PaymentsService {
         return;
       }
 
+      // 3.  LOGIC "HỒI SINH" (RẤT QUAN TRỌNG)
+      // (Chỉ chạy nếu Cron Job đã chạy trước)
+      if (payment.status === PaymentStatus.EXPIRED) {
+        this.logger.warn(
+          `⚠️ Payment ${paymentCode} was EXPIRED. Money received. Checking status...`,
+        );
+
+        // Nếu là BOOKING, kiểm tra Slot
+        if (payment.paymentType === PaymentType.BOOKING) {
+          // Nếu là BOOKING, ta phải kiểm tra xem slot đã bị người khác đặt chưa
+          const slot = payment.appointment?.availabilitySlot;
+          if (slot && slot.status !== SlotStatus.AVAILABLE) {
+            // Kịch bản XẤU NHẤT: Cron Job đã chạy, nhả slot
+            // VÀ một khách hàng B đã đặt mất slot đó.
+            this.logger.error(
+              `[CRITICAL] Payment ${paymentCode} received, but Slot ${slot.slotId} was already re-booked.`,
+            );
+            throw new ConflictException(
+              `Payment received, but the slot was already re-booked by another user. MANUAL REFUND REQUIRED.`,
+            );
+          }
+          // Nếu slot vẫn AVAILABLE (chưa ai đặt), ta "hồi sinh" nó
+          this.logger.log(
+            `Reviving expired BOOKING ${paymentCode}. Re-reserving slot...`,
+          );
+          // (Logic cập nhật slot sẽ ở Giai đoạn 2)
+        }
+        this.logger.log(
+          `Reviving expired ${payment.paymentType} payment ${paymentCode}.`,
+        );
+      }
+      // (Dù status là PENDING hay EXPIRED, giờ nó cũng sẽ là COMPLETED)
       payment.status = PaymentStatus.COMPLETED;
       payment.paidAt = new Date();
       await paymentRepo.save(payment);
@@ -752,7 +786,7 @@ export class PaymentsService {
     };
   }
 
-  // @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async cancelExpiredPayments(): Promise<number> {
     const expiredPayments = await this.paymentRepository.find({
       where: {

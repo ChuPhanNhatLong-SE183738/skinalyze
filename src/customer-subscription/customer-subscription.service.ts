@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, FindOptionsWhere, Repository } from 'typeorm';
 import { CustomerSubscription } from './entities/customer-subscription.entity';
 import { SubscriptionPlansService } from '../subscription-plans/subscription-plans.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -165,10 +165,27 @@ export class CustomerSubscriptionService {
     return subRepo.save(subscription);
   }
 
-  async findByCustomerId(customerId: string): Promise<CustomerSubscription[]> {
+  async findByCustomerId(
+    customerId: string,
+    dermatologistId?: string,
+  ): Promise<CustomerSubscription[]> {
+    const where: FindOptionsWhere<CustomerSubscription> = {
+      customer: { customerId: customerId },
+    };
+
+    if (dermatologistId) {
+      where.subscriptionPlan = {
+        dermatologist: { dermatologistId: dermatologistId },
+      };
+    }
+
     return this.customerSubscriptionRepository.find({
-      where: { customer: { customerId: customerId } },
-      relations: ['subscriptionPlan', 'payment'],
+      where,
+      relations: [
+        'subscriptionPlan',
+        'payment',
+        'subscriptionPlan.dermatologist',
+      ],
       order: { createdAt: 'DESC' },
     });
   }

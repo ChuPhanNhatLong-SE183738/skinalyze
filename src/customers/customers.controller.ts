@@ -52,35 +52,6 @@ export class CustomersController {
     return ResponseHelper.success('Customer retrieved successfully', customer);
   }
 
-  @Patch(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update a customer' })
-  async update(
-    @Param('id') id: string,
-    @Body() updateCustomerDto: UpdateCustomerDto,
-  ) {
-    const customer = await this.customersService.update(id, updateCustomerDto);
-    return ResponseHelper.success('Customer updated successfully', customer);
-  }
-  @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get a customer by ID' })
-  async findOne(@Param('id') id: string) {
-    const customer = await this.customersService.findOne(id);
-    return ResponseHelper.success('Customer retrieved successfully', customer);
-  }
-
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete a customer' })
-  async remove(@Param('id') id: string) {
-    await this.customersService.remove(id);
-    return ResponseHelper.success('Customer deleted successfully');
-  }
-
   @Post('user/:userId/ai-usage/increment')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -118,5 +89,34 @@ export class CustomersController {
       subscriptionId,
     );
     return ResponseHelper.success('Subscription registered', customer);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a customer' })
+  async update(
+    @Param('id') id: string,
+    @Body() updateCustomerDto: UpdateCustomerDto,
+  ) {
+    const customer = await this.customersService.update(id, updateCustomerDto);
+    return ResponseHelper.success('Customer updated successfully', customer);
+  }
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get a customer by ID' })
+  async findOne(@Param('id') id: string) {
+    const customer = await this.customersService.findOne(id);
+    return ResponseHelper.success('Customer retrieved successfully', customer);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a customer' })
+  async remove(@Param('id') id: string) {
+    await this.customersService.remove(id);
+    return ResponseHelper.success('Customer deleted successfully');
   }
 }

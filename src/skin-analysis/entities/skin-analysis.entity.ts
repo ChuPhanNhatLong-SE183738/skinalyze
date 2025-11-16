@@ -6,8 +6,10 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
+import { Appointment } from 'src/appointments/entities/appointment.entity';
 
 @Entity('skin_analysis')
 export class SkinAnalysis {
@@ -57,4 +59,7 @@ export class SkinAnalysis {
   @ManyToOne(() => Customer, (customer) => customer.skinAnalyses)
   @JoinColumn({ name: 'customerId' })
   customer: Customer;
+
+  @OneToMany(() => Appointment, (appointment) => appointment.skinAnalysis)
+  appointments: Appointment[];
 }

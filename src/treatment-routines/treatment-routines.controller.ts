@@ -51,17 +51,6 @@ export class TreatmentRoutinesController {
     );
   }
 
-  @Get(':id')
-  @Roles(UserRole.DERMATOLOGIST, UserRole.CUSTOMER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get a treatment Routine by ID' })
-  async findOne(@Param('id') id: string) {
-    const Routine = await this.treatmentRoutinesService.findOne(id);
-    return ResponseHelper.success(
-      'Treatment Routine retrieved successfully',
-      Routine,
-    );
-  }
-
   @Get('dermatologist/:dermatologistId')
   @Roles(UserRole.DERMATOLOGIST, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all Routines by dermatologist' })
@@ -83,6 +72,16 @@ export class TreatmentRoutinesController {
     return ResponseHelper.success(
       'Customer Routines retrieved successfully',
       Routines,
+    );
+  }
+  @Get(':id')
+  @Roles(UserRole.DERMATOLOGIST, UserRole.CUSTOMER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get a treatment Routine by ID' })
+  async findOne(@Param('id') id: string) {
+    const Routine = await this.treatmentRoutinesService.findOne(id);
+    return ResponseHelper.success(
+      'Treatment Routine retrieved successfully',
+      Routine,
     );
   }
 

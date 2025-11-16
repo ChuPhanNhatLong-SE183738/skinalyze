@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -18,6 +19,7 @@ import {
   ApiOperation,
   ApiCreatedResponse,
   ApiOkResponse,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { ResponseHelper } from '../utils/responses';
 import { CustomerSubscriptionService } from './customer-subscription.service';
@@ -56,9 +58,13 @@ export class CustomerSubscriptionController {
       {
         paymentInfo: {
           paymentCode: payment.paymentCode,
-          amount: payment.amount,
-          expiredAt: payment.expiredAt,
-          // qrCodeUrl: `https://img.vietqr.io/image/MB-YOUR_BANK_ACCOUNT-compact2.png?amount=${payment.amount}&addInfo=${payment.paymentCode}`,
+          bankingInfo: {
+            bankName: 'MBBank',
+            accountNumber: '0347178790',
+            accountName: 'CHU PHAN NHAT LONG',
+            amount: payment.amount,
+            qrCodeUrl: `https://img.vietqr.io/image/MB-0347178790-compact2.png?amount=${payment.amount}&addInfo=${payment.paymentCode}`,
+          },
         },
       },
     );
@@ -68,11 +74,22 @@ export class CustomerSubscriptionController {
   @Roles(UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Get all my subscriptions (Customer only)' })
   @ApiOkResponse({ description: 'Subscriptions retrieved successfully.' })
-  async getMySubscriptions(@GetUser() user: User) {
+  @ApiQuery({
+    name: 'dermatologistId',
+    required: false,
+    description: 'Filter subscriptions by a specific dermatologist ID',
+    type: String,
+  })
+  async getMySubscriptions(
+    @GetUser() user: User,
+    @Query('dermatologistId', new ParseUUIDPipe({ optional: true }))
+    dermatologistId?: string,
+  ) {
     const customer = await this.customersService.findByUserId(user.userId);
     const subscriptions =
       await this.customerSubscriptionService.findByCustomerId(
         customer.customerId,
+        dermatologistId,
       );
 
     return ResponseHelper.success(

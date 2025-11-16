@@ -98,7 +98,7 @@ export class Appointment {
   @JoinColumn({ name: 'paymentId' })
   payment: Payment;
 
-  @OneToOne(() => SkinAnalysis, { nullable: true })
+  @ManyToOne(() => SkinAnalysis, { nullable: true })
   @JoinColumn({ name: 'analysisId' })
   skinAnalysis: SkinAnalysis;
 

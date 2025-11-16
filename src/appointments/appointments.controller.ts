@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -25,14 +26,23 @@ import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User, UserRole } from 'src/users/entities/user.entity';
 import { CreatedResponse, ResponseHelper } from 'src/utils/responses';
 import { Roles } from 'src/auth/decorators/roles.decorator';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Appointment } from './entities/appointment.entity';
 import { CreateSubscriptionAppointmentDto } from './dto/create-subscription-appointment.dto';
-import { CompleteAppointmentDto } from './dto/complete-appointment-dto';
+import { CompleteAppointmentDto } from './dto/complete-appointment.dto';
+import { FindAppointmentsDto } from './dto/find-appointment.dto';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 
 @ApiTags('Appointments')
 @Controller('appointments')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) {}
 
@@ -75,29 +85,14 @@ export class AppointmentsController {
   }
 
   @Get()
-  findAll() {
-    return this.appointmentsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.appointmentsService.findOne(id);
-  }
-
-  @Patch(':id/status')
-  updateStatus(
-    @Param('id') id: string,
-    @Body() updateAppointmentStatusDto: UpdateAppointmentStatusDto,
-  ) {
-    return this.appointmentsService.updateStatus(
-      id,
-      updateAppointmentStatusDto,
+  @ApiOperation({ summary: 'Find all appointments with optional filters' })
+  @ApiResponse({ status: 200, description: 'List retrieved successfully.' })
+  async findAll(@Query() filters: FindAppointmentsDto) {
+    const appointments = await this.appointmentsService.findAll(filters);
+    return ResponseHelper.success(
+      'Appointments retrieved successfully',
+      appointments,
     );
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.appointmentsService.remove(id);
   }
 
   @Patch('my/:id/cancel')
@@ -251,6 +246,32 @@ export class AppointmentsController {
     return ResponseHelper.success('Dermatologist check-in recorded');
   }
 
+  @Delete(':id/reservation')
+  @Roles(UserRole.CUSTOMER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cancel a PENDING payment reservation (Customer)' })
+  @ApiParam({ name: 'id', description: 'Appointment ID', format: 'uuid' })
+  @ApiResponse({
+    status: 200,
+    description: 'Reservation cancelled successfully.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Appointment is not in pending state.',
+  })
+  @ApiResponse({ status: 404, description: 'Appointment not found.' })
+  async cancelPendingReservation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser() user: User,
+  ) {
+    const result =
+      await this.appointmentsService.cancelPendingPaymentReservationByUser(
+        id,
+        user.userId,
+      );
+    return ResponseHelper.success(result.message, null);
+  }
+
   @Patch(':appointmentId/generate-meet-link')
   @Roles(UserRole.DERMATOLOGIST)
   @HttpCode(HttpStatus.OK)
@@ -267,5 +288,26 @@ export class AppointmentsController {
     return ResponseHelper.success('Meet link generated successfully', {
       meetLink,
     });
+  }
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const appointment = await this.appointmentsService.findOne(id);
+    return ResponseHelper.success('Get appointment successfully', appointment);
+  }
+
+  @Patch(':id/status')
+  updateStatus(
+    @Param('id') id: string,
+    @Body() updateAppointmentStatusDto: UpdateAppointmentStatusDto,
+  ) {
+    return this.appointmentsService.updateStatus(
+      id,
+      updateAppointmentStatusDto,
+    );
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.appointmentsService.remove(id);
   }
 }
