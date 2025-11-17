@@ -143,88 +143,66 @@ export class EmailService {
   private createVerificationEmailTemplate(verificationUrl: string): string {
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="vi">
     <head>
         <meta charset="UTF-8">
         <title>Xác Thực Email - Skinalyze</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                margin: 0;
+                padding: 0;
+            }
+        </style>
     </head>
-    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-        <!-- Header với gradient xanh dương chuyên nghiệp -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 15px 15px 0 0; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-            <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">🔬 SKINALYZE</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; font-weight: 500;">AI-Powered Skin Analysis Platform</p>
-        </div>
-        
-        <div style="background: white; padding: 50px 40px; border-radius: 0 0 15px 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
-            <!-- Icon container với gradient mới -->
-            <div style="text-align: center; margin-bottom: 40px;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 25px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);">
-                    <span style="font-size: 45px; line-height: 1;">✉️</span>
-                </div>
-                <h2 style="color: #667eea; margin: 0; font-size: 24px; font-weight: bold;">Xác Thực Email Của Bạn</h2>
-            </div>
-            
-            <div style="text-align: center; margin-bottom: 30px;">
-                <p style="font-size: 18px; margin-bottom: 15px; color: #2C3E50;">Chào mừng bạn đến với <strong style="color: #667eea;">Skinalyze</strong>! 🎉</p>
-                <p style="font-size: 16px; margin-bottom: 0; color: #666;">Vui lòng click vào nút bên dưới để xác thực email và kích hoạt tài khoản:</p>
-            </div>
-            
-            <!-- Button với gradient mới -->
-            <div style="text-align: center; margin: 50px 0;">
-                <a href="${verificationUrl}" 
-                   style="display: inline-block; padding: 18px 45px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); transition: all 0.3s ease;">
-                    🔐 Xác Thực Email Ngay
-                </a>
-            </div>
-            
-            <!-- Thông tin bảo mật với màu xanh dương -->
-            <div style="background: linear-gradient(135deg, #f0f3ff 0%, #e8ecff 100%); border-left: 5px solid #667eea; padding: 25px; margin: 40px 0; border-radius: 8px;">
-                <h3 style="color: #667eea; margin: 0 0 15px 0; font-size: 18px; display: flex; align-items: center;">
-                    <span style="margin-right: 10px;">🛡️</span>Lưu Ý Bảo Mật
-                </h3>
-                <ul style="margin: 0; padding-left: 25px; color: #2C3E50; line-height: 1.8;">
-                    <li>Link này chỉ có hiệu lực trong <strong>24 giờ</strong></li>
-                    <li>Nếu bạn không đăng ký, hãy bỏ qua email này</li>
-                    <li>Không chia sẻ link này với ai khác</li>
-                    <li>Liên hệ hỗ trợ nếu có thắc mắc</li>
-                </ul>
-            </div>
-            
-            <!-- Benefits section -->
-            <div style="background: #F8F9FA; padding: 25px; border-radius: 8px; margin: 30px 0;">
-                <h3 style="color: #667eea; margin: 0 0 15px 0; font-size: 18px; text-align: center;">🌟 Khám phá tính năng của Skinalyze</h3>
-                <div style="display: flex; flex-wrap: wrap; justify-content: space-around; text-align: center;">
-                    <div style="flex: 1; min-width: 120px; margin: 10px;">
-                        <div style="font-size: 24px; margin-bottom: 8px;">🤖</div>
-                        <p style="font-size: 14px; color: #666; margin: 0;">Phân tích da bằng AI</p>
+    <body style="background-color: #F0FDFB; padding: 20px; margin: 0;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center">
+                    <div style="padding: 20px 0; text-align: center;">
+                        <h1 style="color: #0D9488; font-size: 32px; font-weight: 700; margin: 0;">
+                            Skinalyze
+                        </h1>
                     </div>
-                    <div style="flex: 1; min-width: 120px; margin: 10px;">
-                        <div style="font-size: 24px; margin-bottom: 8px;">�</div>
-                        <p style="font-size: 14px; color: #666; margin: 0;">Gợi ý sản phẩm</p>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 550px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.07); margin: 0 auto; overflow: hidden;">
+                        <tr>
+                            <td style="background-color: #14B8A6; height: 10px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 40px 40px 35px 40px;">
+                                <h2 style="color: #1F2937; margin: 0 0 15px 0; font-size: 24px; font-weight: 600;">
+                                    Xác Thực Email Của Bạn ✉️
+                                </h2>
+                                <p style="font-size: 16px; color: #4B5563; margin-bottom: 30px;">
+                                    Chào mừng đến với Skinalyze! Vui lòng xác thực email để kích hoạt tài khoản.
+                                </p>
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="${verificationUrl}" style="display: inline-block; background-color: #14B8A6; color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 50px; font-weight: 600; font-size: 16px;">
+                                        🔐 Xác Thực Ngay
+                                    </a>
+                                </div>
+                                <div style="margin-top: 25px; background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 20px;">
+                                    <p style="color: #92400E; font-size: 14px; margin: 0; font-weight: 500;">
+                                        <strong>⏰ Lưu ý:</strong> Link này chỉ có hiệu lực trong <strong>24 giờ</strong>. Nếu bạn không đăng ký, hãy bỏ qua email này.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="text-align: center; padding: 30px 20px; max-width: 550px; margin: 0 auto;">
+                        <p style="color: #6B7280; font-size: 14px; margin: 0;">
+                            Bạn nhận được email này vì đã đăng ký tài khoản tại Skinalyze.
+                        </p>
+                        <p style="color: #9CA3AF; font-size: 14px; margin: 5px 0 0 0;">
+                            © ${new Date().getFullYear()} Skinalyze.
+                        </p>
                     </div>
-                    <div style="flex: 1; min-width: 120px; margin: 10px;">
-                        <div style="font-size: 24px; margin-bottom: 8px;">�</div>
-                        <p style="font-size: 14px; color: #666; margin: 0;">Theo dõi kết quả</p>
-                    </div>
-                </div>
-            </div>
-            
-            <p style="text-align: center; color: #7F8C8D; font-style: italic; font-size: 16px; margin-top: 30px;">
-                Cảm ơn bạn đã tin tưởng Skinalyze! �
-            </p>
-        </div>
-        
-        <!-- Footer -->
-        <div style="text-align: center; padding: 30px 20px; color: #95A5A6; font-size: 14px; background: #ECF0F1; border-radius: 0 0 15px 15px;">
-            <p style="margin: 0 0 8px 0;"><strong style="color: #667eea;">Skinalyze</strong> - Nền tảng phân tích da bằng AI</p>
-            <p style="margin: 0; font-size: 12px;">© 2025 Skinalyze. All rights reserved.</p>
-            <div style="margin-top: 15px;">
-                <span style="margin: 0 10px; color: #27AE60;">📧</span>
-                <span style="margin: 0 10px; color: #27AE60;">📱</span>
-                <span style="margin: 0 10px; color: #27AE60;">🌐</span>
-            </div>
-        </div>
+                </td>
+            </tr>
+        </table>
     </body>
     </html>
     `;
@@ -233,93 +211,66 @@ export class EmailService {
   private createWelcomeEmailTemplate(fullName: string): string {
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="vi">
     <head>
         <meta charset="UTF-8">
         <title>Chào mừng - Skinalyze</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                margin: 0;
+                padding: 0;
+            }
+        </style>
     </head>
-    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-        <!-- Header với gradient xanh dương -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 15px 15px 0 0; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-            <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">🔬 SKINALYZE</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; font-weight: 500;">AI-Powered Skin Analysis Platform</p>
-        </div>
-        
-        <div style="background: white; padding: 50px 40px; border-radius: 0 0 15px 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
-            <!-- Welcome icon -->
-            <div style="text-align: center; margin-bottom: 40px;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 25px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);">
-                    <span style="font-size: 45px; line-height: 1;">🎉</span>
-                </div>
-                <h2 style="color: #667eea; margin: 0; font-size: 26px; font-weight: bold;">Chào mừng ${fullName}!</h2>
-            </div>
-            
-            <div style="text-align: center; margin-bottom: 40px;">
-                <p style="font-size: 18px; margin-bottom: 15px; color: #2C3E50;">
-                    Cảm ơn bạn đã tham gia <strong style="color: #667eea;">Skinalyze</strong>! �
-                </p>
-                <p style="font-size: 16px; color: #666;">
-                    Tài khoản của bạn đã được xác thực thành công. Hãy khám phá AI phân tích da!
-                </p>
-            </div>
-            
-            <!-- Features grid -->
-            <div style="background: linear-gradient(135deg, #f0f3ff 0%, #e8ecff 100%); border-left: 5px solid #667eea; padding: 30px; margin: 40px 0; border-radius: 8px;">
-                <h3 style="color: #667eea; margin: 0 0 25px 0; font-size: 20px; text-align: center; display: flex; align-items: center; justify-content: center;">
-                    <span style="margin-right: 10px;">🎯</span>Những gì bạn có thể làm
-                </h3>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
-                    <div style="text-align: center; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                        <div style="font-size: 30px; margin-bottom: 10px;">🤖</div>
-                        <h4 style="color: #667eea; margin: 0 0 8px 0; font-size: 16px;">Phân tích da AI</h4>
-                        <p style="color: #666; margin: 0; font-size: 14px;">Công nghệ AI tiên tiến</p>
+    <body style="background-color: #F0FDFB; padding: 20px; margin: 0;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center">
+                    <div style="padding: 20px 0; text-align: center;">
+                        <h1 style="color: #0D9488; font-size: 32px; font-weight: 700; margin: 0;">
+                            Skinalyze
+                        </h1>
                     </div>
-                    
-                    <div style="text-align: center; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                        <div style="font-size: 30px; margin-bottom: 10px;">�</div>
-                        <h4 style="color: #667eea; margin: 0 0 8px 0; font-size: 16px;">Gợi ý sản phẩm</h4>
-                        <p style="color: #666; margin: 0; font-size: 14px;">Phù hợp da bạn</p>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 550px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.07); margin: 0 auto; overflow: hidden;">
+                        <tr>
+                            <td style="background-color: #14B8A6; height: 10px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 40px 40px 35px 40px;">
+                                <h2 style="color: #1F2937; margin: 0 0 15px 0; font-size: 24px; font-weight: 600;">
+                                    Chào mừng ${fullName}! 🎉
+                                </h2>
+                                <p style="font-size: 16px; color: #4B5563; margin-bottom: 30px;">
+                                    Tài khoản của bạn đã được xác thực thành công. Hãy khám phá AI phân tích da ngay bây giờ!
+                                </p>
+                                <div style="background-color: #D1FAE5; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                                    <p style="color: #065F46; font-size: 16px; margin: 0; font-weight: 600; text-align: center;">
+                                        ✨ Chúc mừng! Bạn đã tham gia cộng đồng Skinalyze
+                                    </p>
+                                </div>
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}" style="display: inline-block; background-color: #14B8A6; color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 50px; font-weight: 600; font-size: 16px;">
+                                        🚀 Bắt Đầu Ngay
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="text-align: center; padding: 30px 20px; max-width: 550px; margin: 0 auto;">
+                        <p style="color: #6B7280; font-size: 14px; margin: 0;">
+                            Chúc bạn có trải nghiệm tuyệt vời với Skinalyze!
+                        </p>
+                        <p style="color: #9CA3AF; font-size: 14px; margin: 5px 0 0 0;">
+                            © ${new Date().getFullYear()} Skinalyze.
+                        </p>
                     </div>
-                    
-                    <div style="text-align: center; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                        <div style="font-size: 30px; margin-bottom: 10px;">�</div>
-                        <h4 style="color: #667eea; margin: 0 0 8px 0; font-size: 16px;">Theo dõi tiến độ</h4>
-                        <p style="color: #666; margin: 0; font-size: 14px;">Lịch sử phân tích</p>
-                    </div>
-                    
-                    <div style="text-align: center; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                        <div style="font-size: 30px; margin-bottom: 10px;">🛒</div>
-                        <h4 style="color: #667eea; margin: 0 0 8px 0; font-size: 16px;">Mua sắm</h4>
-                        <p style="color: #666; margin: 0; font-size: 14px;">Sản phẩm chất lượng</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- CTA Button -->
-            <div style="text-align: center; margin: 40px 0;">
-                <a href="${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}" 
-                   style="display: inline-block; padding: 18px 45px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);">
-                    🚀 Bắt Đầu Ngay
-                </a>
-            </div>
-            
-            <p style="text-align: center; color: #7F8C8D; font-style: italic; font-size: 16px; margin-top: 30px;">
-                Chúc bạn có trải nghiệm tuyệt vời với Skinalyze! �
-            </p>
-        </div>
-        
-        <!-- Footer -->
-        <div style="text-align: center; padding: 30px 20px; color: #95A5A6; font-size: 14px; background: #ECF0F1; border-radius: 0 0 15px 15px;">
-            <p style="margin: 0 0 8px 0;"><strong style="color: #667eea;">Skinalyze</strong> - Nền tảng phân tích da bằng AI</p>
-            <p style="margin: 0; font-size: 12px;">© 2025 Skinalyze. All rights reserved.</p>
-            <div style="margin-top: 15px;">
-                <span style="margin: 0 10px; color: #667eea;">📧</span>
-                <span style="margin: 0 10px; color: #667eea;">📱</span>
-                <span style="margin: 0 10px; color: #667eea;">🌐</span>
-            </div>
-        </div>
+                </td>
+            </tr>
+        </table>
     </body>
     </html>
     `;
@@ -328,57 +279,66 @@ export class EmailService {
   private createForgotPasswordEmailTemplate(resetUrl: string): string {
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="vi">
     <head>
         <meta charset="UTF-8">
         <title>Đặt lại mật khẩu - Skinalyze</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                margin: 0;
+                padding: 0;
+            }
+        </style>
     </head>
-    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 15px 15px 0 0; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-            <h1 style="color: white; margin: 0; font-size: 32px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">🔬 SKINALYZE</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px; font-weight: 500;">AI-Powered Skin Analysis Platform</p>
-        </div>
-        <div style="background: white; padding: 50px 40px; border-radius: 0 0 15px 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
-            <div style="text-align: center; margin-bottom: 40px;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 25px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);">
-                    <span style="font-size: 45px; line-height: 1;">🔑</span>
-                </div>
-                <h2 style="color: #667eea; margin: 0; font-size: 24px; font-weight: bold;">Yêu cầu đặt lại mật khẩu</h2>
-            </div>
-            <div style="text-align: center; margin-bottom: 30px;">
-                <p style="font-size: 18px; margin-bottom: 15px; color: #2C3E50;">Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
-                <p style="font-size: 16px; margin-bottom: 0; color: #666;">Nhấn vào nút bên dưới để đặt lại mật khẩu:</p>
-            </div>
-            <div style="text-align: center; margin: 50px 0;">
-                <a href="${resetUrl}" 
-                   style="display: inline-block; padding: 18px 45px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); transition: all 0.3s ease;">
-                    🔒 Đặt lại mật khẩu
-                </a>
-            </div>
-            <div style="background: linear-gradient(135deg, #f0f3ff 0%, #e8ecff 100%); border-left: 5px solid #667eea; padding: 25px; margin: 40px 0; border-radius: 8px;">
-                <h3 style="color: #667eea; margin: 0 0 15px 0; font-size: 18px; display: flex; align-items: center;">
-                    <span style="margin-right: 10px;">🛡️</span>Lưu ý bảo mật
-                </h3>
-                <ul style="margin: 0; padding-left: 25px; color: #2C3E50; line-height: 1.8;">
-                    <li>Link này chỉ có hiệu lực trong <strong>30 phút</strong></li>
-                    <li>Nếu bạn không yêu cầu, hãy bỏ qua email này</li>
-                    <li>Không chia sẻ link này với ai khác</li>
-                </ul>
-            </div>
-            <p style="text-align: center; color: #7F8C8D; font-style: italic; font-size: 16px; margin-top: 30px;">
-                Nếu bạn gặp khó khăn, hãy liên hệ với đội ngũ hỗ trợ của chúng tôi.
-            </p>
-        </div>
-        <div style="text-align: center; padding: 30px 20px; color: #95A5A6; font-size: 14px; background: #ECF0F1; border-radius: 0 0 15px 15px;">
-            <p style="margin: 0 0 8px 0;"><strong style="color: #667eea;">Skinalyze</strong> - Nền tảng phân tích da bằng AI</p>
-            <p style="margin: 0; font-size: 12px;">© 2025 Skinalyze. All rights reserved.</p>
-            <div style="margin-top: 15px;">
-                <span style="margin: 0 10px; color: #667eea;">📧</span>
-                <span style="margin: 0 10px; color: #667eea;">📱</span>
-                <span style="margin: 0 10px; color: #667eea;">🌐</span>
-            </div>
-        </div>
+    <body style="background-color: #F0FDFB; padding: 20px; margin: 0;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center">
+                    <div style="padding: 20px 0; text-align: center;">
+                        <h1 style="color: #0D9488; font-size: 32px; font-weight: 700; margin: 0;">
+                            Skinalyze
+                        </h1>
+                    </div>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 550px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.07); margin: 0 auto; overflow: hidden;">
+                        <tr>
+                            <td style="background-color: #14B8A6; height: 10px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 40px 40px 35px 40px;">
+                                <h2 style="color: #1F2937; margin: 0 0 15px 0; font-size: 24px; font-weight: 600;">
+                                    Đặt Lại Mật Khẩu 🔑
+                                </h2>
+                                <p style="font-size: 16px; color: #4B5563; margin-bottom: 30px;">
+                                    Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.
+                                </p>
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <a href="${resetUrl}" style="display: inline-block; background-color: #14B8A6; color: #FFFFFF; text-decoration: none; padding: 14px 32px; border-radius: 50px; font-weight: 600; font-size: 16px;">
+                                        🔒 Đặt Lại Mật Khẩu
+                                    </a>
+                                </div>
+                                <div style="margin-top: 25px; background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 20px;">
+                                    <p style="color: #92400E; font-size: 14px; margin: 0; font-weight: 500;">
+                                        <strong>⏰ Lưu ý:</strong> Link này chỉ có hiệu lực trong <strong>30 phút</strong>. Nếu bạn không yêu cầu, hãy bỏ qua email này.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="text-align: center; padding: 30px 20px; max-width: 550px; margin: 0 auto;">
+                        <p style="color: #6B7280; font-size: 14px; margin: 0;">
+                            Nếu bạn gặp khó khăn, hãy liên hệ với đội ngũ hỗ trợ.
+                        </p>
+                        <p style="color: #9CA3AF; font-size: 14px; margin: 5px 0 0 0;">
+                            © ${new Date().getFullYear()} Skinalyze.
+                        </p>
+                    </div>
+                </td>
+            </tr>
+        </table>
     </body>
     </html>
     `;
@@ -448,65 +408,82 @@ export class EmailService {
   ): string {
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="vi">
     <head>
         <meta charset="UTF-8">
+        <title>Đặt lại mật khẩu - Skinalyze</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                margin: 0;
+                padding: 0;
+            }
+            .align-right {
+                text-align: right;
+            }
+        </style>
     </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 15px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-                <h1 style="color: #FFFFFF; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    🔐 Đặt Lại Mật Khẩu
-                </h1>
-                <p style="color: #F0E6FF; margin: 10px 0 0 0; font-size: 16px;">
-                    Mật khẩu tài khoản của bạn đã được quản trị viên đặt lại
-                </p>
-            </div>
-            <div style="padding: 40px 30px;">
-                <p style="color: #2C3E50; font-size: 18px; line-height: 1.8; margin: 0 0 20px 0;">
-                    Xin chào <strong style="color: #667eea;">${fullName}</strong>,
-                </p>
-                <p style="color: #34495E; font-size: 16px; line-height: 1.8; margin: 0 0 25px 0;">
-                    Quản trị viên đã đặt lại mật khẩu cho tài khoản của bạn. Đây là mật khẩu tạm thời của bạn:
-                </p>
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 12px; text-align: center; margin: 30px 0; box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);">
-                    <p style="color: #FFFFFF; font-size: 14px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">
-                        Mật Khẩu Tạm Thời
-                    </p>
-                    <p style="color: #FFFFFF; font-size: 32px; font-weight: 800; margin: 0; font-family: 'Courier New', monospace; letter-spacing: 4px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                        ${newPassword}
-                    </p>
-                </div>
-                <div style="background: #FFF3CD; border-left: 4px solid #FFC107; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                    <p style="color: #856404; margin: 0; font-size: 15px; line-height: 1.6;">
-                        <strong>⚠️ Lưu ý quan trọng:</strong><br>
-                        Vui lòng đổi mật khẩu ngay sau khi đăng nhập để bảo mật tài khoản của bạn.
-                    </p>
-                </div>
-                <div style="background: #E8F5E9; border-left: 4px solid #4CAF50; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                    <p style="color: #2C3E50; margin: 0 0 15px 0; font-weight: 600; font-size: 16px;">📋 Hướng dẫn:</p>
-                    <ol style="margin: 0; padding-left: 25px; color: #2C3E50; line-height: 1.8;">
-                        <li>Đăng nhập bằng mật khẩu tạm thời ở trên</li>
-                        <li>Vào phần <strong>Cài đặt tài khoản</strong></li>
-                        <li>Chọn <strong>Đổi mật khẩu</strong></li>
-                        <li>Nhập mật khẩu mới của bạn</li>
-                    </ol>
-                </div>
-                <div style="background: #FFF3E0; border-left: 4px solid #FF9800; padding: 20px; border-radius: 8px; margin: 25px 0;">
-                    <p style="color: #2C3E50; margin: 0 0 15px 0; font-weight: 600; font-size: 16px;">🔒 Bảo mật:</p>
-                    <ul style="margin: 0; padding-left: 25px; color: #2C3E50; line-height: 1.8;">
-                        <li>Không chia sẻ mật khẩu này với bất kỳ ai</li>
-                        <li>Đổi mật khẩu ngay sau lần đăng nhập đầu tiên</li>
-                        <li>Sử dụng mật khẩu mạnh: ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt</li>
-                    </ul>
-                </div>
-            </div>
-            <div style="text-align: center; padding: 30px 20px; color: #95A5A6; font-size: 14px; background: #ECF0F1; border-radius: 0 0 15px 15px;">
-                <p style="margin: 0 0 8px 0;"><strong style="color: #667eea;">Skinalyze</strong> - AI-Powered Skincare Platform</p>
-                <p style="margin: 0; font-size: 12px;">© 2025 Skinalyze. All rights reserved.</p>
-            </div>
-        </div>
+    <body style="background-color: #F0FDFB; padding: 20px; margin: 0;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center">
+                    <div style="padding: 20px 0; text-align: center;">
+                        <h1 style="color: #0D9488; font-size: 32px; font-weight: 700; margin: 0;">
+                            Skinalyze
+                        </h1>
+                    </div>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 550px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.07); margin: 0 auto; overflow: hidden;">
+                        <tr>
+                            <td style="background-color: #14B8A6; height: 10px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 40px 40px 35px 40px;">
+                                <h2 style="color: #1F2937; margin: 0 0 15px 0; font-size: 24px; font-weight: 600;">
+                                    Mật Khẩu Tạm Thời 🔐
+                                </h2>
+                                <p style="font-size: 16px; color: #4B5563; margin-bottom: 20px;">
+                                    Xin chào <strong>${fullName}</strong>,
+                                </p>
+                                <p style="font-size: 16px; color: #4B5563; margin-bottom: 30px;">
+                                    Quản trị viên đã đặt lại mật khẩu cho tài khoản của bạn. Đây là mật khẩu tạm thời:
+                                </p>
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <div style="background-color: #CCFBF1; border: 2px dashed #14B8A6; border-radius: 12px; padding: 25px;">
+                                        <p style="color: #4B5563; font-size: 14px; margin: 0 0 10px 0;">Mật khẩu tạm thời:</p>
+                                        <h1 style="color: #0D9488; margin: 0; font-size: 32px; letter-spacing: 4px; font-weight: 700; font-family: 'Courier New', monospace;">${newPassword}</h1>
+                                    </div>
+                                </div>
+                                <div style="margin-top: 25px; background-color: #FEF3C7; border: 1px solid #FDE68A; border-radius: 8px; padding: 20px;">
+                                    <p style="color: #92400E; font-size: 14px; margin: 0; font-weight: 500;">
+                                        <strong>⚠️ Lưu ý quan trọng:</strong> Vui lòng đổi mật khẩu ngay sau khi đăng nhập để bảo mật tài khoản của bạn.
+                                    </p>
+                                </div>
+                                <div style="margin-top: 25px; background-color: #D1FAE5; border: 1px solid #A7F3D0; border-radius: 8px; padding: 20px;">
+                                    <p style="color: #065F46; font-size: 14px; margin: 0 0 10px 0; font-weight: 600;">📋 Hướng dẫn:</p>
+                                    <ol style="margin: 0; padding-left: 20px; color: #065F46; line-height: 1.8; font-size: 14px;">
+                                        <li>Đăng nhập bằng mật khẩu tạm thời ở trên</li>
+                                        <li>Vào phần <strong>Cài đặt tài khoản</strong></li>
+                                        <li>Chọn <strong>Đổi mật khẩu</strong></li>
+                                        <li>Nhập mật khẩu mới của bạn</li>
+                                    </ol>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="text-align: center; padding: 30px 20px; max-width: 550px; margin: 0 auto;">
+                        <p style="color: #6B7280; font-size: 14px; margin: 0;">
+                            Bạn nhận được email này vì quản trị viên đã đặt lại mật khẩu cho tài khoản của bạn.
+                        </p>
+                        <p style="color: #9CA3AF; font-size: 14px; margin: 5px 0 0 0;">
+                            © ${new Date().getFullYear()} Skinalyze.
+                        </p>
+                    </div>
+                </td>
+            </tr>
+        </table>
     </body>
     </html>
     `;
@@ -541,34 +518,110 @@ export class EmailService {
     bankName?: string,
     accountNumber?: string,
   ): Promise<void> {
-    const censoredAccount = accountNumber ? this.censorAccountNumber(accountNumber) : 'Not provided yet';
+    const censoredAccount = accountNumber ? this.censorAccountNumber(accountNumber) : 'Chưa cung cấp';
     
     const html = `
     <!DOCTYPE html>
-    <html>
+    <html lang="vi">
     <head>
         <meta charset="UTF-8">
-        <title>OTP Withdrawal Request - Skinalyze</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mã OTP Rút tiền - Skinalyze</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                margin: 0;
+                padding: 0;
+            }
+            .align-right {
+                text-align: right;
+            }
+        </style>
     </head>
-    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 15px 15px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 32px;">Skinalyze</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Withdrawal Request OTP</p>
-        </div>
-        <div style="background: white; padding: 50px 40px; border-radius: 0 0 15px 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
-            <h2 style="color: #2C3E50; margin: 0 0 25px 0;">Your OTP Code</h2>
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; text-align: center; margin: 30px 0;">
-                <p style="color: white; margin: 0 0 10px 0; font-size: 14px;">Your verification code:</p>
-                <h1 style="color: white; margin: 0; font-size: 48px; letter-spacing: 8px; font-weight: bold;">${otpCode}</h1>
-            </div>
-            <p style="color: #7F8C8D; font-size: 14px; text-align: center; margin: 20px 0;">This code will expire in 10 minutes</p>
-        </div>
+    <body style="background-color: #F0FDFB; padding: 20px; margin: 0;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center">
+                    <div style="padding: 20px 0; text-align: center;">
+                        <h1 style="color: #0D9488; font-size: 32px; font-weight: 700; margin: 0;">
+                            Skinalyze
+                        </h1>
+                    </div>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 550px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.07); margin: 0 auto; overflow: hidden;">
+                        <tr>
+                            <td style="background-color: #14B8A6; height: 10px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 40px 40px 35px 40px;">
+                                <h2 style="color: #1F2937; margin: 0 0 15px 0; font-size: 24px; font-weight: 600;">
+                                    Mã OTP Xác Thực Rút Tiền 🔐
+                                </h2>
+                                <p style="font-size: 16px; color: #4B5563; margin-bottom: 30px;">
+                                    Vui lòng sử dụng mã OTP bên dưới để xác nhận yêu cầu rút tiền của bạn.
+                                </p>
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <div style="background-color: #CCFBF1; border: 2px dashed #14B8A6; border-radius: 12px; padding: 25px;">
+                                        <p style="color: #4B5563; font-size: 14px; margin: 0 0 10px 0;">Mã xác thực của bạn:</p>
+                                        <h1 style="color: #0D9488; margin: 0; font-size: 48px; letter-spacing: 8px; font-weight: 700;">${otpCode}</h1>
+                                    </div>
+                                </div>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 30px 0 0 0;">
+                                    <tr>
+                                        <td style="padding: 12px 0; font-size: 16px; color: #4B5563; border-bottom: 1px solid #E5E7EB;">
+                                            Số tiền
+                                        </td>
+                                        <td class="align-right" style="padding: 12px 0; font-size: 16px; color: #1F2937; font-weight: 600; text-align: right; border-bottom: 1px solid #E5E7EB;">
+                                            ${amount.toLocaleString()} VND
+                                        </td>
+                                    </tr>
+                                    ${bankName ? `
+                                    <tr>
+                                        <td style="padding: 12px 0; font-size: 16px; color: #4B5563; border-bottom: 1px solid #E5E7EB;">
+                                            Ngân hàng
+                                        </td>
+                                        <td class="align-right" style="padding: 12px 0; font-size: 16px; color: #1F2937; font-weight: 600; text-align: right; border-bottom: 1px solid #E5E7EB;">
+                                            ${bankName}
+                                        </td>
+                                    </tr>
+                                    ` : ''}
+                                    ${accountNumber ? `
+                                    <tr>
+                                        <td style="padding: 12px 0; font-size: 16px; color: #4B5563; border-bottom: 1px solid #E5E7EB;">
+                                            Số tài khoản
+                                        </td>
+                                        <td class="align-right" style="padding: 12px 0; font-size: 16px; color: #1F2937; font-weight: 600; text-align: right; border-bottom: 1px solid #E5E7EB;">
+                                            ${censoredAccount}
+                                        </td>
+                                    </tr>
+                                    ` : ''}
+                                </table>
+                                <div style="margin-top: 25px; background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 20px;">
+                                    <p style="color: #92400E; font-size: 14px; margin: 0; font-weight: 500;">
+                                        <strong>⏰ Lưu ý:</strong> Mã OTP này chỉ có hiệu lực trong <strong>10 phút</strong>. Không chia sẻ mã này với bất kỳ ai.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="text-align: center; padding: 30px 20px; max-width: 550px; margin: 0 auto;">
+                        <p style="color: #6B7280; font-size: 14px; margin: 0;">
+                            Bạn nhận được email này vì đã yêu cầu rút tiền tại Skinalyze.
+                        </p>
+                        <p style="color: #9CA3AF; font-size: 14px; margin: 5px 0 0 0;">
+                            © ${new Date().getFullYear()} Skinalyze.
+                        </p>
+                    </div>
+                </td>
+            </tr>
+        </table>
     </body>
     </html>
     `;
     
-    const subject = 'OTP for Withdrawal Request - Skinalyze';
-    const text = `Your OTP code for withdrawal request is: ${otpCode}. This code will expire in 10 minutes.`;
+    const subject = 'Mã OTP Xác Thực Rút Tiền - Skinalyze';
+    const text = `Mã OTP xác thực rút tiền của bạn là: ${otpCode}. Mã này có hiệu lực trong 10 phút.`;
     
     await this.sendEmail(email, subject, html, text);
   }
@@ -582,35 +635,95 @@ export class EmailService {
   ): Promise<void> {
     const html = `
     <!DOCTYPE html>
-    <html>
+    <html lang="vi">
     <head>
         <meta charset="UTF-8">
-        <title>Withdrawal Request Update - Skinalyze</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cập nhật Yêu cầu Rút tiền</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                margin: 0;
+                padding: 0;
+            }
+            .align-right {
+                text-align: right;
+            }
+        </style>
     </head>
-    <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 15px 15px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 32px;">Skinalyze</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Withdrawal Request Update</p>
-        </div>
-        <div style="background: white; padding: 50px 40px; border-radius: 0 0 15px 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
-            <h2 style="color: #2C3E50; margin: 0 0 25px 0;">Status Update</h2>
-            <p style="font-size: 16px; color: #555;">Your withdrawal request has been updated to: <strong style="color: #667eea;">${status.toUpperCase()}</strong></p>
-            <div style="background: #F8F9FA; padding: 25px; border-radius: 8px; margin: 25px 0;">
-                <h3 style="color: #2C3E50; margin: 0 0 15px 0;">Request Details:</h3>
-                <ul style="margin: 0; padding-left: 20px; color: #555;">
-                    <li>Amount: <strong>${amount.toLocaleString()} VND</strong></li>
-                    <li>Bank: <strong>${bankName}</strong></li>
-                    <li>Status: <strong>${status}</strong></li>
-                    ${reason ? `<li>Reason: <strong>${reason}</strong></li>` : ''}
-                </ul>
-            </div>
-        </div>
+    <body style="background-color: #F0FDFB; padding: 20px; margin: 0;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+                <td align="center">
+                    <div style="padding: 20px 0; text-align: center;">
+                        <h1 style="color: #0D9488; font-size: 32px; font-weight: 700; margin: 0;">
+                            Skinalyze
+                        </h1>
+                    </div>
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 550px; background: #FFFFFF; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.07); margin: 0 auto; overflow: hidden;">
+                        <tr>
+                            <td style="background-color: #14B8A6; height: 10px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 40px 40px 35px 40px;">
+                                <h2 style="color: #1F2937; margin: 0 0 15px 0; font-size: 24px; font-weight: 600;">
+                                    Yêu cầu đã được cập nhật!
+                                </h2>
+                                <p style="font-size: 16px; color: #4B5563; margin-bottom: 30px;">
+                                    Yêu cầu rút tiền của bạn vừa thay đổi trạng thái.
+                                </p>
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <span style="font-size: 18px; font-weight: 600; color: #134E4A; background-color: #CCFBF1; border-radius: 50px; padding: 12px 30px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        ${status}
+                                    </span>
+                                </div>
+                                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 30px 0 0 0;">
+                                    <tr>
+                                        <td style="padding: 12px 0; font-size: 16px; color: #4B5563; border-bottom: 1px solid #E5E7EB;">
+                                            Số tiền
+                                        </td>
+                                        <td class="align-right" style="padding: 12px 0; font-size: 16px; color: #1F2937; font-weight: 600; text-align: right; border-bottom: 1px solid #E5E7EB;">
+                                            ${amount.toLocaleString()} VND
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px 0; font-size: 16px; color: #4B5563; border-bottom: 1px solid #E5E7EB;">
+                                            Ngân hàng
+                                        </td>
+                                        <td class="align-right" style="padding: 12px 0; font-size: 16px; color: #1F2937; font-weight: 600; text-align: right; border-bottom: 1px solid #E5E7EB;">
+                                            ${bankName}
+                                        </td>
+                                    </tr>
+                                </table>
+                                ${reason ? `
+                                <div style="margin-top: 25px; background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 20px;">
+                                    <p style="color: #92400E; font-size: 16px; margin: 0; font-weight: 500;">
+                                        <strong>Lý do:</strong> ${reason}
+                                    </p>
+                                </div>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="text-align: center; padding: 30px 20px; max-width: 550px; margin: 0 auto;">
+                        <p style="color: #6B7280; font-size: 14px; margin: 0;">
+                            Bạn nhận được email này vì đã yêu cầu rút tiền tại Skinalyze.
+                        </p>
+                        <p style="color: #9CA3AF; font-size: 14px; margin: 5px 0 0 0;">
+                            © ${new Date().getFullYear()} Skinalyze.
+                        </p>
+                    </div>
+                </td>
+            </tr>
+        </table>
     </body>
     </html>
     `;
     
-    const subject = `Withdrawal Request ${status} - Skinalyze`;
-    const text = `Your withdrawal request status has been updated to: ${status}. Amount: ${amount} VND.`;
+    const subject = `Cập nhật Yêu cầu Rút tiền - ${status} - Skinalyze`;
+    const text = `Yêu cầu rút tiền của bạn đã được cập nhật sang trạng thái: ${status}. Số tiền: ${amount.toLocaleString()} VND.`;
     
     await this.sendEmail(email, subject, html, text);
   }
