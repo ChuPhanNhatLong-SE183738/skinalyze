@@ -198,7 +198,12 @@ export class UsersController {
   }
 
   @Get('balance')
-  @Roles(UserRole.CUSTOMER, UserRole.STAFF, UserRole.ADMIN)
+  @Roles(
+    UserRole.CUSTOMER,
+    UserRole.DERMATOLOGIST,
+    UserRole.STAFF,
+    UserRole.ADMIN,
+  )
   @ApiOperation({
     summary: 'Xem số dư tài khoản',
     description: 'Lấy thông tin số dư hiện tại của user',
@@ -226,7 +231,12 @@ export class UsersController {
   }
 
   @Get('topup-history')
-  @Roles(UserRole.CUSTOMER, UserRole.STAFF, UserRole.ADMIN)
+  @Roles(
+    UserRole.CUSTOMER,
+    UserRole.DERMATOLOGIST,
+    UserRole.STAFF,
+    UserRole.ADMIN,
+  )
   @ApiOperation({
     summary: 'Xem lịch sử nạp tiền',
     description:
