@@ -1,16 +1,36 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import axios, { AxiosInstance } from 'axios';
 import { CreateChatMessageDto } from './dto/create-chat-message.dto';
 import { ChatMessage } from './entities/chat-message.entity';
 import { ChatSession } from '../chat-sessions/entities/chat-session.entity';
 import { ChatSessionsService } from '../chat-sessions/chat-sessions.service';
 
+interface ConversationHistory {
+  role: 'user' | 'ai';
+  content: string;
+}
+
+interface ChatResponse {
+  answer: string;
+  response_time: number;
+  timestamp: string;
+}
+
+interface ImageAnalysisResponse {
+  skin_analysis: string;
+  product_recommendation: string;
+  severity_warning: string | null;
+  response_time: number;
+  timestamp: string;
+}
+
 @Injectable()
 export class ChatMessagesService {
-  private genAI: GoogleGenerativeAI;
+  private axiosInstance: AxiosInstance;
+  private aiServiceUrl: string;
 
   constructor(
     @InjectRepository(ChatMessage)
@@ -20,14 +40,25 @@ export class ChatMessagesService {
     private chatSessionsService: ChatSessionsService,
     private configService: ConfigService,
   ) {
-    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY is not set in environment variables');
+    this.aiServiceUrl = this.configService.get<string>('AI_SERVICE_URL') || 'http://localhost:8000';
+    
+    if (!this.aiServiceUrl) {
+      throw new Error('AI_SERVICE_URL is not set in environment variables');
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
+
+    // Initialize axios instance with default config
+    this.axiosInstance = axios.create({
+      baseURL: this.aiServiceUrl,
+      timeout: 30000, // 30 seconds timeout
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
   }
 
-  async createUserMessage(createChatMessageDto: CreateChatMessageDto): Promise<{ userMessage: ChatMessage; aiMessage: ChatMessage }> {
+  async createUserMessage(
+    createChatMessageDto: CreateChatMessageDto,
+  ): Promise<{ userMessage: ChatMessage; aiMessage: ChatMessage }> {
     const { chatId, messageContent } = createChatMessageDto;
 
     // Verify chat session exists
@@ -41,7 +72,9 @@ export class ChatMessagesService {
     }
 
     // Check if this is the first user message (only greeting exists)
-    const userMessages = chatSession.messages.filter(msg => msg.sender === 'user');
+    const userMessages = chatSession.messages.filter(
+      (msg) => msg.sender === 'user',
+    );
     const isFirstUserMessage = userMessages.length === 0;
 
     // Save user message
@@ -54,11 +87,17 @@ export class ChatMessagesService {
 
     // Update chat title if this is the first user message
     if (isFirstUserMessage) {
-      await this.chatSessionsService.updateTitleFromMessage(chatId, messageContent);
+      await this.chatSessionsService.updateTitleFromMessage(
+        chatId,
+        messageContent,
+      );
     }
 
-    // Get AI response
-    const aiResponse = await this.getGeminiResponse(messageContent, chatSession.messages);
+    // Get AI response from FastAPI backend
+    const aiResponse = await this.getAIResponse(
+      messageContent,
+      chatSession.messages,
+    );
 
     // Save AI message
     const aiMessage = this.chatMessageRepository.create({
@@ -71,64 +110,141 @@ export class ChatMessagesService {
     return { userMessage, aiMessage };
   }
 
-  private async getGeminiResponse(userMessage: string, previousMessages: ChatMessage[]): Promise<string> {
+  private async getAIResponse(
+    userMessage: string,
+    previousMessages: ChatMessage[],
+  ): Promise<string> {
     try {
-      const model = this.genAI.getGenerativeModel({ 
-        model: 'gemini-2.0-flash-exp',
-        systemInstruction: {
-          role: 'system',
-          parts: [{ 
-            text: `You are Skinalyze AI, a specialized skincare and dermatology assistant. Your expertise is strictly limited to:
-- Skincare products and ingredients
-- Acne treatment and prevention
-- Skincare routines and regimens
-- Dermatological conditions and concerns
-- Skin types and their specific needs
-- Product recommendations for skin concerns
-- General skincare advice and best practices
+      // Filter out the greeting message and build conversation history
+      const greetingMessage = "Greeting, I'm Skinalyze AI, how can i help you today?";
+      
+      const conversationHistory: ConversationHistory[] = previousMessages
+        .filter((msg) => msg.messageContent !== greetingMessage)
+        .map((msg) => ({
+          role: msg.sender === 'user' ? 'user' : 'ai',
+          content: msg.messageContent,
+        }));
 
-IMPORTANT RULES:
-1. ONLY answer questions related to skincare, dermatology, and skin health.
-2. If a user asks about topics outside of skincare (like programming, math, general knowledge, etc.), politely decline and redirect them back to skincare topics.
-3. Use this exact response format for off-topic questions: "I apologize, but I'm specialized in skincare and dermatology advice only. I can help you with skin concerns, product recommendations, skincare routines, acne treatment, and other skin-related questions. Is there anything about skincare I can help you with today?"
-4. Always provide helpful, accurate, and personalized skincare advice within your domain.
-5. Recommend consulting a dermatologist for severe skin conditions or medical concerns.`
-          }]
-        }
+      // Call FastAPI /chat endpoint
+      const response = await this.axiosInstance.post<ChatResponse>('/chat', {
+        question: userMessage,
+        conversation_history: conversationHistory,
       });
 
-      // Filter out the greeting message
-      const greetingMessage = "Greeting, I'm Skinalyze AI, how can i help you today?";
-      const conversationMessages = previousMessages.filter(msg => 
-        msg.messageContent !== greetingMessage
-      );
+      return response.data.answer;
+    } catch (error) {
+      console.error('AI Service error:', error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error('AI Service response error:', error.response.data);
+          throw new BadRequestException(
+            `AI Service error: ${error.response.data.detail || 'Unknown error'}`,
+          );
+        } else if (error.request) {
+          // The request was made but no response was received
+          console.error('No response from AI Service');
+          throw new BadRequestException(
+            'AI Service is not responding. Please try again later.',
+          );
+        }
+      }
+      
+      return 'I apologize, but I encountered an error processing your request. Please try again.';
+    }
+  }
 
-      // Build history and ensure it starts with 'user' role
-      let history = conversationMessages.map((msg) => ({
-        role: msg.sender === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.messageContent }],
-      }));
+  async analyzeImage(
+    chatId: string,
+    imageFile: Express.Multer.File,
+    additionalText?: string,
+  ): Promise<{ userMessage: ChatMessage; aiMessage: ChatMessage }> {
+    // Verify chat session exists
+    const chatSession = await this.chatSessionRepository.findOne({
+      where: { chatId },
+    });
 
-      // If history exists and first message is from 'model', remove it
-      // This ensures the conversation always starts with a user message
-      while (history.length > 0 && history[0].role === 'model') {
-        history.shift();
+    if (!chatSession) {
+      throw new NotFoundException(`Chat session with ID ${chatId} not found`);
+    }
+
+    try {
+      // Create FormData for image upload
+      const FormData = require('form-data');
+      const formData = new FormData();
+      
+      formData.append('image', imageFile.buffer, {
+        filename: imageFile.originalname,
+        contentType: imageFile.mimetype,
+      });
+
+      if (additionalText) {
+        formData.append('additional_text', additionalText);
       }
 
-      const chat = model.startChat({
-        history: history.length > 0 ? history : undefined,
-        generationConfig: {
-          maxOutputTokens: 1000,
-          temperature: 0.7,
+      // Call FastAPI /analyze-image endpoint
+      const response = await this.axiosInstance.post<ImageAnalysisResponse>(
+        '/analyze-image',
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+          },
         },
-      });
+      );
 
-      const result = await chat.sendMessage(userMessage);
-      const response = await result.response;
-      return response.text();
+      // Save user message (image upload notification)
+      const userMessage = this.chatMessageRepository.create({
+        chatId,
+        sender: 'user',
+        messageContent: additionalText || '[Uploaded an image for analysis]',
+      });
+      await this.chatMessageRepository.save(userMessage);
+
+      // Format AI response
+      let aiResponseText = '';
+      
+      if (response.data.skin_analysis) {
+        aiResponseText += `**Phân tích da:**\n${response.data.skin_analysis}\n\n`;
+      }
+      
+      if (response.data.product_recommendation) {
+        aiResponseText += `**Gợi ý sản phẩm:**\n${response.data.product_recommendation}\n\n`;
+      }
+      
+      if (response.data.severity_warning) {
+        aiResponseText += `⚠️ **Cảnh báo:**\n${response.data.severity_warning}`;
+      }
+
+      // Save AI message
+      const aiMessage = this.chatMessageRepository.create({
+        chatId,
+        sender: 'ai',
+        messageContent: aiResponseText.trim(),
+      });
+      await this.chatMessageRepository.save(aiMessage);
+
+      return { userMessage, aiMessage };
     } catch (error) {
-      console.error('Gemini API error:', error);
-      return 'I apologize, but I encountered an error processing your request. Please try again.';
+      console.error('Image analysis error:', error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          throw new BadRequestException(
+            `Image analysis error: ${error.response.data.detail || 'Unknown error'}`,
+          );
+        } else if (error.request) {
+          throw new BadRequestException(
+            'AI Service is not responding. Please try again later.',
+          );
+        }
+      }
+      
+      throw new BadRequestException(
+        'Failed to analyze image. Please try again.',
+      );
     }
   }
 
@@ -140,10 +256,14 @@ IMPORTANT RULES:
   }
 
   async remove(messageId: string): Promise<void> {
-    const message = await this.chatMessageRepository.findOne({ where: { messageId } });
+    const message = await this.chatMessageRepository.findOne({
+      where: { messageId },
+    });
+    
     if (!message) {
       throw new NotFoundException(`Message with ID ${messageId} not found`);
     }
+    
     await this.chatMessageRepository.remove(message);
   }
 }
