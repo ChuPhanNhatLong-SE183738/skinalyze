@@ -75,6 +75,60 @@ export class UsersController {
     return this.usersService.findOne(user.userId);
   }
 
+  @Get('balance')
+  @Roles(
+    UserRole.CUSTOMER,
+    UserRole.DERMATOLOGIST,
+    UserRole.STAFF,
+    UserRole.ADMIN,
+  )
+  @ApiOperation({
+    summary: 'Xem số dư tài khoản',
+    description: 'Lấy thông tin số dư hiện tại của user',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Thông tin số dư',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Lấy thông tin số dư thành công',
+        data: {
+          userId: '550e8400-e29b-41d4-a716-446655440000',
+          email: 'user@example.com',
+          fullName: 'Nguyen Van A',
+          balance: 600000,
+          currency: 'VND',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getBalance(@GetUser() user: User) {
+    return this.usersService.getBalance(user.userId);
+  }
+
+  @Get('topup-history')
+  @Roles(
+    UserRole.CUSTOMER,
+    UserRole.DERMATOLOGIST,
+    UserRole.STAFF,
+    UserRole.ADMIN,
+  )
+  @ApiOperation({
+    summary: 'Xem lịch sử nạp tiền',
+    description:
+      'Lấy lịch sử các lần nạp tiền (cần implement transactions table để track đầy đủ)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lịch sử nạp tiền',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getTopupHistory(@GetUser() user: User) {
+    return this.usersService.getTopupHistory(user.userId);
+  }
+
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   @ApiOperation({ summary: 'Get user by ID (Admin/Staff only)' })
@@ -195,60 +249,6 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async topupBalance(@GetUser() user: User, @Body() topupDto: TopupBalanceDto) {
     return this.usersService.topupBalance(user.userId, topupDto);
-  }
-
-  @Get('balance')
-  @Roles(
-    UserRole.CUSTOMER,
-    UserRole.DERMATOLOGIST,
-    UserRole.STAFF,
-    UserRole.ADMIN,
-  )
-  @ApiOperation({
-    summary: 'Xem số dư tài khoản',
-    description: 'Lấy thông tin số dư hiện tại của user',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Thông tin số dư',
-    schema: {
-      example: {
-        statusCode: 200,
-        message: 'Lấy thông tin số dư thành công',
-        data: {
-          userId: '550e8400-e29b-41d4-a716-446655440000',
-          email: 'user@example.com',
-          fullName: 'Nguyen Van A',
-          balance: 600000,
-          currency: 'VND',
-        },
-      },
-    },
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getBalance(@GetUser() user: User) {
-    return this.usersService.getBalance(user.userId);
-  }
-
-  @Get('topup-history')
-  @Roles(
-    UserRole.CUSTOMER,
-    UserRole.DERMATOLOGIST,
-    UserRole.STAFF,
-    UserRole.ADMIN,
-  )
-  @ApiOperation({
-    summary: 'Xem lịch sử nạp tiền',
-    description:
-      'Lấy lịch sử các lần nạp tiền (cần implement transactions table để track đầy đủ)',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Lịch sử nạp tiền',
-  })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async getTopupHistory(@GetUser() user: User) {
-    return this.usersService.getTopupHistory(user.userId);
   }
 
   @Post('device-tokens')
