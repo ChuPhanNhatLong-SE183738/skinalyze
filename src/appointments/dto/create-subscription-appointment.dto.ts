@@ -40,16 +40,17 @@ export class CreateSubscriptionAppointmentDto {
   @IsEnum(AppointmentType)
   appointmentType: AppointmentType;
 
-  @ValidateIf(
-    (object: CreateSubscriptionAppointmentDto) =>
-      object.appointmentType === AppointmentType.NEW_PROBLEM,
-  )
+  // @ValidateIf(
+  //   (object: CreateSubscriptionAppointmentDto) =>
+  //     object.appointmentType === AppointmentType.NEW_PROBLEM,
+  // )
   @ApiPropertyOptional({
     description:
       'Skin analysis identifier (required when appointmentType is NEW_PROBLEM)',
     example: '6d5f9f12-4ba1-4f6e-a5af-0987654321fe',
   })
   @IsUUID()
+  @IsNotEmpty()
   analysisId: string;
 
   @ValidateIf(

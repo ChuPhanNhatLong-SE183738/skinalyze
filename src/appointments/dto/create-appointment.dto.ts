@@ -5,6 +5,7 @@ import {
   IsString,
   IsEnum,
   ValidateIf,
+  IsNotEmpty,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AppointmentType } from '../types/appointment.types';
@@ -43,16 +44,17 @@ export class CreateAppointmentDto {
    * Bắt buộc phải có nếu 'appointmentType' là 'NEW_PROBLEM'.
    * Đây là ID của 'Skin_Analysis' (lần quét da) mà buổi hẹn này sẽ khám.
    */
-  @ValidateIf(
-    (object: CreateAppointmentDto) =>
-      object.appointmentType === AppointmentType.NEW_PROBLEM,
-  )
+  // @ValidateIf(
+  //   (object: CreateAppointmentDto) =>
+  //     object.appointmentType === AppointmentType.NEW_PROBLEM,
+  // )
   @ApiPropertyOptional({
     description:
       'Skin analysis identifier (required when appointmentType is NEW_PROBLEM)',
     example: '6d5f9f12-4ba1-4f6e-a5af-0987654321fe',
   })
   @IsUUID()
+  @IsNotEmpty()
   analysisId: string;
 
   /**

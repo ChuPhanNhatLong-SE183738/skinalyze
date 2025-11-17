@@ -43,6 +43,7 @@ import { addMinutes, subMinutes } from 'date-fns';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   AppointmentStatus,
+  AppointmentType,
   TerminationReason,
 } from './types/appointment.types';
 import { CreateSubscriptionAppointmentDto } from './dto/create-subscription-appointment.dto';
@@ -100,6 +101,39 @@ export class AppointmentsService {
 
     return this.entityManager.transaction(async (manager) => {
       const appointmentRepo = manager.getRepository(Appointment);
+      const skinAnalysisRepo = manager.getRepository(SkinAnalysis);
+      const routineRepo = manager.getRepository(TreatmentRoutine);
+
+      const skinAnalysis = await skinAnalysisRepo.findOne({
+        where: {
+          analysisId: createDto.analysisId,
+          customer: { customerId: customer.customerId },
+        },
+      });
+      if (!skinAnalysis) {
+        throw new BadRequestException(
+          'Invalid or non-existent SkinAnalysis ID for this customer.',
+        );
+      }
+
+      if (createDto.appointmentType === AppointmentType.FOLLOW_UP) {
+        if (!createDto.trackingRoutineId) {
+          throw new BadRequestException(
+            'trackingRoutineId is required for FOLLOW_UP appointments.',
+          );
+        }
+        const routine = await routineRepo.findOne({
+          where: {
+            routineId: createDto.trackingRoutineId,
+            customer: { customerId: customer.customerId },
+          },
+        });
+        if (!routine) {
+          throw new BadRequestException(
+            'Invalid or non-existent TreatmentRoutine ID for this customer.',
+          );
+        }
+      }
 
       const reservedSlot = await this.availabilitySlotsService.reserveSlot(
         createDto.dermatologistId,
@@ -133,9 +167,7 @@ export class AppointmentsService {
         dermatologist: {
           dermatologistId: createDto.dermatologistId,
         } as Dermatologist,
-        skinAnalysis: createDto.analysisId
-          ? ({ analysisId: createDto.analysisId } as SkinAnalysis)
-          : undefined,
+        skinAnalysis: { analysisId: createDto.analysisId } as SkinAnalysis,
         trackingRoutine: createDto.trackingRoutineId
           ? ({ routineId: createDto.trackingRoutineId } as TreatmentRoutine)
           : undefined,
@@ -153,7 +185,7 @@ export class AppointmentsService {
       return {
         appointmentId: savedAppointment.appointmentId,
         paymentType: payment.paymentType,
-        paymentCode: payment.paymentCode, // Customer PHẢI nhập đúng code này
+        paymentCode: payment.paymentCode, // Must pay using this code
         paymentMethod: payment.paymentMethod,
         expiredAt: payment.expiredAt,
         bankingInfo: {
@@ -178,7 +210,39 @@ export class AppointmentsService {
 
     return this.entityManager.transaction(async (manager) => {
       const appointmentRepo = manager.getRepository(Appointment);
+      const skinAnalysisRepo = manager.getRepository(SkinAnalysis);
+      const routineRepo = manager.getRepository(TreatmentRoutine);
 
+      const skinAnalysis = await skinAnalysisRepo.findOne({
+        where: {
+          analysisId: createDto.analysisId,
+          customer: { customerId: customer.customerId },
+        },
+      });
+      if (!skinAnalysis) {
+        throw new BadRequestException(
+          'Invalid or non-existent SkinAnalysis ID for this customer.',
+        );
+      }
+
+      if (createDto.appointmentType === AppointmentType.FOLLOW_UP) {
+        if (!createDto.trackingRoutineId) {
+          throw new BadRequestException(
+            'trackingRoutineId is required for FOLLOW_UP appointments.',
+          );
+        }
+        const routine = await routineRepo.findOne({
+          where: {
+            routineId: createDto.trackingRoutineId,
+            customer: { customerId: customer.customerId },
+          },
+        });
+        if (!routine) {
+          throw new BadRequestException(
+            'Invalid or non-existent TreatmentRoutine ID for this customer.',
+          );
+        }
+      }
       //  Reserve Slot
       const reservedSlot = await this.availabilitySlotsService.reserveSlot(
         createDto.dermatologistId,
@@ -209,9 +273,7 @@ export class AppointmentsService {
         dermatologist: {
           dermatologistId: createDto.dermatologistId,
         } as Dermatologist,
-        skinAnalysis: createDto.analysisId
-          ? ({ analysisId: createDto.analysisId } as SkinAnalysis)
-          : undefined,
+        skinAnalysis: { analysisId: createDto.analysisId } as SkinAnalysis,
         trackingRoutine: createDto.trackingRoutineId
           ? ({ routineId: createDto.trackingRoutineId } as TreatmentRoutine)
           : undefined,
