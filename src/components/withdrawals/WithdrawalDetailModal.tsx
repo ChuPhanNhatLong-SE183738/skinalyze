@@ -193,13 +193,6 @@ export default function WithdrawalDetailModal({
               </div>
 
               <div>
-                <p className="text-sm text-slate-500 mb-1">OTP Code</p>
-                <p className="font-mono font-semibold text-lg text-blue-600 dark:text-blue-400">
-                  {withdrawal.otpCode}
-                </p>
-              </div>
-
-              <div>
                 <p className="text-sm text-slate-500 mb-1">Type</p>
                 <p className="text-slate-900 dark:text-slate-100 capitalize">
                   {withdrawal.type}
@@ -320,18 +313,6 @@ export default function WithdrawalDetailModal({
           {(withdrawal.status === WithdrawalStatus.PENDING ||
             withdrawal.status === WithdrawalStatus.VERIFIED) && (
             <div className="space-y-4 pt-4 border-t">
-              <div>
-                <Label htmlFor="note">Processing Note (Optional)</Label>
-                <Textarea
-                  id="note"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Add any notes about this withdrawal..."
-                  className="mt-1"
-                  rows={3}
-                />
-              </div>
-
               <div>
                 <Label htmlFor="rejectionReason">
                   Rejection Reason (Required if rejecting)
