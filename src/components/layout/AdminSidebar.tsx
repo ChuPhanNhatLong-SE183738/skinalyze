@@ -16,6 +16,7 @@ import {
   Bell,
   Truck,
   FolderTree,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -33,6 +34,11 @@ const menuItems = [
     title: "Orders",
     href: "/admin/orders",
     icon: ShoppingBag,
+  },
+  {
+    title: "Withdrawals",
+    href: "/admin/withdrawals",
+    icon: Wallet,
   },
   {
     title: "Shipping Logs",
