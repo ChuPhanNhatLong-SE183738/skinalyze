@@ -27,9 +27,10 @@ export interface ShippingLog {
     | "PENDING"
     | "PICKED_UP"
     | "IN_TRANSIT"
+    | "OUT_FOR_DELIVERY"
     | "DELIVERED"
-    | "RETURNED"
-    | "CANCELLED";
+    | "FAILED"
+    | "RETURNED";
   totalAmount: string;
   codCollectDate: string | null;
   codTransferDate: string | null;
