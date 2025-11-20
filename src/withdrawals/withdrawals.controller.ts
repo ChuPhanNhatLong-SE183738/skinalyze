@@ -36,7 +36,7 @@ export class WithdrawalsController {
   constructor(private readonly withdrawalsService: WithdrawalsService) {}
 
   @Post('request-otp')
-  @Roles(UserRole.DERMATOLOGIST)
+  @Roles(UserRole.CUSTOMER, UserRole.DERMATOLOGIST)
   @ApiOperation({
     summary: '🔐 Step 1: Request OTP for withdrawal',
     description: 'Request OTP code sent to email before creating withdrawal request. OTP valid for 10 minutes.',
@@ -46,18 +46,17 @@ export class WithdrawalsController {
     @GetUser() user: User,
     @Body() requestOtpDto: RequestOtpDto,
   ) {
-    const { sessionId } = await this.withdrawalsService.requestOTP(
+    const result = await this.withdrawalsService.requestOTP(
       user.userId,
       requestOtpDto,
     );
-    return ResponseHelper.success(
-      'OTP code sent to your email. Valid for 10 minutes.',
-      { sessionId },
-    );
+    
+    const message = result.message || 'OTP code sent to your email. Valid for 10 minutes.';
+    return ResponseHelper.success(message, result);
   }
 
   @Post()
-  @Roles(UserRole.DERMATOLOGIST)
+  @Roles(UserRole.CUSTOMER, UserRole.DERMATOLOGIST)
   @ApiOperation({
     summary: 'Step 2: Create withdrawal request with OTP',
     description: 'Creates withdrawal request after verifying OTP code. OTP will be verified automatically.',
@@ -82,10 +81,10 @@ export class WithdrawalsController {
   }
 
   @Get('my-requests')
-  @Roles(UserRole.DERMATOLOGIST)
+  @Roles(UserRole.CUSTOMER, UserRole.DERMATOLOGIST)
   @ApiOperation({
     summary: 'Get my withdrawal requests',
-    description: 'Returns all withdrawal requests for the authenticated dermatologist',
+    description: 'Returns all withdrawal requests for the authenticated user',
   })
   @ApiResponse({ status: 200, description: 'Withdrawal requests retrieved successfully' })
   async getMyRequests(@GetUser() user: User) {
@@ -138,7 +137,7 @@ export class WithdrawalsController {
   }
 
   @Delete(':requestId')
-  @Roles(UserRole.DERMATOLOGIST)
+  @Roles(UserRole.CUSTOMER, UserRole.DERMATOLOGIST)
   @ApiOperation({
     summary: 'Cancel withdrawal request',
     description: 'Cancels a pending or verified withdrawal request',

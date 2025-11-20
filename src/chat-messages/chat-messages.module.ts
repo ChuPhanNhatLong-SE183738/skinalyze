@@ -1,6 +1,5 @@
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
 import { ChatMessagesService } from './chat-messages.service';
 import { ChatMessagesController } from './chat-messages.controller';
 import { ChatMessage } from './entities/chat-message.entity';
@@ -10,8 +9,7 @@ import { ChatSessionsModule } from '../chat-sessions/chat-sessions.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([ChatMessage, ChatSession]),
-    ConfigModule,
-    forwardRef(() => ChatSessionsModule),
+    ChatSessionsModule,
   ],
   controllers: [ChatMessagesController],
   providers: [ChatMessagesService],
