@@ -1,0 +1,132 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, EntityManager, IsNull, Between, LessThan } from 'typeorm';
+import { Appointment } from './entities/appointment.entity';
+import { AppointmentsService } from './appointments.service';
+import { AppointmentStatus } from './types/appointment.types';
+import { addMinutes, subMinutes, subHours } from 'date-fns';
+
+@Injectable()
+export class AppointmentsScheduler {
+  private readonly logger = new Logger(AppointmentsScheduler.name);
+
+  constructor(
+    @InjectRepository(Appointment)
+    private readonly appointmentRepository: Repository<Appointment>,
+    private readonly appointmentsService: AppointmentsService,
+    private readonly entityManager: EntityManager,
+  ) {}
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async handleGenerateMeetLinksCron() {
+    this.logger.log(
+      'Running Cron: Check for appointments needing Meet links...',
+    );
+
+    const now = new Date();
+    const targetTime = addMinutes(now, 60);
+
+    const appointmentsToProcess = await this.appointmentRepository.find({
+      where: {
+        appointmentStatus: AppointmentStatus.SCHEDULED,
+        meetingUrl: IsNull(),
+        startTime: Between(now, targetTime),
+      },
+      relations: ['dermatologist', 'customer'],
+    });
+
+    if (appointmentsToProcess.length === 0) return;
+
+    this.logger.log(
+      `Found ${appointmentsToProcess.length} appointments needing links.`,
+    );
+
+    for (const appointment of appointmentsToProcess) {
+      await this.appointmentsService.generateMeetLinkForAppointment(
+        appointment,
+      );
+    }
+  }
+
+  @Cron(CronExpression.EVERY_30_MINUTES)
+  async handleCleanupEndedAppointments() {
+    this.logger.log('Running Cron: Cleanup stuck appointments...');
+
+    const fifteenMinutesAgo = subMinutes(new Date(), 15);
+
+    const stuckAppointments = await this.appointmentRepository.find({
+      select: [
+        'appointmentId',
+        'customerJoinedAt',
+        'dermatologistJoinedAt',
+        'appointmentStatus',
+      ],
+      where: [
+        {
+          appointmentStatus: AppointmentStatus.SCHEDULED,
+          endTime: LessThan(fifteenMinutesAgo),
+        },
+        {
+          appointmentStatus: AppointmentStatus.IN_PROGRESS,
+          endTime: LessThan(fifteenMinutesAgo),
+        },
+      ],
+      relations: ['customerSubscription'],
+    });
+
+    if (stuckAppointments.length === 0) return;
+
+    this.logger.log(`Found ${stuckAppointments.length} stuck appointments.`);
+
+    for (const stuckAppt of stuckAppointments) {
+      try {
+        await this.entityManager.transaction(async (manager) => {
+          await this.appointmentsService.processStuckAppointment(
+            stuckAppt.appointmentId,
+            manager,
+          );
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed cleanup for ${stuckAppt.appointmentId}: ${error.message}`,
+        );
+      }
+    }
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleSettlement() {
+    this.logger.log('Running Cron: Settlement (Paying Doctors)...');
+
+    // Find COMPLETED appointment more than 24 hours ago (Dispute Window)
+    // And not disputed, not settled
+    const disputeWindow = subHours(new Date(), 24);
+
+    const pendingSettlements = await this.appointmentRepository.find({
+      where: {
+        appointmentStatus: AppointmentStatus.COMPLETED,
+        updatedAt: LessThan(disputeWindow), // Đã hoàn thành > 24h
+      },
+      relations: ['dermatologist', 'dermatologist.user', 'payment'],
+    });
+
+    if (pendingSettlements.length === 0) return;
+
+    this.logger.log(
+      `Found ${pendingSettlements.length} appointments ready for settlement.`,
+    );
+
+    for (const appt of pendingSettlements) {
+      try {
+        await this.entityManager.transaction(async (manager) => {
+          await this.appointmentsService.settleAppointment(appt, manager);
+        });
+      } catch (error) {
+        this.logger.error(
+          `Failed settlement for ${appt.appointmentId}: ${error.message}`,
+        );
+      }
+    }
+  }
+}

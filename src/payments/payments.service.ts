@@ -25,9 +25,11 @@ import { CartService } from '../cart/cart.service';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { AppointmentsService } from 'src/appointments/appointments.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { AppointmentStatus } from 'src/appointments/types/appointment.types';
+import {
+  AppointmentStatus,
+  TerminationReason,
+} from 'src/appointments/types/appointment.types';
 import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
-import { User } from 'src/users/entities/user.entity';
 import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
 import { SlotStatus } from 'src/availability-slots/entities/availability-slot.entity';
 
@@ -43,7 +45,6 @@ interface PaymentProcessingResult {
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
-  private readonly BOOKING_FEE_RATE = 0.25; // 25% fee for booking
   private readonly SUBSCRIPTION_FEE_RATE = 0.2; // 20% fee for subscription
   constructor(
     private readonly entityManager: EntityManager,
@@ -121,6 +122,9 @@ export class PaymentsService {
         throw new BadRequestException(
           'CustomerId ID is required for booking payment',
         );
+      }
+      if (!userId) {
+        throw new BadRequestException('UserId is required for booking payment');
       }
     } else if (paymentType === PaymentType.SUBSCRIPTION) {
       if (!customerId || !planId) {
@@ -214,7 +218,7 @@ export class PaymentsService {
       const paymentRepo = manager.getRepository(Payment);
       const payment = await paymentRepo.findOne({
         where: { paymentCode },
-        relations: ['appointment', 'appointment.availabilitySlot'],
+        relations: ['appointment', 'appointment.availabilitySlot', 'user'],
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -245,19 +249,83 @@ export class PaymentsService {
       //   return;
       // }
 
+      // Nếu payment đã FAILED trước đó (ví dụ do underpayment lần 1),
+      // mà khách lại chuyển thêm tiền -> Vẫn hoàn về ví (Logic Fallback an toàn nhất)
+      if (payment.status === PaymentStatus.FAILED) {
+        const refundAmount = webhookData.transferAmount;
+        if (payment.user) {
+          await this.usersService.updateBalance(
+            payment.user.userId,
+            refundAmount,
+            manager,
+          );
+        }
+        responsePayload = {
+          success: true,
+          message: 'Payment was FAILED. New transfer refunded to Wallet.',
+        };
+        return;
+      }
       const amountReceived = webhookData.transferAmount;
       const amountExpected = Number(payment.amount);
 
       this.applyWebhookAudit(payment, webhookData, amountReceived);
 
+      // if (amountReceived < amountExpected) {
+      //   this.logger.warn(
+      //     `⚠️ Insufficient amount. Expected: ${amountExpected}, Received: ${amountReceived}`,
+      //   );
+      //   await paymentRepo.save(payment);
+      //   responsePayload = {
+      //     success: false,
+      //     message: 'Insufficient amount',
+      //     expected: amountExpected,
+      //     received: amountReceived,
+      //   };
+      //   return;
+      // }
+
       if (amountReceived < amountExpected) {
         this.logger.warn(
-          `⚠️ Insufficient amount. Expected: ${amountExpected}, Received: ${amountReceived}`,
+          `⚠️ Underpayment detected. Expected: ${amountExpected}, Received: ${amountReceived}. Triggering Wallet Refund.`,
         );
+
+        // (WALLET FALLBACK)
+        if (payment.user) {
+          await this.usersService.updateBalance(
+            payment.user.userId,
+            amountReceived,
+            manager,
+          );
+          this.logger.log(
+            `💰 Refunded ${amountReceived} to User ${payment.user.userId} wallet due to underpayment.`,
+          );
+        } else {
+          this.logger.error(
+            `[CRITICAL] Cannot refund underpayment: User not found for Payment ${paymentCode}`,
+          );
+        }
+
+        payment.status = PaymentStatus.FAILED;
         await paymentRepo.save(payment);
+
+        // C. HỦY BOOKING NGAY LẬP TỨC (Để nhả Slot)
+        if (
+          payment.paymentType === PaymentType.BOOKING &&
+          payment.appointment
+        ) {
+          await this.appointmentsService.cancelPendingAppointment(
+            payment.appointment.appointmentId,
+            manager,
+            TerminationReason.PAYMENT_FAILED,
+            `Underpayment: Received ${amountReceived}/${amountExpected}`,
+          );
+        }
+
         responsePayload = {
-          success: false,
-          message: 'Insufficient amount',
+          success: true, // Webhook xử lý thành công (dù đơn hàng fail)
+          message:
+            'Underpayment handled: Refunded to Wallet & Booking Cancelled',
           expected: amountExpected,
           received: amountReceived,
         };
@@ -402,7 +470,6 @@ export class PaymentsService {
     return this.entityManager.transaction(async (manager) => {
       const paymentRepo = manager.getRepository(Payment);
       const appointmentRepo = manager.getRepository(Appointment);
-      const userRepo = manager.getRepository(User);
 
       // 1. Find Payment
       const payment = await paymentRepo.findOne({
@@ -450,22 +517,8 @@ export class PaymentsService {
         );
       }
 
-      const doctorShare = amountReceived * (1 - this.BOOKING_FEE_RATE);
-      const systemShare = amountReceived - doctorShare;
-
-      const dermatologistUserId = appointment.dermatologist.user.userId;
-
-      await userRepo.increment(
-        { userId: dermatologistUserId },
-        'balance',
-        doctorShare,
-      );
-
       this.logger.log(
         `✅ Booking confirmed for Appt ${appointment.appointmentId}`,
-      );
-      this.logger.log(
-        `💰 Credited ${doctorShare} to User (Dermatologist) ${dermatologistUserId}. System fee: ${systemShare}`,
       );
 
       // 4. Update Appointment status to SCHEDULED
@@ -494,7 +547,6 @@ export class PaymentsService {
   ): Promise<PaymentProcessingResult> {
     return this.entityManager.transaction(async (manager) => {
       const paymentRepo = manager.getRepository(Payment);
-      const userRepo = manager.getRepository(User);
 
       const payment = await paymentRepo.findOne({ where: { paymentId } });
 
@@ -539,10 +591,10 @@ export class PaymentsService {
       const dermatologistUserId =
         fullSubscription.subscriptionPlan.dermatologist.user.userId;
 
-      await userRepo.increment(
-        { userId: dermatologistUserId },
-        'balance',
+      await this.usersService.updateBalance(
+        dermatologistUserId,
         doctorShare,
+        manager,
       );
 
       this.logger.log(
@@ -810,9 +862,11 @@ export class PaymentsService {
           switch (payment.paymentType) {
             case PaymentType.BOOKING:
               if (payment.appointment) {
-                await this.appointmentsService.cancelExpiredReservation(
+                await this.appointmentsService.cancelPendingAppointment(
                   payment.appointment.appointmentId,
                   manager,
+                  TerminationReason.PAYMENT_TIMEOUT,
+                  'System auto-cancelled due to payment expiration.',
                 );
               }
               break;
@@ -831,13 +885,15 @@ export class PaymentsService {
               break;
           }
 
-          // Always update payment status to EXPIRED
+          // Always Update Payment -> EXPIRED
           payment.status = PaymentStatus.EXPIRED;
           await manager.save(payment);
         });
         processedCount++;
       } catch (error) {
-        // ... (xử lý lỗi)
+        this.logger.error(
+          `Error processing cron job expired payment ${payment.paymentId}: ${(error as Error).message}`,
+        );
       }
     }
 

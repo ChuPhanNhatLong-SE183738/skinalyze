@@ -17,10 +17,7 @@ import {
   AppointmentReservationResult,
 } from './appointments.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
-import {
-  InterruptAppointmentDto,
-  UpdateAppointmentStatusDto,
-} from './dto/update-appointment-status.dto';
+import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { User, UserRole } from 'src/users/entities/user.entity';
@@ -39,6 +36,9 @@ import { CreateSubscriptionAppointmentDto } from './dto/create-subscription-appo
 import { CompleteAppointmentDto } from './dto/complete-appointment.dto';
 import { FindAppointmentsDto } from './dto/find-appointment.dto';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { UpdateMedicalNoteDto } from './dto/update-medical-note.dto';
+import { ReportNoShowDto } from './dto/report-no-show-dto';
+import { InterruptAppointmentDto } from './dto/report-interrupt-appointment';
 
 @ApiTags('Appointments')
 @Controller('appointments')
@@ -84,6 +84,24 @@ export class AppointmentsController {
     );
   }
 
+  @Post('use-wallet')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Create an appointment using Wallet balance' })
+  async createWithWallet(
+    @Body() createDto: CreateAppointmentDto,
+    @GetUser() user: User,
+  ): Promise<CreatedResponse<Appointment>> {
+    const appointment = await this.appointmentsService.createWalletAppointment(
+      user.userId,
+      createDto,
+    );
+
+    return ResponseHelper.created(
+      'Appointment created successfully using Wallet balance.',
+      appointment,
+    );
+  }
+
   @Get()
   @ApiOperation({ summary: 'Find all appointments with optional filters' })
   @ApiResponse({ status: 200, description: 'List retrieved successfully.' })
@@ -111,15 +129,38 @@ export class AppointmentsController {
     return ResponseHelper.success('Appointment cancelled successfully', result);
   }
 
+  @Patch('dermatologist/:id/medical-note')
+  @Roles(UserRole.DERMATOLOGIST)
+  @ApiOperation({ summary: 'Update medical note only (Save Draft)' })
+  @ApiOkResponse({ description: 'Medical note updated successfully' })
+  async updateMedicalNote(
+    @GetUser() user: User,
+    @Param('id', new ParseUUIDPipe()) appointmentId: string,
+    @Body() dto: UpdateMedicalNoteDto,
+  ) {
+    const updatedAppointment = await this.appointmentsService.updateMedicalNote(
+      user.userId,
+      appointmentId,
+      dto.medicalNote,
+    );
+
+    return ResponseHelper.success(
+      'Medical note updated successfully',
+      updatedAppointment,
+    );
+  }
+
   @Patch('dermatologist/:id/report-no-show')
   @Roles(UserRole.DERMATOLOGIST)
   async reportCustomerNoShow(
     @GetUser() user: User,
     @Param('id', new ParseUUIDPipe()) appointmentId: string,
+    @Body() dto: ReportNoShowDto,
   ) {
     const result = await this.appointmentsService.reportCustomerNoShow(
       user.userId,
       appointmentId,
+      dto,
     );
     return ResponseHelper.success(result.message, result);
   }
@@ -129,10 +170,12 @@ export class AppointmentsController {
   async reportDoctorNoShow(
     @GetUser() user: User,
     @Param('id', new ParseUUIDPipe()) appointmentId: string,
+    @Body() dto: ReportNoShowDto,
   ) {
     const result = await this.appointmentsService.reportDoctorNoShow(
       user.userId,
       appointmentId,
+      dto,
     );
     return ResponseHelper.success(result.message, result);
   }

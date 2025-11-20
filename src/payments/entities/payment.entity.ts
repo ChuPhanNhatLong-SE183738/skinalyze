@@ -11,6 +11,7 @@ import {
 import { Order } from '../../orders/entities/order.entity';
 import { Appointment } from 'src/appointments/entities/appointment.entity';
 import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
+import { User } from 'src/users/entities/user.entity';
 
 export enum PaymentStatus {
   PENDING = 'pending',
@@ -129,6 +130,10 @@ export class Payment {
 
   @OneToOne(() => Appointment, (appointment) => appointment.payment)
   appointment: Appointment;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
   @OneToOne(() => CustomerSubscription, (subscription) => subscription.payment)
   customerSubscription: CustomerSubscription;

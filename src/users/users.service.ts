@@ -2,9 +2,10 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { TopupBalanceDto } from './dto/topup-balance.dto';
@@ -15,12 +16,15 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly emailService: EmailService,
   ) {}
-
+  private getRepository(manager?: EntityManager): Repository<User> {
+    return manager ? manager.getRepository(User) : this.userRepository;
+  }
   async create(createUserDto: CreateUserDto): Promise<User> {
     // Validate required fields
     if (
@@ -145,13 +149,10 @@ export class UsersService {
       throw new BadRequestException('Số tiền nạp tối đa là 50,000,000 VND');
     }
 
-    // Calculate new balance
-    const oldBalance = parseFloat(user.balance.toString());
-    const newBalance = oldBalance + topupDto.amount;
-
-    // Update user balance
-    user.balance = newBalance;
-    await this.userRepository.save(user);
+    const { oldBalance, newBalance } = await this.updateBalance(
+      userId,
+      topupDto.amount,
+    );
 
     // Return transaction info
     return ResponseHelper.success('Nạp tiền thành công', {
@@ -187,5 +188,52 @@ export class UsersService {
       currentBalance: parseFloat(user.balance.toString()),
       message: 'Để xem lịch sử chi tiết, cần implement bảng transactions riêng',
     });
+  }
+
+  async updateBalance(
+    userId: string,
+    amountToChange: number, // Number (+/-) to add or deduct
+    manager?: EntityManager,
+  ): Promise<{ oldBalance: number; newBalance: number }> {
+    if (amountToChange === 0) {
+      this.logger.warn(`Attempted to change balance with 0 for user ${userId}`);
+      const user = await this.findOne(userId);
+      return {
+        oldBalance: Number(user.balance),
+        newBalance: Number(user.balance),
+      };
+    }
+
+    const userRepo = this.getRepository(manager);
+
+    const user = await userRepo.findOne({
+      where: { userId },
+      select: ['userId', 'balance'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `User ${userId} not found for balance update.`,
+      );
+    }
+
+    const oldBalance = parseFloat(user.balance.toString());
+    const newBalance = oldBalance + amountToChange;
+
+    // 2. Check no negative balance
+    if (newBalance < 0) {
+      throw new BadRequestException(
+        `Insufficient funds. Cannot deduct ${Math.abs(amountToChange)}. Current balance is ${oldBalance}`,
+      );
+    }
+
+    // Increment safely using atomic operation avoiding race conditions
+    await userRepo.increment({ userId: userId }, 'balance', amountToChange);
+
+    this.logger.log(
+      `Balance updated for user ${userId}: ${oldBalance} -> ${newBalance} (Change: ${amountToChange})`,
+    );
+
+    return { oldBalance, newBalance };
   }
 }

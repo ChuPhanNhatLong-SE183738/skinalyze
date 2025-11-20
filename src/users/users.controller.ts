@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   UseGuards,
-  Req,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -73,20 +72,6 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getProfile(@GetUser() user: User) {
     return this.usersService.findOne(user.userId);
-  }
-
-  @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.STAFF)
-  @ApiOperation({ summary: 'Get user by ID (Admin/Staff only)' })
-  @ApiParam({ name: 'id', type: String, description: 'User UUID' })
-  @ApiResponse({ status: 200, description: 'Returns the user' })
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden - Admin/Staff access required',
-  })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
   }
 
   @Patch('profile')
@@ -300,5 +285,19 @@ export class UsersController {
       statusCode: 200,
       message: 'Device token removed successfully',
     };
+  }
+
+  @Get(':id')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @ApiOperation({ summary: 'Get user by ID (Admin/Staff only)' })
+  @ApiParam({ name: 'id', type: String, description: 'User UUID' })
+  @ApiResponse({ status: 200, description: 'Returns the user' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin/Staff access required',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  findOne(@Param('id') id: string) {
+    return this.usersService.findOne(id);
   }
 }

@@ -10,6 +10,8 @@ import { AvailabilitySlotsModule } from '../availability-slots/availability-slot
 import { PaymentsModule } from 'src/payments/payments.module';
 import { GoogleMeetModule } from 'src/google-meet/google-meet.module';
 import { CustomerSubscriptionModule } from 'src/customer-subscription/customer-subscription.module';
+import { UsersModule } from 'src/users/users.module';
+import { AppointmentsScheduler } from './appointments.schedule';
 
 @Module({
   imports: [
@@ -20,10 +22,11 @@ import { CustomerSubscriptionModule } from 'src/customer-subscription/customer-s
     AvailabilitySlotsModule,
     CustomerSubscriptionModule,
     GoogleMeetModule,
+    UsersModule,
     forwardRef(() => PaymentsModule),
   ],
   controllers: [AppointmentsController],
-  providers: [AppointmentsService],
+  providers: [AppointmentsService, AppointmentsScheduler],
   exports: [AppointmentsService],
 })
 export class AppointmentsModule {}

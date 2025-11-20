@@ -10,5 +10,5 @@ export class CompleteAppointmentDto {
   @IsNotEmpty()
   @IsString()
   @MinLength(5)
-  note: string;
+  medicalNote: string;
 }

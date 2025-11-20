@@ -52,6 +52,9 @@ export class Appointment {
   @Column({ type: 'text', nullable: true })
   note: string;
 
+  @Column({ type: 'text', nullable: true })
+  medicalNote: string;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   meetingUrl: string;
 
@@ -78,9 +81,32 @@ export class Appointment {
   @Column({ type: 'text', nullable: true })
   terminationNote?: string;
 
+  @Column({ type: 'datetime', nullable: true })
+  actualEndTime: Date;
+
+  @Column({ type: 'enum', enum: TerminationReason, nullable: true })
+  customerReportReason: TerminationReason;
+
+  @Column({ type: 'text', nullable: true })
+  customerReportNote: string;
+
+  @Column({ type: 'enum', enum: TerminationReason, nullable: true })
+  dermatologistReportReason: TerminationReason;
+
+  @Column({ type: 'text', nullable: true })
+  dermatologistReportNote: string;
+
+  // Admin note for handle issues (Refund/Payout)
+  @Column({ type: 'text', nullable: true })
+  adminNote: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  resolvedAt: Date;
+
+  @Column({ type: 'varchar', nullable: true })
+  resolvedBy: string;
   @CreateDateColumn()
   createdAt: Date;
-
   @UpdateDateColumn()
   updatedAt: Date;
 
