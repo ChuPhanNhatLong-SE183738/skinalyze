@@ -16,6 +16,7 @@ import { orderService } from "@/services/orderService";
 import { authService } from "@/services/authService";
 import { userService } from "@/services/userService";
 import { notificationService } from "@/services/notificationService";
+import { CreateShippingLogModal } from "@/components/shipping/CreateShippingLogModal";
 import { NotificationType, NotificationPriority } from "@/types/notification";
 import {
   Package,
@@ -26,6 +27,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Truck,
 } from "lucide-react";
 
 interface Order {
@@ -98,7 +100,9 @@ export function OrderDetailModal({
   onOpenChange,
   onOrderUpdated,
 }: OrderDetailModalProps) {
+  const [showShippingModal, setShowShippingModal] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [processedByUser, setProcessedByUser] = useState<{
     fullName: string;
     email: string;
@@ -117,8 +121,20 @@ export function OrderDetailModal({
   useEffect(() => {
     if (open && orderId) {
       loadOrderDetails();
+      fetchUserRole();
     }
   }, [open, orderId]);
+
+  const fetchUserRole = async () => {
+    try {
+      const response = await authService.checkAuth();
+      if (response?.user?.role) {
+        setUserRole(response.user.role);
+      }
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+    }
+  };
 
   const loadOrderDetails = async () => {
     if (!orderId) return;
@@ -412,6 +428,19 @@ export function OrderDetailModal({
               {isProcessing ? "Confirming..." : "Confirm Order"}
             </Button>
           </DialogFooter>
+          
+          {showShippingModal && order && (
+            <CreateShippingLogModal
+              isOpen={showShippingModal}
+              onClose={() => setShowShippingModal(false)}
+              onSuccess={() => {
+                setShowShippingModal(false);
+                onOrderUpdated();
+              }}
+              preselectedOrderId={order.orderId}
+              userRole={userRole || undefined}
+            />
+          )}
         </DialogContent>
       </Dialog>
     );
@@ -699,6 +728,15 @@ export function OrderDetailModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
+          {order && order.status === "CONFIRMED" && (
+            <Button
+              onClick={() => setShowShippingModal(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Truck className="mr-2 h-4 w-4" />
+              Create Shipping Log
+            </Button>
+          )}
           {order && order.status === "PENDING" && (
             <>
               <Button
@@ -727,6 +765,19 @@ export function OrderDetailModal({
           )}
         </DialogFooter>
       </DialogContent>
+      
+      {showShippingModal && order && (
+        <CreateShippingLogModal
+          isOpen={showShippingModal}
+          onClose={() => setShowShippingModal(false)}
+          onSuccess={() => {
+            setShowShippingModal(false);
+            onOrderUpdated();
+          }}
+          preselectedOrderId={order.orderId}
+          userRole={userRole || undefined}
+        />
+      )}
     </Dialog>
   );
 }

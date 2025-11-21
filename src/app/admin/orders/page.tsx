@@ -38,6 +38,11 @@ const statusConfig = {
     icon: Package,
     color: "text-purple-400 bg-purple-500/20 border-purple-500/30",
   },
+  SHIPPING: {
+    label: "Shipping",
+    icon: Truck,
+    color: "text-indigo-400 bg-indigo-500/20 border-indigo-500/30",
+  },
   SHIPPED: {
     label: "Shipped",
     icon: Truck,
@@ -45,6 +50,11 @@ const statusConfig = {
   },
   DELIVERED: {
     label: "Delivered",
+    icon: CheckCircle,
+    color: "text-green-400 bg-green-500/20 border-green-500/30",
+  },
+  COMPLETED: {
+    label: "Completed",
     icon: CheckCircle,
     color: "text-green-400 bg-green-500/20 border-green-500/30",
   },
@@ -334,7 +344,11 @@ export default function AdminOrdersPage() {
                     </tr>
                   ) : (
                     filteredOrders.map((order) => {
-                      const status = statusConfig[order.status];
+                      const status = statusConfig[order.status] || {
+                        label: order.status,
+                        icon: AlertCircle,
+                        color: "text-gray-400 bg-gray-500/20 border-gray-500/30",
+                      };
                       const StatusIcon = status.icon;
 
                       return (

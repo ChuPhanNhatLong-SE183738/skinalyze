@@ -12,6 +12,7 @@ import {
   LogOut,
   Warehouse,
   Bell,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -31,14 +32,14 @@ const menuItems = [
     icon: Package,
   },
   {
+    title: "Shipping",
+    href: "/staff/shipping",
+    icon: Truck,
+  },
+  {
     title: "Inventory",
     href: "/staff/inventory",
     icon: Warehouse,
-  },
-  {
-    title: "Customers",
-    href: "/staff/customers",
-    icon: Users,
   },
   {
     title: "Settings",

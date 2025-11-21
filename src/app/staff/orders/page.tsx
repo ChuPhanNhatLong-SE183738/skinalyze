@@ -37,6 +37,11 @@ const statusConfig = {
     icon: Package,
     color: "text-purple-600 bg-purple-50",
   },
+  SHIPPING: {
+    label: "Shipping",
+    icon: Truck,
+    color: "text-indigo-600 bg-indigo-50",
+  },
   SHIPPED: {
     label: "Shipped",
     icon: Truck,
@@ -44,6 +49,11 @@ const statusConfig = {
   },
   DELIVERED: {
     label: "Delivered",
+    icon: CheckCircle,
+    color: "text-green-600 bg-green-50",
+  },
+  COMPLETED: {
+    label: "Completed",
     icon: CheckCircle,
     color: "text-green-600 bg-green-50",
   },
@@ -318,7 +328,12 @@ export default function StaffOrdersPage() {
                     </tr>
                   ) : (
                     filteredOrders.map((order) => {
-                      const StatusIcon = statusConfig[order.status].icon;
+                      const status = statusConfig[order.status] || {
+                        label: order.status,
+                        icon: AlertCircle,
+                        color: "text-gray-600 bg-gray-50",
+                      };
+                      const StatusIcon = status.icon;
                       return (
                         <tr
                           key={order.orderId}
@@ -327,8 +342,17 @@ export default function StaffOrdersPage() {
                           <td className="px-6 py-4 text-sm font-mono text-slate-900">
                             {order.orderId.slice(0, 8)}...
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">
-                            {order.customerId.slice(0, 8)}...
+                          <td className="px-6 py-4">
+                            <div className="text-sm">
+                              <div className="font-medium text-slate-900">
+                                {order.customer?.user?.fullName || order.customer?.user?.email || 'N/A'}
+                              </div>
+                              {order.customer?.user?.fullName && order.customer?.user?.email && (
+                                <div className="text-slate-500 text-xs">
+                                  {order.customer.user.email}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-slate-600">
                             {order.orderItems.length} item(s)
@@ -346,12 +370,10 @@ export default function StaffOrdersPage() {
                           </td>
                           <td className="px-6 py-4">
                             <span
-                              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                statusConfig[order.status].color
-                              }`}
+                              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${status.color}`}
                             >
                               <StatusIcon className="h-3 w-3" />
-                              {statusConfig[order.status].label}
+                              {status.label}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-sm text-slate-600">

@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { shippingService } from "@/services/shippingService";
 import { authService } from "@/services/authService";
 import type { ShippingLog } from "@/types/shipping";
+import { CreateShippingLogModal } from "@/components/shipping/CreateShippingLogModal";
+import { ShippingDetailModal } from "@/components/shipping/ShippingDetailModal";
+import { useToast } from "@/hooks/use-toast";
 import {
   Search,
   Truck,
@@ -20,15 +23,20 @@ import {
   User,
   Calendar,
   DollarSign,
+  Plus,
+  RefreshCw,
 } from "lucide-react";
 
 export default function ShippingLogsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [shippingLogs, setShippingLogs] = useState<ShippingLog[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState<ShippingLog | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthAndFetchData();
@@ -48,6 +56,7 @@ export default function ShippingLogsPage() {
         return;
       }
 
+      setUserRole(response.user.role);
       await fetchShippingLogs();
     } catch (error) {
       console.error("Authentication error:", error);
@@ -65,6 +74,24 @@ export default function ShippingLogsPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleShippingLogCreated = () => {
+    setShowCreateModal(false);
+    fetchShippingLogs();
+    toast({
+      title: "Success",
+      description: "Shipping log created successfully",
+    });
+  };
+
+  const handleShippingLogUpdated = () => {
+    setShowDetailModal(false);
+    fetchShippingLogs();
+    toast({
+      title: "Success",
+      description: "Shipping log updated successfully",
+    });
   };
 
   const filteredLogs = shippingLogs.filter((log) => {
@@ -97,10 +124,6 @@ export default function ShippingLogsPage() {
       },
       RETURNED: {
         color: "bg-orange-50 text-orange-600 border-orange-200",
-        icon: XCircle,
-      },
-      CANCELLED: {
-        color: "bg-red-50 text-red-600 border-red-200",
         icon: XCircle,
       },
     };
@@ -219,9 +242,9 @@ export default function ShippingLogsPage() {
           </Card>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
+        {/* Search and Actions */}
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <Input
               type="text"
@@ -230,6 +253,23 @@ export default function ShippingLogsPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
+          </div>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => fetchShippingLogs()}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Create Shipping Log
+            </Button>
           </div>
         </div>
 
@@ -318,13 +358,14 @@ export default function ShippingLogsPage() {
                       <td className="py-4 px-6">
                         <Button
                           size="sm"
-                          className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                          variant="ghost"
                           onClick={() => {
                             setSelectedLog(log);
                             setShowDetailModal(true);
                           }}
+                          className="text-green-600 hover:text-green-700 hover:bg-green-50"
                         >
-                          Details
+                          View Details
                         </Button>
                       </td>
                     </tr>
@@ -335,143 +376,23 @@ export default function ShippingLogsPage() {
           </div>
         </Card>
 
-        {/* Detail Modal */}
-        {showDetailModal && selectedLog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6 border-b border-slate-200">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-slate-900">
-                    Shipping Details
-                  </h2>
-                  <button
-                    onClick={() => setShowDetailModal(false)}
-                    className="text-slate-400 hover:text-slate-600"
-                  >
-                    <XCircle className="h-6 w-6" />
-                  </button>
-                </div>
-              </div>
+        {/* Shipping Detail Modal */}
+        <ShippingDetailModal
+          shippingLog={selectedLog}
+          open={showDetailModal}
+          onOpenChange={setShowDetailModal}
+          onUpdate={handleShippingLogUpdated}
+          userRole={userRole || undefined}
+        />
 
-              <div className="p-6 space-y-6">
-                {/* Status and Basic Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-slate-500">Status</p>
-                    <div className="mt-1">
-                      {getStatusBadge(selectedLog.status)}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Total Amount</p>
-                    <p className="text-lg font-bold text-slate-900 mt-1">
-                      {formatCurrency(selectedLog.totalAmount)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Shipping Staff */}
-                {selectedLog.shippingStaff && (
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <User className="h-5 w-5 text-blue-600" />
-                      <div>
-                        <p className="font-semibold text-slate-900">
-                          {selectedLog.shippingStaff.fullName}
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          {selectedLog.shippingStaff.email}
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          {selectedLog.shippingStaff.phone}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Dates */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-slate-500">Created Date</p>
-                    <p className="text-sm text-slate-900">
-                      {formatDate(selectedLog.createdAt)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">Estimated Delivery</p>
-                    <p className="text-sm text-slate-900">
-                      {formatDate(selectedLog.estimatedDeliveryDate)}
-                    </p>
-                  </div>
-                  {selectedLog.deliveredDate && (
-                    <div>
-                      <p className="text-sm text-slate-500">Actual Delivery</p>
-                      <p className="text-sm text-green-600">
-                        {formatDate(selectedLog.deliveredDate)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Notes */}
-                {selectedLog.note && (
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">Notes</p>
-                    <p className="text-sm text-slate-600 mt-1">
-                      {selectedLog.note}
-                    </p>
-                  </div>
-                )}
-
-                {/* COD Information */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-slate-500">COD Collected</p>
-                    <p className="text-sm font-medium text-slate-900">
-                      {selectedLog.isCodCollected ? "✓ Yes" : "✗ No"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">COD Transferred</p>
-                    <p className="text-sm font-medium text-slate-900">
-                      {selectedLog.isCodTransferred ? "✓ Yes" : "✗ No"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Finished Pictures */}
-                {selectedLog.finishedPictures &&
-                  selectedLog.finishedPictures.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-slate-700 mb-3">
-                        Delivery Photos
-                      </p>
-                      <div className="grid grid-cols-4 gap-2">
-                        {selectedLog.finishedPictures.map((pic, index) => (
-                          <img
-                            key={index}
-                            src={pic}
-                            alt={`Finished ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-              </div>
-
-              <div className="p-6 border-t border-slate-200">
-                <Button
-                  onClick={() => setShowDetailModal(false)}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          </div>
+        {/* Create Shipping Log Modal */}
+        {showCreateModal && (
+          <CreateShippingLogModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={handleShippingLogCreated}
+            userRole={userRole || undefined}
+          />
         )}
       </div>
     </AdminLayout>
