@@ -1,5 +1,9 @@
 import { http } from "@/lib/http";
-import type { Appointment, CompleteAppointmentDto } from "@/types/appointment";
+import type {
+  Appointment,
+  CompleteAppointmentDto,
+  UpdateMedicalNoteDto,
+} from "@/types/appointment";
 import type { ApiResponse } from "@/types/api";
 
 class AppointmentService {
@@ -45,6 +49,19 @@ class AppointmentService {
       `/api/appointments/dermatologist/check-in/${appointmentId}`,
       {}
     );
+  }
+
+  async updateMedicalNote(
+    appointmentId: string,
+    note: string
+  ): Promise<Appointment> {
+    const dto: UpdateMedicalNoteDto = { medicalNote: note };
+    // Gọi BFF Route
+    const response = await http.patch<ApiResponse<Appointment>>(
+      `/api/appointments/dermatologist/medical-note/${appointmentId}`,
+      dto
+    );
+    return response.data;
   }
 
   async completeAppointment(

@@ -27,11 +27,14 @@ export enum AppointmentType {
 export enum TerminationReason {
   CUSTOMER_CANCELLED_EARLY = "CUSTOMER_CANCELLED_EARLY",
   CUSTOMER_CANCELLED_LATE = "CUSTOMER_CANCELLED_LATE",
+
   DOCTOR_CANCELLED = "DOCTOR_CANCELLED",
   PAYMENT_TIMEOUT = "PAYMENT_TIMEOUT",
   SYSTEM_CANCELLED = "SYSTEM_CANCELLED",
+
   CUSTOMER_NO_SHOW = "CUSTOMER_NO_SHOW",
   DOCTOR_NO_SHOW = "DOCTOR_NO_SHOW",
+
   CUSTOMER_ISSUE = "CUSTOMER_ISSUE",
   DOCTOR_ISSUE = "DOCTOR_ISSUE",
   PLATFORM_ISSUE = "PLATFORM_ISSUE",
@@ -43,6 +46,7 @@ export interface Appointment {
   endTime: string;
   price: number;
   note: string | null;
+  medicalNote: string | null;
   meetingUrl: string | null;
   appointmentType: AppointmentType;
   appointmentStatus: AppointmentStatus;
@@ -50,18 +54,24 @@ export interface Appointment {
   terminationNote?: string | null;
   createdAt: string;
 
+  customerJoinedAt: string | null;
+  dermatologistJoinedAt: string | null;
+
   customer: Customer;
   dermatologist: Dermatologist;
   skinAnalysis: SkinAnalysis | null;
   payment: Payment | null;
-
 
   trackingRoutine: TreatmentRoutine | null;
   createdRoutine: TreatmentRoutine | null;
 }
 
 export interface CompleteAppointmentDto {
-  note?: string;
+  medicalNote?: string;
+}
+
+export interface UpdateMedicalNoteDto {
+  medicalNote: string;
 }
 
 export interface FindAppointmentsDto {

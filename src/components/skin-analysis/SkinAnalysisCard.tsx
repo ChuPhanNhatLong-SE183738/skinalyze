@@ -86,11 +86,7 @@ export function SkinAnalysisCard({ analysis }: SkinAnalysisCardProps) {
               label="Patient Symptoms"
               value={analysis.patientSymptoms}
             />
-            <InfoRow
-              icon={Notebook}
-              label="Dermatologist Notes"
-              value={analysis.notes}
-            />
+            <InfoRow icon={Notebook} label="Notes" value={analysis.notes} />
           </div>
           <Separator />
           <div className="space-y-4">
@@ -107,7 +103,7 @@ export function SkinAnalysisCard({ analysis }: SkinAnalysisCardProps) {
               icon={Sparkles}
               label="AI Detected Condition"
               value={
-                <Badge variant="secondary">
+                <Badge variant="warning">
                   {analysis.aiDetectedCondition || "N/A"}
                 </Badge>
               }

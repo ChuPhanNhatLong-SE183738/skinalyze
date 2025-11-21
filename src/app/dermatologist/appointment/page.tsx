@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Badge, BadgeProps } from "@/components/ui/badge";
 import { Loader2, CalendarSearch } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -30,22 +30,23 @@ import { useDermatologist } from "@/contexts/DermatologistContext";
 
 const getStatusBadgeVariant = (
   status: AppointmentStatus
-): "default" | "destructive" | "secondary" | "outline" => {
+): BadgeProps["variant"] => {
   switch (status) {
     case AppointmentStatus.SCHEDULED:
-      return "default";
+      return "warning";
     case AppointmentStatus.IN_PROGRESS:
-      return "secondary";
+      return "info";
     case AppointmentStatus.COMPLETED:
-      return "secondary";
+      return "success";
     case AppointmentStatus.CANCELLED:
+      return "destructive";
     case AppointmentStatus.NO_SHOW:
     case AppointmentStatus.INTERRUPTED:
-      return "destructive";
+      return "signal";
     case AppointmentStatus.PENDING_PAYMENT:
-      return "outline";
-    default:
       return "secondary";
+    default:
+      return "outline";
   }
 };
 

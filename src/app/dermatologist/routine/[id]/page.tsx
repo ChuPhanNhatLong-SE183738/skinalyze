@@ -176,7 +176,7 @@ function TreatmentRoutineForm() {
           description: "Routine created successfully.",
           variant: "success",
         });
-        router.replace(`/dermatologist/routines/${newRoutine.routineId}`);
+        router.replace(`/dermatologist/routine/${newRoutine.routineId}`);
       } else {
         const dto: UpdateTreatmentRoutineDto = values;
         await treatmentRoutineService.update(routineId, dto);

@@ -49,7 +49,9 @@ const workShiftSchema = z.object({
 const batchFormSchema = z.object({
   selectedDays: z.array(z.date()).min(1, "Select at least one day."),
   shifts: z.array(workShiftSchema).min(1, "Add at least one shift."),
-  slotDurationInMinutes: z.coerce.number().min(5, "Duration must be 5 minutes or more."),
+  slotDurationInMinutes: z.coerce
+    .number()
+    .min(5, "Duration must be 5 minutes or more."),
   price: z.coerce.number().optional(),
   repeatWeeks: z.coerce.number().min(0).default(0),
 });
@@ -70,9 +72,12 @@ export function CreateSlotModal({
   onSlotsCreated,
 }: CreateSlotModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [calendarDisplayMonth, setCalendarDisplayMonth] = useState<Date>(
+    new Date()
+  );
   const { toast } = useToast();
 
-  const form = useForm<BatchFormValues>({
+  const form = useForm({
     resolver: zodResolver(batchFormSchema),
     defaultValues: {
       selectedDays: selectedDates.length > 0 ? selectedDates : [],
@@ -84,13 +89,25 @@ export function CreateSlotModal({
   });
 
   useEffect(() => {
-    form.reset({
-      selectedDays: selectedDates.length > 0 ? selectedDates : [],
-      shifts: [{ startTime: "08:00", endTime: "11:00" }],
-      slotDurationInMinutes: 30,
-      repeatWeeks: 0,
-    });
-  }, [selectedDates, form, isOpen]);
+    if (isOpen) {
+      const newSelectedDates = selectedDates.length > 0 ? selectedDates : [];
+
+      form.reset({
+        selectedDays: newSelectedDates,
+        shifts: [{ startTime: "08:00", endTime: "11:00" }],
+        slotDurationInMinutes: 30,
+        repeatWeeks: 0,
+        price: undefined,
+      });
+      // Display the month of the first selected date or current month
+      if (newSelectedDates.length > 0) {
+        setCalendarDisplayMonth(newSelectedDates[0]);
+      } else {
+        // If no dates selected, display the current month
+        setCalendarDisplayMonth(new Date());
+      }
+    }
+  }, [isOpen, selectedDates, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -162,7 +179,9 @@ export function CreateSlotModal({
     } catch (error: unknown) {
       console.error("Failed to create availability:", error);
       const message =
-        error instanceof Error ? error.message : "Unable to create availability.";
+        error instanceof Error
+          ? error.message
+          : "Unable to create availability.";
       toast({
         title: "Error",
         description: message,
@@ -199,6 +218,8 @@ export function CreateSlotModal({
                           mode="multiple"
                           selected={field.value}
                           onSelect={field.onChange}
+                          month={calendarDisplayMonth}
+                          onMonthChange={setCalendarDisplayMonth}
                           locale={enUS}
                           className="rounded-md border p-0"
                           disabled={(date) =>
@@ -355,6 +376,7 @@ export function CreateSlotModal({
                         type="number"
                         className="w-20"
                         min="0"
+                        max="4"
                         disabled={!allowRepeat}
                         value={field.value}
                         onChange={(e) =>
@@ -372,8 +394,9 @@ export function CreateSlotModal({
                     </div>
                     {!allowRepeat && (
                       <FormDescription>
-                        Repeating is disabled when the selected range spans more than one week.
-                        Select dates within the same week to enable repetition.
+                        Repeating is disabled when the selected range spans more
+                        than one week. Select dates within the same week to
+                        enable repetition.
                       </FormDescription>
                     )}
                     <FormMessage />

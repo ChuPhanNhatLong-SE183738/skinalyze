@@ -220,7 +220,8 @@ export default function AvailabilityPage() {
         <div>
           <h1 className="text-3xl font-bold">Manage Availability</h1>
           <p className="mt-2 text-muted-foreground">
-            Review your calendar, delete existing slots, or drag to create new availability.
+            Review your calendar, delete existing slots, or drag to create new
+            availability.
           </p>
         </div>
         <Button
@@ -235,7 +236,9 @@ export default function AvailabilityPage() {
       </div>
 
       <div className="h-[75vh] rounded-lg border bg-white p-4 shadow-sm">
-        {isLoadingSlots && <div className="text-center">Loading availability...</div>}
+        {isLoadingSlots && (
+          <div className="text-center">Loading availability...</div>
+        )}
 
         <BigCalendar
           localizer={localizer}
@@ -271,7 +274,10 @@ export default function AvailabilityPage() {
       </div>
 
       {selectedSlot && (
-        <Card ref={detailCardRef} className="relative mt-6 border-2 border-yellow-400 shadow-md">
+        <Card
+          ref={detailCardRef}
+          className="relative mt-6 border-2 border-yellow-400 shadow-md"
+        >
           <Button
             variant="ghost"
             size="sm"
@@ -292,10 +298,8 @@ export default function AvailabilityPage() {
                 Time
               </span>
               <p className="font-semibold">
-                {format(new Date(selectedSlot.startTime), "HH:mm")} - {format(
-                  new Date(selectedSlot.endTime),
-                  "HH:mm"
-                )}
+                {format(new Date(selectedSlot.startTime), "HH:mm")} -{" "}
+                {format(new Date(selectedSlot.endTime), "HH:mm")}
               </p>
             </div>
             <div>
