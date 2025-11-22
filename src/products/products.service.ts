@@ -203,11 +203,22 @@ export class ProductsService {
     await this.productRepository.remove(product);
   }
 
-  async findByCategory(categoryName: string): Promise<Product[]> {
+  async findByCategory(categoryId: string): Promise<Product[]> {
+    // Verify category exists
+    const category = await this.categoryRepository.findOne({
+      where: { categoryId },
+    });
+
+    if (!category) {
+      throw new NotFoundException(`Category with ID ${categoryId} not found`);
+    }
+
+    // Query products with JOIN on product_categories
     return await this.productRepository
       .createQueryBuilder('product')
-      .leftJoinAndSelect('product.categories', 'category')
-      .where('category.categoryName = :categoryName', { categoryName })
+      .leftJoin('product.categories', 'category')
+      .where('category.categoryId = :categoryId', { categoryId })
+      .leftJoinAndSelect('product.categories', 'productCategories')
       .getMany();
   }
 
