@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000/api/v1";
 
 export async function PATCH(
   request: NextRequest,

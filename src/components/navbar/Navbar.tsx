@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useRef, useState } from "react";
 import Link from "next/link";
@@ -83,7 +83,7 @@ const Navbar = () => {
     setActiveDropdown(index);
   };
   return (
-    <header className="bg-white/70 backdrop-blur-xl shadow-lg border border-emerald-200/30 fixed top-4 z-50 max-w-none w-auto mx-auto left-1/2 transform -translate-x-1/2 rounded-2xl">
+    <header className="bg-black/60 backdrop-blur-xl shadow-lg border border-[#4fb7b3]/30 fixed top-4 z-50 max-w-none w-auto mx-auto left-1/2 transform -translate-x-1/2 rounded-2xl">
       <div className="px-8 lg:px-12">
         <div className="flex justify-between items-center h-18 whitespace-nowrap">
           {/* Logo */}
@@ -97,7 +97,7 @@ const Navbar = () => {
                     className="w-10 h-10 object-contain"
                   />
                 </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
+                <span className="text-xl font-bold bg-gradient-to-r from-[#a8fbd3] to-[#4fb7b3] bg-clip-text text-transparent tracking-tight whitespace-nowrap">
                   Skinalyze
                 </span>
               </div>
@@ -116,7 +116,7 @@ const Navbar = () => {
                   {" "}
                   <Link
                     href={item.href}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-emerald-600 transition-colors duration-200 rounded-xl hover:bg-emerald-50/70 whitespace-nowrap"
+                    className="flex items-center px-4 py-2 text-sm font-medium text-gray-200 hover:text-[#a8fbd3] transition-colors duration-200 rounded-xl hover:bg-[#4fb7b3]/20 whitespace-nowrap"
                   >
                     {item.title}
                     {item.dropdown && (
@@ -140,7 +140,7 @@ const Navbar = () => {
                   {/* Dropdown Menu */}
                   {item.dropdown && activeDropdown === index && (
                     <div
-                      className="absolute top-full left-0 mt-2 w-60 bg-white/90 backdrop-blur-xl rounded-xl shadow-xl border border-emerald-200/40 py-2 z-50"
+                      className="absolute top-full left-0 mt-2 w-60 bg-black/90 backdrop-blur-xl rounded-xl shadow-xl border border-[#4fb7b3]/40 py-2 z-50"
                       onMouseEnter={() => handleDropdownEnter(index)}
                       onMouseLeave={handleMouseLeave}
                     >
@@ -148,7 +148,7 @@ const Navbar = () => {
                         <Link
                           key={dropdownIndex}
                           href={dropdownItem.href}
-                          className="block px-4 py-3 text-sm text-gray-700 hover:text-emerald-600 hover:bg-emerald-50/70 transition-colors duration-200 rounded-lg mx-2 whitespace-nowrap"
+                          className="block px-4 py-3 text-sm text-gray-200 hover:text-[#a8fbd3] hover:bg-[#4fb7b3]/20 transition-colors duration-200 rounded-lg mx-2 whitespace-nowrap"
                           onClick={handleDropdownClick}
                         >
                           {dropdownItem.title}
@@ -165,7 +165,7 @@ const Navbar = () => {
             {/* CTA Button */}{" "}
             <Link
               href="/app"
-              className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl whitespace-nowrap"
+              className="bg-gradient-to-r from-[#4fb7b3] to-[#a8fbd3] hover:from-[#a8fbd3] hover:to-[#4fb7b3] text-black px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl whitespace-nowrap"
             >
               <span className="hidden xl:inline">GET FREE APP</span>{" "}
               <span className="xl:hidden">GET STARTED</span>
@@ -175,7 +175,7 @@ const Navbar = () => {
           <div className="lg:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="inline-flex items-center justify-center p-3 rounded-xl text-gray-600 hover:text-emerald-600 hover:bg-emerald-50/70 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500 transition-colors duration-200"
+              className="inline-flex items-center justify-center p-3 rounded-xl text-gray-200 hover:text-[#a8fbd3] hover:bg-[#4fb7b3]/20 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#4fb7b3] transition-colors duration-200"
             >
               <svg
                 className="h-5 w-5"
@@ -206,12 +206,12 @@ const Navbar = () => {
         {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="lg:hidden">
-            <div className="px-4 pt-4 pb-5 space-y-3 bg-white/80 backdrop-blur-xl border-t border-emerald-200/40 rounded-b-xl mt-2">
+            <div className="px-4 pt-4 pb-5 space-y-3 bg-black/80 backdrop-blur-xl border-t border-[#4fb7b3]/40 rounded-b-xl mt-2">
               {menuItems.map((item, index) => (
                 <div key={index}>
                   <Link
                     href={item.href}
-                    className="text-gray-700 hover:text-emerald-600 block px-4 py-3 text-base font-medium transition-colors duration-200 rounded-xl hover:bg-emerald-50/70"
+                    className="text-gray-200 hover:text-[#a8fbd3] block px-4 py-3 text-base font-medium transition-colors duration-200 rounded-xl hover:bg-[#4fb7b3]/20"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {item.title}
@@ -222,7 +222,7 @@ const Navbar = () => {
                         <Link
                           key={dropdownIndex}
                           href={dropdownItem.href}
-                          className="text-gray-600 hover:text-emerald-600 block px-4 py-2 text-sm transition-colors duration-200 rounded-lg hover:bg-emerald-50/70"
+                          className="text-gray-300 hover:text-[#a8fbd3] block px-4 py-2 text-sm transition-colors duration-200 rounded-lg hover:bg-[#4fb7b3]/20"
                           onClick={() => setIsMenuOpen(false)}
                         >
                           {dropdownItem.title}
@@ -238,7 +238,7 @@ const Navbar = () => {
                 {" "}
                 <Link
                   href="/app"
-                  className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white block px-4 py-3 rounded-xl text-base font-semibold text-center transition-all duration-200 shadow-lg"
+                  className="bg-gradient-to-r from-[#4fb7b3] to-[#a8fbd3] hover:from-[#a8fbd3] hover:to-[#4fb7b3] text-black block px-4 py-3 rounded-xl text-base font-semibold text-center transition-all duration-200 shadow-lg"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   GET FREE APP

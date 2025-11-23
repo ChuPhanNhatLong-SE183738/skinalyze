@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import Navbar from "@/components/navbar/Navbar";
 import React, { useState } from "react";
@@ -23,51 +23,50 @@ const Contacts = () => {
     e.preventDefault();
     // Handle form submission here
     console.log("Form submitted:", formData);
-    alert("Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi trong vòng 24 giờ.");
+    alert("Thank you for contacting us! We will respond within 24 hours.");
     setFormData({ name: "", email: "", subject: "", message: "" });
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#0a0e1a]">
       <Navbar />
 
-      <section className="pt-32 pb-20 bg-gradient-to-br from-green-50 to-blue-50">
+      <section className="pt-32 pb-20 bg-gradient-to-br from-emerald-950/50 to-teal-950/50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium mb-6">
-            <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-            Liên hệ với chúng tôi
+          <div className="inline-flex items-center px-4 py-2 glass-card border border-emerald-400/30 rounded-full text-sm font-medium mb-6">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></span>
+            <span className="gradient-text">Contact Us</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Kết nối với <span className="text-green-600">Skinalyze</span>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            Connect with <span className="gradient-text">Skinalyze</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Chúng tôi luôn sẵn sàng hỗ trợ bạn trong hành trình chăm sóc sức
-            khỏe da
+          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            We are always ready to support you on your skin care journey
           </p>
         </div>
       </section>
 
-      <section className="py-20">
+      <section className="py-20 bg-[#0a0e1a]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16">
             {/* Contact Information */}
             <div className="space-y-8">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                  Thông tin liên hệ
+                <h2 className="text-3xl font-bold text-white mb-6">
+                  Contact Information
                 </h2>
-                <p className="text-lg text-gray-600 mb-8">
-                  Hãy liên hệ với chúng tôi để được tư vấn và hỗ trợ tốt nhất về
-                  công nghệ AI phân tích da.
+                <p className="text-lg text-gray-400 mb-8">
+                  Contact us for the best consultation and support on AI skin
+                  analysis technology.
                 </p>
               </div>
 
               {/* Contact Methods */}
               <div className="space-y-6">
                 <div className="flex items-start">
-                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                  <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
                     <svg
-                      className="w-6 h-6 text-green-600"
+                      className="w-6 h-6 text-emerald-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -81,15 +80,13 @@ const Contacts = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    <h3 className="text-lg font-semibold text-white mb-1">
                       Email
                     </h3>
-                    <p className="text-gray-600 mb-2">
-                      Gửi email cho chúng tôi
-                    </p>
+                    <p className="text-gray-400 mb-2">Send us an email</p>
                     <a
                       href="mailto:dtrong206@gmail.com"
-                      className="text-green-600 font-medium hover:text-green-700 transition-colors"
+                      className="text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
                     >
                       dtrong206@gmail.com
                     </a>
@@ -97,9 +94,9 @@ const Contacts = () => {
                 </div>
 
                 <div className="flex items-start">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                  <div className="w-12 h-12 bg-teal-500/20 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
                     <svg
-                      className="w-6 h-6 text-blue-600"
+                      className="w-6 h-6 text-teal-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -113,13 +110,13 @@ const Contacts = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      Điện thoại
+                    <h3 className="text-lg font-semibold text-white mb-1">
+                      Phone
                     </h3>
-                    <p className="text-gray-600 mb-2">Gọi cho chúng tôi</p>
+                    <p className="text-gray-400 mb-2">Call us</p>
                     <a
                       href="tel:+84123456789"
-                      className="text-blue-600 font-medium hover:text-blue-700 transition-colors"
+                      className="text-teal-400 font-medium hover:text-teal-300 transition-colors"
                     >
                       +84 123 456 789
                     </a>
@@ -127,9 +124,9 @@ const Contacts = () => {
                 </div>
 
                 <div className="flex items-start">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                  <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
                     <svg
-                      className="w-6 h-6 text-purple-600"
+                      className="w-6 h-6 text-cyan-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -149,21 +146,21 @@ const Contacts = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      Địa chỉ văn phòng
+                    <h3 className="text-lg font-semibold text-white mb-1">
+                      Office Address
                     </h3>
-                    <p className="text-gray-600 mb-2">Trụ sở chính</p>
-                    <p className="text-purple-600 font-medium">
-                      123 Nguyễn Huệ, Quận 1<br />
-                      TP. Hồ Chí Minh, Việt Nam
+                    <p className="text-gray-400 mb-2">Head Office</p>
+                    <p className="text-cyan-400 font-medium">
+                      123 Nguyen Hue, District 1<br />
+                      Ho Chi Minh City, Vietnam
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start">
-                  <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                  <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
                     <svg
-                      className="w-6 h-6 text-orange-600"
+                      className="w-6 h-6 text-emerald-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -177,14 +174,14 @@ const Contacts = () => {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      Giờ làm việc
+                    <h3 className="text-lg font-semibold text-white mb-1">
+                      Business Hours
                     </h3>
-                    <p className="text-gray-600 mb-2">Thời gian hỗ trợ</p>
-                    <p className="text-orange-600 font-medium">
-                      Thứ 2 - Thứ 6: 8:00 - 18:00
+                    <p className="text-gray-400 mb-2">Support Time</p>
+                    <p className="text-emerald-400 font-medium">
+                      Monday - Friday: 8:00 AM - 6:00 PM
                       <br />
-                      Thứ 7: 9:00 - 15:00
+                      Saturday: 9:00 AM - 3:00 PM
                     </p>
                   </div>
                 </div>
@@ -192,8 +189,8 @@ const Contacts = () => {
 
               {/* Social Media */}
               <div className="pt-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Theo dõi chúng tôi
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Follow Us
                 </h3>
                 <div className="flex space-x-4">
                   <a
@@ -237,17 +234,17 @@ const Contacts = () => {
             </div>
 
             {/* Contact Form */}
-            <div className="bg-gray-50 rounded-3xl p-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                Gửi tin nhắn
+            <div className="glass-card border border-white/10 rounded-3xl p-8">
+              <h2 className="text-3xl font-bold text-white mb-6">
+                Send Message
               </h2>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label
                     htmlFor="name"
-                    className="block text-sm font-medium text-gray-700 mb-2"
+                    className="block text-sm font-medium text-gray-300 mb-2"
                   >
-                    Họ và tên *
+                    Full Name *
                   </label>
                   <input
                     type="text"
@@ -256,15 +253,15 @@ const Contacts = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
-                    placeholder="Nhập họ và tên của bạn"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 transition-colors text-white placeholder-gray-500"
+                    placeholder="Enter your full name"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="email"
-                    className="block text-sm font-medium text-gray-700 mb-2"
+                    className="block text-sm font-medium text-gray-300 mb-2"
                   >
                     Email *
                   </label>
@@ -275,7 +272,7 @@ const Contacts = () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 transition-colors text-white placeholder-gray-500"
                     placeholder="example@email.com"
                   />
                 </div>
@@ -283,9 +280,9 @@ const Contacts = () => {
                 <div>
                   <label
                     htmlFor="subject"
-                    className="block text-sm font-medium text-gray-700 mb-2"
+                    className="block text-sm font-medium text-gray-300 mb-2"
                   >
-                    Chủ đề
+                    Subject (Optional)
                   </label>
                   <input
                     type="text"
@@ -293,17 +290,17 @@ const Contacts = () => {
                     name="subject"
                     value={formData.subject}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
-                    placeholder="Chủ đề tin nhắn"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 transition-colors text-white placeholder-gray-500"
+                    placeholder="Message subject"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="message"
-                    className="block text-sm font-medium text-gray-700 mb-2"
+                    className="block text-sm font-medium text-gray-300 mb-2"
                   >
-                    Tin nhắn *
+                    Message *
                   </label>
                   <textarea
                     id="message"
@@ -312,16 +309,16 @@ const Contacts = () => {
                     onChange={handleInputChange}
                     required
                     rows={5}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors resize-none"
-                    placeholder="Nội dung tin nhắn của bạn..."
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-400 transition-colors resize-none text-white placeholder-gray-500"
+                    placeholder="Your message content..."
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl glow-emerald"
                 >
-                  Gửi tin nhắn
+                  Send Message
                 </button>
               </form>
             </div>
@@ -330,18 +327,18 @@ const Contacts = () => {
       </section>
 
       {/* Map Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gradient-to-br from-emerald-950/30 to-teal-950/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Vị trí văn phòng
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Office Location
             </h2>
-            <p className="text-lg text-gray-600">
-              Hãy đến thăm chúng tôi tại trụ sở chính ở TP. Hồ Chí Minh
+            <p className="text-lg text-gray-400">
+              Visit us at our headquarters in Ho Chi Minh City
             </p>
           </div>
 
-          <div className="bg-white rounded-3xl overflow-hidden shadow-xl">
+          <div className="glass-card border border-white/10 rounded-3xl overflow-hidden">
             <div className="h-96 bg-gray-300 flex items-center justify-center">
               <div className="text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -366,17 +363,16 @@ const Contacts = () => {
                   </svg>
                 </div>
                 <p className="text-gray-600">
-                  Bản đồ Google Maps sẽ được tích hợp tại đây
+                  Google Maps will be integrated here
                 </p>
                 <p className="text-sm text-gray-500 mt-2">
-                  123 Nguyễn Huệ, Quận 1, TP. HCM
+                  123 Nguyen Hue, District 1, HCMC
                 </p>
               </div>
             </div>
           </div>
         </div>
       </section>
-
     </div>
   );
 };

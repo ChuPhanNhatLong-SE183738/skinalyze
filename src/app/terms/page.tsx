@@ -1,111 +1,108 @@
-'use client'
+"use client";
 
 import Navbar from "@/components/navbar/Navbar";
 import React from "react";
 
 const Terms = () => (
-  <div className="min-h-screen bg-white">
+  <div className="min-h-screen bg-[#0a0e1a]">
     <Navbar />
     <main className="max-w-3xl mx-auto px-4 py-32">
-      <h1 className="text-4xl font-bold mb-6 text-green-700">
-        Điều khoản & Điều kiện sử dụng Skinalyze
+      <h1 className="text-4xl font-bold mb-6 gradient-text">
+        Skinalyze Terms & Conditions
       </h1>
-      <p className="mb-6 text-gray-700">
-        Chào mừng bạn đến với Skinalyze – hệ thống AI hỗ trợ quét, phân tích và tư
-        vấn sức khỏe da liễu. Vui lòng đọc kỹ các điều khoản dưới đây trước khi
-        sử dụng dịch vụ của chúng tôi.
+      <p className="mb-6 text-gray-300">
+        Welcome to Skinalyze – an AI system for scanning, analyzing and
+        consulting on skin health. Please read the following terms carefully
+        before using our service.
       </p>
 
-      <h2 className="text-2xl font-semibold mt-8 mb-3 text-green-600">
-        1. Mục đích sử dụng
+      <h2 className="text-2xl font-semibold mt-8 mb-3 text-emerald-400">
+        1. Purpose of Use
       </h2>
-      <p className="mb-4 text-gray-700">
-        Skinalyze là nền tảng ứng dụng trí tuệ nhân tạo (AI) trong lĩnh vực y tế,
-        giúp người dùng quét, phân tích hình ảnh da và cung cấp thông tin tham
-        khảo về các vấn đề da liễu. Dịch vụ này không thay thế cho chẩn đoán
-        hoặc điều trị y tế chuyên nghiệp.
+      <p className="mb-4 text-gray-300">
+        Skinalyze is an artificial intelligence (AI) platform in the medical
+        field, helping users scan and analyze skin images and provide reference
+        information about dermatological issues. This service does not replace
+        professional medical diagnosis or treatment.
       </p>
 
-      <h2 className="text-2xl font-semibold mt-8 mb-3 text-green-600">
-        2. Quyền và trách nhiệm của người dùng
+      <h2 className="text-2xl font-semibold mt-8 mb-3 text-emerald-400">
+        2. User Rights and Responsibilities
       </h2>
-      <ul className="list-disc pl-6 mb-4 text-gray-700">
+      <ul className="list-disc pl-6 mb-4 text-gray-300">
         <li>
-          Chỉ sử dụng Skinalyze cho mục đích cá nhân hoặc nghiên cứu, không sử
-          dụng cho mục đích thương mại khi chưa được phép.
+          Only use Skinalyze for personal or research purposes, not for
+          commercial purposes without permission.
         </li>
         <li>
-          Không tự ý thay đổi, sao chép, phát tán hoặc khai thác dữ liệu AI của
-          hệ thống.
+          Do not arbitrarily modify, copy, distribute or exploit the system's AI
+          data.
         </li>
         <li>
-          Chịu trách nhiệm về tính chính xác của hình ảnh và thông tin cung cấp
-          cho hệ thống.
+          Be responsible for the accuracy of images and information provided to
+          the system.
         </li>
       </ul>
 
-      <h2 className="text-2xl font-semibold mt-8 mb-3 text-green-600">
-        3. Quyền và trách nhiệm của Skinalyze
+      <h2 className="text-2xl font-semibold mt-8 mb-3 text-emerald-400">
+        3. Skinalyze Rights and Responsibilities
       </h2>
-      <ul className="list-disc pl-6 mb-4 text-gray-700">
+      <ul className="list-disc pl-6 mb-4 text-gray-300">
         <li>
-          Cung cấp dịch vụ AI phân tích da dựa trên dữ liệu và thuật toán hiện
-          đại nhất.
+          Provide AI skin analysis services based on the most modern data and
+          algorithms.
         </li>
         <li>
-          Bảo mật thông tin cá nhân và hình ảnh của người dùng theo quy định
-          pháp luật.
+          Secure users' personal information and images in accordance with legal
+          regulations.
         </li>
         <li>
-          Không chịu trách nhiệm với các quyết định y tế dựa hoàn toàn vào kết
-          quả AI mà không có sự tư vấn của bác sĩ chuyên khoa.
+          Not responsible for medical decisions based entirely on AI results
+          without consultation from a specialist doctor.
         </li>
       </ul>
 
-      <h2 className="text-2xl font-semibold mt-8 mb-3 text-green-600">
-        4. Giới hạn trách nhiệm
+      <h2 className="text-2xl font-semibold mt-8 mb-3 text-emerald-400">
+        4. Limitation of Liability
       </h2>
-      <p className="mb-4 text-gray-700">
-        Kết quả phân tích từ Skinalyze chỉ mang tính chất tham khảo, không thay
-        thế cho ý kiến chuyên môn của bác sĩ. Người dùng cần tham khảo ý kiến y
-        tế chuyên nghiệp trước khi đưa ra quyết định điều trị.
+      <p className="mb-4 text-gray-300">
+        Analysis results from Skinalyze are for reference only and do not
+        replace professional medical advice. Users should consult professional
+        medical advice before making treatment decisions.
       </p>
 
-      <h2 className="text-2xl font-semibold mt-8 mb-3 text-green-600">
-        5. Quyền riêng tư & bảo mật dữ liệu
+      <h2 className="text-2xl font-semibold mt-8 mb-3 text-emerald-400">
+        5. Privacy & Data Security
       </h2>
-      <p className="mb-4 text-gray-700">
-        Skinalyze cam kết bảo mật thông tin cá nhân, hình ảnh và dữ liệu y tế của
-        người dùng. Dữ liệu chỉ được sử dụng cho mục đích phân tích AI và cải
-        thiện chất lượng dịch vụ, không chia sẻ cho bên thứ ba khi chưa có sự
-        đồng ý.
+      <p className="mb-4 text-gray-300">
+        Skinalyze is committed to securing users' personal information, images
+        and medical data. Data is only used for AI analysis purposes and service
+        quality improvement, not shared with third parties without consent.
       </p>
 
-      <h2 className="text-2xl font-semibold mt-8 mb-3 text-green-600">
-        6. Thay đổi điều khoản
+      <h2 className="text-2xl font-semibold mt-8 mb-3 text-emerald-400">
+        6. Terms Modification
       </h2>
-      <p className="mb-4 text-gray-700">
-        Skinalyze có quyền thay đổi, cập nhật điều khoản sử dụng bất cứ lúc nào.
-        Người dùng nên thường xuyên kiểm tra để cập nhật thông tin mới nhất.
+      <p className="mb-4 text-gray-300">
+        Skinalyze reserves the right to change and update the terms of use at
+        any time. Users should check regularly for the latest information.
       </p>
 
-      <h2 className="text-2xl font-semibold mt-8 mb-3 text-green-600">
-        7. Liên hệ
+      <h2 className="text-2xl font-semibold mt-8 mb-3 text-emerald-400">
+        7. Contact
       </h2>
-      <p className="mb-4 text-gray-700">
-        Nếu có thắc mắc về điều khoản sử dụng, vui lòng liên hệ với chúng tôi
-        qua email:{" "}
+      <p className="mb-4 text-gray-300">
+        If you have any questions about the terms of use, please contact us via
+        email:{" "}
         <a
           href="mailto:support@Skinalyze.ai"
-          className="text-green-700 underline"
+          className="text-emerald-400 underline hover:text-emerald-300 transition-colors"
         >
           support@Skinalyze.ai
         </a>
       </p>
 
-      <div className="mt-12 text-gray-500 text-sm">
-        Cập nhật lần cuối: 07/2024
-      </div>
+      <div className="mt-12 text-gray-500 text-sm">Last updated: 07/2024</div>
     </main>
   </div>
 );

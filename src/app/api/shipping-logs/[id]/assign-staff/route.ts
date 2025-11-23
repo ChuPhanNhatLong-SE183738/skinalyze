@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000/api/v1";
 
 export async function POST(
   request: NextRequest,
@@ -13,10 +14,7 @@ export async function POST(
     const { id } = await params;
 
     if (!token) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();

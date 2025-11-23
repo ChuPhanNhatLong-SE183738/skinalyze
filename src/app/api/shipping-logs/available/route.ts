@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000/api/v1";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,22 +10,16 @@ export async function GET(request: NextRequest) {
     const token = cookieStore.get("access_token")?.value;
 
     if (!token) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const response = await fetch(
-      `${API_BASE_URL}/shipping-logs/available`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/shipping-logs/available`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
