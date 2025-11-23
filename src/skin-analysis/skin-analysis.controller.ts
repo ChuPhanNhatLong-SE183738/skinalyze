@@ -10,6 +10,7 @@ import {
   FileTypeValidator,
   UseGuards,
   HttpStatus,
+  Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -30,7 +31,7 @@ export class SkinAnalysisController {
   constructor(private readonly skinAnalysisService: SkinAnalysisService) {}
 
   // ==================================================================
-  // PIPELINE: DISEASE DETECTION (Có check Face)
+  // PIPELINE: DISEASE DETECTION (Checks Face + Sends Notes)
   // ==================================================================
   @Post('disease-detection/:customerId')
   @UseGuards(JwtAuthGuard)
@@ -40,7 +41,7 @@ export class SkinAnalysisController {
     description:
       '1. Checks for face visibility (FastAPI)\n' +
       '2. Uploads to Cloudinary\n' +
-      '3. Classifies disease & segments lesion\n' +
+      '3. Classifies disease & segments lesion (Sends note context)\n' +
       '4. Saves result to MySQL',
   })
   @ApiParam({
@@ -58,6 +59,12 @@ export class SkinAnalysisController {
           format: 'binary',
           description: 'Image file (Max 5MB)',
         },
+        notes: {
+          type: 'string',
+          description: 'Area context (e.g., "facial" or "other")',
+          example: 'facial',
+          nullable: true,
+        },
       },
     },
   })
@@ -72,6 +79,7 @@ export class SkinAnalysisController {
   @UseInterceptors(FileInterceptor('file'))
   async diseaseDetection(
     @Param('customerId') customerId: string,
+    @Body('notes') notes: string, // Receive the note from Frontend
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -82,11 +90,15 @@ export class SkinAnalysisController {
     )
     file: Express.Multer.File,
   ) {
-    return await this.skinAnalysisService.diseaseDetection(file, customerId);
+    return await this.skinAnalysisService.diseaseDetection(
+      file,
+      customerId,
+      notes,
+    );
   }
 
   // ==================================================================
-  // PIPELINE: CONDITION DETECTION (Có check Face)
+  // PIPELINE: CONDITION DETECTION (Checks Face)
   // ==================================================================
   @Post('condition-detection/:customerId')
   @UseGuards(JwtAuthGuard)
@@ -141,8 +153,11 @@ export class SkinAnalysisController {
   // ==================================================================
   @Post('classification')
   @UseInterceptors(FileInterceptor('file'))
-  async classifyImage(@UploadedFile() file: Express.Multer.File) {
-    return await this.skinAnalysisService.classifyDisease(file);
+  async classifyImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('notes') notes: string,
+  ) {
+    return await this.skinAnalysisService.classifyDisease(file, notes);
   }
 
   @Post('segmentation')

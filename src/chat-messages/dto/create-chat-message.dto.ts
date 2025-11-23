@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateChatMessageDto {
@@ -7,8 +7,17 @@ export class CreateChatMessageDto {
   @IsNotEmpty()
   chatId: string;
 
-  @ApiProperty({ description: 'Message content', example: 'What products should I use for dry skin?' })
+  @ApiProperty({ description: 'Message content', example: 'Does this product look good for my skin?' })
   @IsString()
   @IsNotEmpty()
   messageContent: string;
+
+  @ApiProperty({ 
+    type: 'string', 
+    format: 'binary', 
+    required: false, 
+    description: 'Optional image for VLM analysis' 
+  })
+  @IsOptional()
+  image?: any; 
 }

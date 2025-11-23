@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
+import * as FormData from 'form-data';
 import { CreateChatMessageDto } from './dto/create-chat-message.dto';
 import { ChatMessage } from './entities/chat-message.entity';
 import { ChatSession } from '../chat-sessions/entities/chat-session.entity';
@@ -46,18 +47,16 @@ export class ChatMessagesService {
       throw new Error('AI_SERVICE_URL is not set in environment variables');
     }
 
-    // Initialize axios instance with default config
+    // Initialize axios instance with a longer timeout for AI processing
     this.axiosInstance = axios.create({
       baseURL: this.aiServiceUrl,
-      timeout: 30000, // 30 seconds timeout
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      timeout: 60000, // 60 seconds timeout (VLM can take time)
     });
   }
 
   async createUserMessage(
     createChatMessageDto: CreateChatMessageDto,
+    imageFile?: Express.Multer.File,
   ): Promise<{ userMessage: ChatMessage; aiMessage: ChatMessage }> {
     const { chatId, messageContent } = createChatMessageDto;
 
@@ -65,23 +64,30 @@ export class ChatMessagesService {
     const chatSession = await this.chatSessionRepository.findOne({
       where: { chatId },
       relations: ['messages'],
+      order: { messages: { createdAt: 'ASC' } } // Ensure order for context
     });
 
     if (!chatSession) {
       throw new NotFoundException(`Chat session with ID ${chatId} not found`);
     }
 
-    // Check if this is the first user message (only greeting exists)
+    // Check if this is the first user message
     const userMessages = chatSession.messages.filter(
       (msg) => msg.sender === 'user',
     );
     const isFirstUserMessage = userMessages.length === 0;
 
-    // Save user message
+    // 1. Save User Message
+    // If an image is attached, we append a marker to the text content stored in DB
+    // This helps the UI know an image was sent (if you don't have a separate image URL field)
+    const storedContent = imageFile 
+      ? `${messageContent}\n[Attached Image: ${imageFile.originalname}]`
+      : messageContent;
+
     const userMessage = this.chatMessageRepository.create({
       chatId,
       sender: 'user',
-      messageContent,
+      messageContent: storedContent,
     });
     await this.chatMessageRepository.save(userMessage);
 
@@ -93,13 +99,14 @@ export class ChatMessagesService {
       );
     }
 
-    // Get AI response from FastAPI backend
+    // 2. Get AI response from FastAPI backend
     const aiResponse = await this.getAIResponse(
       messageContent,
       chatSession.messages,
+      imageFile,
     );
 
-    // Save AI message
+    // 3. Save AI message
     const aiMessage = this.chatMessageRepository.create({
       chatId,
       sender: 'ai',
@@ -113,22 +120,42 @@ export class ChatMessagesService {
   private async getAIResponse(
     userMessage: string,
     previousMessages: ChatMessage[],
+    imageFile?: Express.Multer.File,
   ): Promise<string> {
     try {
-      // Filter out the greeting message and build conversation history
+      const formData = new FormData();
+
+      // A. Append Question
+      formData.append('question', userMessage);
+
+      // B. Append History
+      // Filter out greeting and clean up history
       const greetingMessage = "Greeting, I'm Skinalyze AI, how can i help you today?";
-      
       const conversationHistory: ConversationHistory[] = previousMessages
         .filter((msg) => msg.messageContent !== greetingMessage)
         .map((msg) => ({
           role: msg.sender === 'user' ? 'user' : 'ai',
-          content: msg.messageContent,
+          // Remove internal image markers from history to not confuse the AI text model
+          content: msg.messageContent.replace(/\[Attached Image:.*?\]/g, '').trim(),
         }));
 
+      // FastAPI expects history as a JSON string in form-data
+      formData.append('conversation_history', JSON.stringify(conversationHistory));
+
+      // C. Append Image (if exists)
+      if (imageFile) {
+        formData.append('image', imageFile.buffer, {
+          filename: imageFile.originalname,
+          contentType: imageFile.mimetype,
+        });
+      }
+
       // Call FastAPI /chat endpoint
-      const response = await this.axiosInstance.post<ChatResponse>('/chat', {
-        question: userMessage,
-        conversation_history: conversationHistory,
+      // Note: We must spread formData.getHeaders() to set the correct Content-Type boundary
+      const response = await this.axiosInstance.post<ChatResponse>('/chat', formData, {
+        headers: {
+          ...formData.getHeaders(),
+        },
       });
 
       return response.data.answer;
@@ -137,14 +164,11 @@ export class ChatMessagesService {
       
       if (axios.isAxiosError(error)) {
         if (error.response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
           console.error('AI Service response error:', error.response.data);
           throw new BadRequestException(
             `AI Service error: ${error.response.data.detail || 'Unknown error'}`,
           );
         } else if (error.request) {
-          // The request was made but no response was received
           console.error('No response from AI Service');
           throw new BadRequestException(
             'AI Service is not responding. Please try again later.',
@@ -172,7 +196,6 @@ export class ChatMessagesService {
 
     try {
       // Create FormData for image upload
-      const FormData = require('form-data');
       const formData = new FormData();
       
       formData.append('image', imageFile.buffer, {

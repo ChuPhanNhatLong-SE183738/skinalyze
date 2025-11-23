@@ -24,17 +24,39 @@ export class ChatMessagesController {
   constructor(private readonly chatMessagesService: ChatMessagesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Send a message in a chat session' })
+  @ApiOperation({ summary: 'Send a message (Text + Optional Image) in a chat session' })
+  @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Message sent successfully' })
   @ApiResponse({ status: 404, description: 'Chat session not found' })
-  async create(@Body() createChatMessageDto: CreateChatMessageDto) {
+  @UseInterceptors(FileInterceptor('image'))
+  async create(
+    @Body() createChatMessageDto: CreateChatMessageDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    // Validate file if it exists
+    if (image) {
+      const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+      if (!allowedMimeTypes.includes(image.mimetype)) {
+        throw new BadRequestException(
+          'Invalid file type. Only JPEG, PNG, and WebP images are allowed',
+        );
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (image.size > maxSize) {
+        throw new BadRequestException('File size must not exceed 5MB');
+      }
+    }
+
     return await this.chatMessagesService.createUserMessage(
       createChatMessageDto,
+      image,
     );
   }
 
   @Post('analyze-image/:chatId')
-  @ApiOperation({ summary: 'Upload and analyze skin image' })
+  @ApiOperation({ summary: 'Upload and analyze skin image (Legacy/Standalone)' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Image analyzed successfully' })
   @ApiResponse({ status: 400, description: 'Invalid image file' })
@@ -49,7 +71,6 @@ export class ChatMessagesController {
       throw new BadRequestException('Image file is required');
     }
 
-    // Validate file type
     const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
@@ -57,7 +78,6 @@ export class ChatMessagesController {
       );
     }
 
-    // Validate file size (max 5MB)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (file.size > maxSize) {
       throw new BadRequestException('File size must not exceed 5MB');

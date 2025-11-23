@@ -58,7 +58,7 @@ export class SkinAnalysisService {
     this.logger.error(`AI Service Error [${context}]:`, error.message);
 
     if (error.response) {
-      // Lỗi từ FastAPI trả về (4xx, 5xx)
+      // Pass through specific error messages from FastAPI (e.g., "No face detected")
       throw new HttpException(
         error.response.data?.detail ||
           error.response.data?.message ||
@@ -66,12 +66,10 @@ export class SkinAnalysisService {
         error.response.status,
       );
     } else if (error.request) {
-      // Không nhận được response (FastAPI down)
       throw new BadGatewayException(
         'Cannot connect to AI Service. Please try again later.',
       );
     }
-    // Lỗi code nội bộ
     throw new HttpException(
       'Internal Error',
       HttpStatus.INTERNAL_SERVER_ERROR,
@@ -92,7 +90,6 @@ export class SkinAnalysisService {
       return customer;
     } catch (e) {
       if (e instanceof NotFoundException) throw e;
-      // Handle invalid UUID format error from DB
       throw new BadRequestException('Invalid Customer ID format');
     }
   }
@@ -112,22 +109,30 @@ export class SkinAnalysisService {
         formData,
         { headers: { ...formData.getHeaders() } },
       );
-      // FastAPI trả về: { "has_face": boolean }
+      // FastAPI returns: { "has_face": boolean }
       return response.data.has_face;
     } catch (error) {
       this.logger.warn(
-        `Face detection service warning: ${error.message}. Proceeding anyway.`,
+        `Face detection service warning: ${error.message}. Proceeding cautiously.`,
       );
-      // Nếu service check mặt bị lỗi, ta có thể chọn:
-      // 1. return true (cho qua để AI chính xử lý) -> Chọn cách này để an toàn
-      // 2. throw error (chặn luôn)
+      // Fail open: If AI service errors (not 400, but 500/network), assume true to not block user
+      // unless it's a logic error handled elsewhere.
       return true;
     }
   }
 
-  async classifyDisease(file: Express.Multer.File) {
+  /**
+   * Call classification endpoint, optionally sending notes about area
+   */
+  async classifyDisease(file: Express.Multer.File, notes?: string) {
     try {
       const formData = this.createFormData(file);
+
+      // Append the note if it exists (facial / other)
+      if (notes) {
+        formData.append('notes', notes);
+      }
+
       const response = await axios.post(
         `${this.aiServiceUrl}/api/classification-disease`,
         formData,
@@ -172,27 +177,34 @@ export class SkinAnalysisService {
   // ==================================================================
 
   /**
-   * Flow: Validate -> Face Check -> Upload -> AI -> Save
+   * Flow: Validate -> Face Check -> Upload -> AI (with Notes) -> Save
    */
   async diseaseDetection(
     file: Express.Multer.File,
     customerId: string,
+    notes?: string,
   ): Promise<SkinAnalysis> {
     this.logger.log(`Starting disease detection for: ${customerId}`);
 
     // 1. Validate Customer
     await this.validateCustomer(customerId);
 
-    // 2. Check Face (FastAPI) - Fail fast
+    // 2. Check Face (FastAPI)
     this.logger.debug('Step 1: Checking for face...');
-    const hasFace = await this.detectFace(file);
-    if (!hasFace) {
-      throw new BadRequestException(
-        'No face detected. Please upload a clear image of a face.',
-      );
+    
+    // CRITICAL LOGIC: If user selected "facial", we MUST detect a face.
+    // If user selected "other", we skip the face check check or ignore false results.
+    if (notes === 'facial') {
+      const hasFace = await this.detectFace(file);
+      if (!hasFace) {
+        this.logger.warn('No face detected for facial analysis. Aborting.');
+        throw new BadRequestException(
+          'No face detected. Please upload a clear image of a face for facial analysis.',
+        );
+      }
     }
 
-    // 3. Upload to Cloudinary
+    // 3. Upload to Cloudinary (Only happens if face check passed/skipped)
     this.logger.debug('Step 2: Uploading to Cloudinary...');
     const uploadResult = await this.cloudinaryService.uploadImage(
       file,
@@ -202,8 +214,11 @@ export class SkinAnalysisService {
 
     // 4. AI Analysis (Parallel execution)
     this.logger.debug('Step 3: Calling AI Services...');
+    
+    // We pass 'notes' to classifyDisease so the Python backend also has context 
+    // (and performs its own double-check if configured)
     const [classificationResult, segmentationResult] = await Promise.all([
-      this.classifyDisease(file),
+      this.classifyDisease(file, notes), 
       this.segmentDisease(file),
     ]);
 
@@ -213,9 +228,9 @@ export class SkinAnalysisService {
       customerId,
       source: 'AI_SCAN',
       imageUrls: [imageUrl],
+      notes: notes, // Store "facial" or "other" in the database
       aiDetectedDisease: classificationResult.predicted_class,
-      mask: [segmentationResult.mask], // mask là array string
-      // Bạn có thể lưu thêm confidence nếu entity có cột đó
+      mask: [segmentationResult.mask], // mask is array string
     };
 
     const savedAnalysis = await this.skinAnalysisRepository.save(
@@ -239,11 +254,15 @@ export class SkinAnalysisService {
     await this.validateCustomer(customerId);
 
     // 2. Check Face
+    // Condition detection (Oily/Dry/Normal) is ALWAYS facial.
     this.logger.debug('Step 1: Checking for face...');
     const hasFace = await this.detectFace(file);
+    
     if (!hasFace) {
+      this.logger.warn('No face detected for condition analysis. Aborting.');
+      // Stop execution immediately. Do not upload. Do not save.
       throw new BadRequestException(
-        'No face detected. Please upload a clear image of a face.',
+        'No face detected. Please upload a clear image of a face for skin condition analysis.',
       );
     }
 
