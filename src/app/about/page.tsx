@@ -124,7 +124,7 @@ const About = () => {
                     Vision
                   </h3>
                   <p className="text-gray-400 leading-relaxed">
-                    To become the world's leading AI platform in dermatological
+                    To become the world&apos;s leading AI platform in dermatological
                     diagnostics, contributing to a future where skin health care
                     is easy, accurate, and accessible to everyone.
                   </p>
@@ -171,7 +171,7 @@ const About = () => {
               Our Achievements
             </h2>
             <p className="text-lg text-gray-400">
-              Impressive numbers in Skinalyze's development journey
+              Impressive numbers in Skinalyze&apos;s development journey
             </p>
           </div>
 
@@ -280,7 +280,7 @@ const About = () => {
               </div>
               <h3 className="text-xl font-bold text-white mb-4">Security</h3>
               <p className="text-gray-400">
-                Protecting users' personal information and medical data
+                Protecting users&apos; personal information and medical data
                 absolutely
               </p>
             </div>
@@ -349,7 +349,7 @@ const About = () => {
               </div>
               <h3 className="text-xl font-bold text-white mb-4">Care</h3>
               <p className="text-gray-400">
-                Putting users' health and interests first
+                Putting users&apos; health and interests first
               </p>
             </div>
 

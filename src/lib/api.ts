@@ -8,9 +8,9 @@ const API_BASE_URL =
 
 class BackendApiError extends Error {
   status: number;
-  response: any;
+  response: unknown;
 
-  constructor(message: string, status: number, response: any) {
+  constructor(message: string, status: number, response: unknown) {
     super(message);
     this.name = "BackendApiError";
     this.status = status;
@@ -77,7 +77,7 @@ export const api = {
    * @param body
    * @param config
    */
-  post: (endpoint: string, body: any, config: ApiConfig = {}) => {
+  post: (endpoint: string, body: unknown, config: ApiConfig = {}) => {
     const { options = {}, req } = config;
     return baseRequest(
       endpoint,
@@ -95,7 +95,7 @@ export const api = {
    * @param body
    * @param config
    */
-  put: (endpoint: string, body: any, config: ApiConfig = {}) => {
+  put: (endpoint: string, body: unknown, config: ApiConfig = {}) => {
     const { options = {}, req } = config;
     return baseRequest(
       endpoint,
@@ -112,7 +112,7 @@ export const api = {
    * @param body
    * @param config
    */
-  patch: (endpoint: string, body: any, config: ApiConfig = {}) => {
+  patch: (endpoint: string, body: unknown, config: ApiConfig = {}) => {
     const { options = {}, req } = config;
     return baseRequest(
       endpoint,

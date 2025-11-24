@@ -339,7 +339,7 @@ export function CreateSlotModal({
                                 : Number(e.target.value)
                             )
                           }
-                          value={field.value ?? ""}
+                          value={(field.value as number) ?? ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -358,7 +358,7 @@ export function CreateSlotModal({
                       <Checkbox
                         id="repeat-checkbox"
                         disabled={!allowRepeat}
-                        checked={field.value > 0}
+                        checked={(field.value as number) > 0}
                         onCheckedChange={(checked) => {
                           field.onChange(checked ? 1 : 0);
                         }}
@@ -378,7 +378,7 @@ export function CreateSlotModal({
                         min="0"
                         max="4"
                         disabled={!allowRepeat}
-                        value={field.value}
+                        value={(field.value as string) ?? ""}
                         onChange={(e) =>
                           field.onChange(Math.max(0, Number(e.target.value)))
                         }

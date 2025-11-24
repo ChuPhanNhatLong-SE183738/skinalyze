@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching shipping logs:", error);
     return NextResponse.json(
       { message: "Internal server error" },
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating shipping log:", error);
     return NextResponse.json(
       { message: "Internal server error" },

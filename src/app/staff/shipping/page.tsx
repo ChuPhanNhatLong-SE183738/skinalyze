@@ -29,7 +29,11 @@ import {
 
 const statusConfig: Record<
   string,
-  { label: string; icon: any; color: string }
+  {
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+  }
 > = {
   PENDING: {
     label: "Pending",
@@ -193,10 +197,12 @@ export default function StaffShippingPage() {
         description: "You have successfully claimed this delivery",
       });
       await fetchAllData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to claim delivery",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to claim delivery",
         variant: "error",
       });
     }
@@ -454,7 +460,8 @@ export default function StaffShippingPage() {
                 ) : (
                   filteredLogs.map((log) => {
                     const StatusIcon = statusConfig[log.status].icon;
-                    const statusStyle = statusConfig[log.status].color;
+                    const statusStyle = statusConfig[log.status]
+                      .color as string;
 
                     return (
                       <tr

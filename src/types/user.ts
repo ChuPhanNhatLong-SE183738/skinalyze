@@ -8,7 +8,13 @@ export interface User {
   photoUrl?: string | null;
   phone: string | null;
   role: "admin" | "staff" | "customer" | "dermatologist";
-  addresses?: any[];
+  addresses?: {
+    addressId: string;
+    street: string;
+    city: string;
+    country: string;
+    postalCode: string;
+  }[];
   createdAt: string;
   updatedAt: string;
   isActive: boolean;

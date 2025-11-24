@@ -40,10 +40,10 @@ export function DeleteDetailDialog({
         variant: "success",
       });
       onDetailDeleted();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete detail.",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to delete detail.",
         variant: "error",
       });
     } finally {

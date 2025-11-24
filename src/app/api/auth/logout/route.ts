@@ -13,9 +13,9 @@ export async function POST(request: NextRequest) {
     res.cookies.delete("user_data");
 
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: (error instanceof Error ? error.message : String(error)) || "Internal server error" },
       { status: 500 }
     );
   }

@@ -67,11 +67,11 @@ export default function CategoriesPage() {
       setIsLoading(true);
       const data = await categoryService.getCategories();
       setCategories(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setToast({
         variant: "error",
         title: "Error",
-        description: error.message || "Failed to load categories",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to load categories",
       });
     } finally {
       setIsLoading(false);
@@ -103,11 +103,11 @@ export default function CategoriesPage() {
         title: "Success",
         description: "Category deleted successfully",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       setToast({
         variant: "error",
         title: "Error",
-        description: error.message || "Failed to delete category",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to delete category",
       });
     }
   };
@@ -133,11 +133,11 @@ export default function CategoriesPage() {
       }
       await loadCategories();
       setIsModalOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setToast({
         variant: "error",
         title: "Error",
-        description: error.message || "Failed to save category",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to save category",
       });
     }
   };

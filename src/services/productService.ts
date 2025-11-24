@@ -39,8 +39,8 @@ export class ProductService {
 
       // Fallback to direct products array if already in expected format
       return result;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch products");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch products");
     }
   }
 
@@ -60,8 +60,8 @@ export class ProductService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch product");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch product");
     }
   }
 
@@ -85,8 +85,8 @@ export class ProductService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to create product");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to create product");
     }
   }
 
@@ -134,8 +134,8 @@ export class ProductService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to create product with files");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to create product with files");
     }
   }
 
@@ -162,8 +162,8 @@ export class ProductService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to update product");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to update product");
     }
   }
 
@@ -214,8 +214,8 @@ export class ProductService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to update product");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to update product");
     }
   }
 
@@ -233,8 +233,8 @@ export class ProductService {
         const error = await response.json();
         throw new Error(error.error || "Failed to delete product");
       }
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to delete product");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to delete product");
     }
   }
 
@@ -258,8 +258,8 @@ export class ProductService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to update stock");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to update stock");
     }
   }
 }

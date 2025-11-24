@@ -31,7 +31,10 @@ export default function WithdrawalsPage() {
   const [selectedWithdrawal, setSelectedWithdrawal] =
     useState<WithdrawalRequest | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [currentAdmin, setCurrentAdmin] = useState<any>(null);
+  const [currentAdmin, setCurrentAdmin] = useState<{
+    userId: string;
+    role: string;
+  } | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -61,11 +64,13 @@ export default function WithdrawalsPage() {
       setLoading(true);
       const response = await withdrawalService.getWithdrawals();
       setWithdrawals(response.data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error fetching withdrawals:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to fetch withdrawal requests",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to fetch withdrawal requests",
         variant: "error",
       });
     } finally {
@@ -93,10 +98,12 @@ export default function WithdrawalsPage() {
       });
       setIsDetailModalOpen(false);
       fetchWithdrawals();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to approve withdrawal",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to approve withdrawal",
         variant: "error",
       });
     }
@@ -117,10 +124,12 @@ export default function WithdrawalsPage() {
       });
       setIsDetailModalOpen(false);
       fetchWithdrawals();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to reject withdrawal",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to reject withdrawal",
         variant: "error",
       });
     }
@@ -141,10 +150,12 @@ export default function WithdrawalsPage() {
       });
       setIsDetailModalOpen(false);
       fetchWithdrawals();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update withdrawal status",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to update withdrawal status",
         variant: "error",
       });
     }
@@ -259,242 +270,242 @@ export default function WithdrawalsPage() {
                 Manage and process customer withdrawal requests
               </p>
             </div>
-          <Button
-            onClick={fetchWithdrawals}
-            variant="outline"
-            disabled={loading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Total
-                </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                  {stats.total}
-                </p>
-              </div>
-              <Wallet className="h-8 w-8 text-slate-400" />
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Pending
-                </p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {stats.pending}
-                </p>
-              </div>
-              <Clock className="h-8 w-8 text-yellow-400" />
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Verified
-                </p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {stats.verified}
-                </p>
-              </div>
-              <Clock className="h-8 w-8 text-blue-400" />
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Approved
-                </p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {stats.approved}
-                </p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-purple-400" />
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Completed
-                </p>
-                <p className="text-2xl font-bold text-green-600">
-                  {stats.completed}
-                </p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-400" />
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Rejected
-                </p>
-                <p className="text-2xl font-bold text-red-600">
-                  {stats.rejected}
-                </p>
-              </div>
-              <XCircle className="h-8 w-8 text-red-400" />
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by name, bank, account number, or request ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-100"
+            <Button
+              onClick={fetchWithdrawals}
+              variant="outline"
+              disabled={loading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
               />
+              Refresh
+            </Button>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Total
+                  </p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                    {stats.total}
+                  </p>
+                </div>
+                <Wallet className="h-8 w-8 text-slate-400" />
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-slate-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-100"
-              >
-                <option value="all">All Status</option>
-                <option value={WithdrawalStatus.PENDING}>Pending</option>
-                <option value={WithdrawalStatus.VERIFIED}>Verified</option>
-                <option value={WithdrawalStatus.APPROVED}>Approved</option>
-                <option value={WithdrawalStatus.COMPLETED}>Completed</option>
-                <option value={WithdrawalStatus.REJECTED}>Rejected</option>
-                <option value={WithdrawalStatus.CANCELLED}>Cancelled</option>
-              </select>
+
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Pending
+                  </p>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {stats.pending}
+                  </p>
+                </div>
+                <Clock className="h-8 w-8 text-yellow-400" />
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Verified
+                  </p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {stats.verified}
+                  </p>
+                </div>
+                <Clock className="h-8 w-8 text-blue-400" />
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Approved
+                  </p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {stats.approved}
+                  </p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-purple-400" />
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Completed
+                  </p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {stats.completed}
+                  </p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-400" />
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Rejected
+                  </p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {stats.rejected}
+                  </p>
+                </div>
+                <XCircle className="h-8 w-8 text-red-400" />
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Withdrawals Table */}
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+          {/* Filters */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name, bank, account number, or request ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-100"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-slate-400" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-100"
+                >
+                  <option value="all">All Status</option>
+                  <option value={WithdrawalStatus.PENDING}>Pending</option>
+                  <option value={WithdrawalStatus.VERIFIED}>Verified</option>
+                  <option value={WithdrawalStatus.APPROVED}>Approved</option>
+                  <option value={WithdrawalStatus.COMPLETED}>Completed</option>
+                  <option value={WithdrawalStatus.REJECTED}>Rejected</option>
+                  <option value={WithdrawalStatus.CANCELLED}>Cancelled</option>
+                </select>
+              </div>
             </div>
-          ) : filteredWithdrawals.length === 0 ? (
-            <div className="text-center py-12">
-              <Wallet className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <p className="text-slate-600 dark:text-slate-400">
-                {searchQuery || statusFilter !== "all"
-                  ? "No withdrawal requests found matching your filters"
-                  : "No withdrawal requests yet"}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead className="bg-slate-50 dark:bg-slate-900">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Request ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Customer
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Bank Info
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Created At
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
-                  {filteredWithdrawals.map((withdrawal) => (
-                    <tr
-                      key={withdrawal.requestId}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-mono text-slate-900 dark:text-slate-100">
-                          {withdrawal.requestId.slice(0, 8)}...
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm">
-                          <div className="font-medium text-slate-900 dark:text-slate-100">
-                            {withdrawal.fullName}
-                          </div>
-                          <div className="text-slate-500 text-xs">
-                            OTP: {withdrawal.otpCode}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm">
-                          <div className="font-medium text-slate-900 dark:text-slate-100">
-                            {withdrawal.bankName}
-                          </div>
-                          <div className="text-slate-500 text-xs font-mono">
-                            {withdrawal.accountNumber}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {formatCurrency(withdrawal.amount)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(withdrawal.status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
-                          {formatDate(withdrawal.createdAt)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Button
-                          onClick={() => handleViewDetails(withdrawal)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </td>
+          </div>
+
+          {/* Withdrawals Table */}
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow overflow-hidden">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : filteredWithdrawals.length === 0 ? (
+              <div className="text-center py-12">
+                <Wallet className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <p className="text-slate-600 dark:text-slate-400">
+                  {searchQuery || statusFilter !== "all"
+                    ? "No withdrawal requests found matching your filters"
+                    : "No withdrawal requests yet"}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                  <thead className="bg-slate-50 dark:bg-slate-900">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Request ID
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Customer
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Bank Info
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Created At
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
+                    {filteredWithdrawals.map((withdrawal) => (
+                      <tr
+                        key={withdrawal.requestId}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-mono text-slate-900 dark:text-slate-100">
+                            {withdrawal.requestId.slice(0, 8)}...
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm">
+                            <div className="font-medium text-slate-900 dark:text-slate-100">
+                              {withdrawal.fullName}
+                            </div>
+                            <div className="text-slate-500 text-xs">
+                              OTP: {withdrawal.otpCode}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm">
+                            <div className="font-medium text-slate-900 dark:text-slate-100">
+                              {withdrawal.bankName}
+                            </div>
+                            <div className="text-slate-500 text-xs font-mono">
+                              {withdrawal.accountNumber}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {formatCurrency(withdrawal.amount)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getStatusBadge(withdrawal.status)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-slate-600 dark:text-slate-400">
+                            {formatDate(withdrawal.createdAt)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Button
+                            onClick={() => handleViewDetails(withdrawal)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       </div>
 
       {/* Detail Modal */}

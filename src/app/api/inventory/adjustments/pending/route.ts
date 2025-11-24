@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching pending adjustments:", error);
     return NextResponse.json(
       { message: "Internal server error" },

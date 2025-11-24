@@ -39,10 +39,10 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching withdrawal requests:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: (error instanceof Error ? error.message : String(error)) || "Internal server error" },
       { status: 500 }
     );
   }

@@ -27,8 +27,8 @@ export class NotificationService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to send notification");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to send notification");
     }
   }
 
@@ -54,8 +54,8 @@ export class NotificationService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to broadcast notification");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to broadcast notification");
     }
   }
 }

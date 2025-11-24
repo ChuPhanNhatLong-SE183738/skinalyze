@@ -37,7 +37,9 @@ export function CreateShippingLogModal({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [confirmedOrders, setConfirmedOrders] = useState<Order[]>([]);
-  const [staffList, setStaffList] = useState<any[]>([]);
+  const [staffList, setStaffList] = useState<
+    Array<{ userId: string; fullName: string; email: string }>
+  >([]);
   const [formData, setFormData] = useState({
     orderId: "",
     carrierName: "",
@@ -115,7 +117,9 @@ export function CreateShippingLogModal({
 
       console.log("Creating shipping log with payload:", createPayload);
 
-      const newShippingLog = await shippingService.createShippingLog(createPayload);
+      const newShippingLog = await shippingService.createShippingLog(
+        createPayload
+      );
 
       // If admin assigned a staff member, assign them now
       if (formData.assignedStaffId && userRole === "admin") {
@@ -133,16 +137,18 @@ export function CreateShippingLogModal({
 
       toast({
         title: "Success",
-        description: formData.assignedStaffId 
+        description: formData.assignedStaffId
           ? "Shipping log created and staff assigned successfully"
           : "Shipping log created successfully",
       });
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create shipping log",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to create shipping log",
         variant: "error",
       });
     } finally {
@@ -257,7 +263,10 @@ export function CreateShippingLogModal({
           {/* Staff Assignment - Admin Only */}
           {userRole === "admin" && (
             <div className="space-y-2">
-              <Label htmlFor="assignedStaffId" className="flex items-center gap-2">
+              <Label
+                htmlFor="assignedStaffId"
+                className="flex items-center gap-2"
+              >
                 <User className="h-4 w-4 text-blue-600" />
                 Assign to Staff (Optional)
               </Label>
@@ -268,7 +277,9 @@ export function CreateShippingLogModal({
                 onChange={handleChange}
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
               >
-                <option value="">Leave unassigned (staff can claim later)</option>
+                <option value="">
+                  Leave unassigned (staff can claim later)
+                </option>
                 {staffList.map((staff) => (
                   <option key={staff.userId} value={staff.userId}>
                     {staff.fullName || staff.email} - {staff.email}

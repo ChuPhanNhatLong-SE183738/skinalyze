@@ -105,7 +105,10 @@ export default function ShippingLogsPage() {
   });
 
   const getStatusBadge = (status: string) => {
-    const configs: Record<string, { color: string; icon: any }> = {
+    const configs: Record<
+      string,
+      { color: string; icon: React.ComponentType<{ className?: string }> }
+    > = {
       PENDING: {
         color: "bg-yellow-50 text-yellow-600 border-yellow-200",
         icon: Clock,

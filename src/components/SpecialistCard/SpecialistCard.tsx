@@ -5,12 +5,19 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Specialist } from "../types";
 import { Stethoscope } from "lucide-react";
 
 interface SpecialistCardProps {
   specialist: Specialist;
   onClick: () => void;
+}
+
+interface Specialist {
+  id?: string | number;
+  name: string;
+  image: string;
+  hospital: string;
+  specialty: string;
 }
 
 const SpecialistCard: React.FC<SpecialistCardProps> = ({

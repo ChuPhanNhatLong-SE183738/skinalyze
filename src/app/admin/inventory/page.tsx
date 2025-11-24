@@ -91,8 +91,8 @@ export default function AdminInventoryPage() {
       await fetchInventory();
       setShowDirectModal(false);
       setSelectedInventory(null);
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to adjust stock");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to adjust stock");
     }
   };
 
@@ -106,8 +106,8 @@ export default function AdminInventoryPage() {
       };
       await inventoryService.reviewAdjustment(request);
       await Promise.all([fetchInventory(), fetchPendingAdjustments()]);
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to approve adjustment");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to approve adjustment");
     }
   };
 
@@ -121,8 +121,8 @@ export default function AdminInventoryPage() {
       };
       await inventoryService.reviewAdjustment(request);
       await fetchPendingAdjustments();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to reject adjustment");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to reject adjustment");
     }
   };
 

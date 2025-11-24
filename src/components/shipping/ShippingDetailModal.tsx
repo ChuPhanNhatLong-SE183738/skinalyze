@@ -63,7 +63,9 @@ export function ShippingDetailModal({
   const [isAssigning, setIsAssigning] = useState(false);
   const [showAssignStaff, setShowAssignStaff] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState("");
-  const [staffList, setStaffList] = useState<any[]>([]);
+  const [staffList, setStaffList] = useState<
+    Array<{ userId: string; fullName: string; email: string }>
+  >([]);
   const [newStatus, setNewStatus] = useState(shippingLog?.status || "PENDING");
   const [note, setNote] = useState("");
   const [isCodCollected, setIsCodCollected] = useState(
@@ -80,7 +82,9 @@ export function ShippingDetailModal({
   const fetchStaffList = async () => {
     try {
       const response = await userService.getUsers(1, 100);
-      const staff = response.users.filter((user: any) => user.role === "staff");
+      const staff = response.users.filter(
+        (user: unknown) => user.role === "staff"
+      );
       setStaffList(staff);
     } catch (error) {
       console.error("Error fetching staff:", error);
@@ -115,10 +119,12 @@ export function ShippingDetailModal({
       setShowAssignStaff(false);
       setSelectedStaffId("");
       onUpdate();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to assign staff",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to assign staff",
         variant: "error",
       });
     } finally {
@@ -157,10 +163,12 @@ export function ShippingDetailModal({
       });
 
       onUpdate();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to claim delivery",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to claim delivery",
         variant: "error",
       });
     } finally {
@@ -204,10 +212,12 @@ export function ShippingDetailModal({
       });
 
       onUpdate();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update shipping log",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to update shipping log",
         variant: "error",
       });
     } finally {
@@ -255,10 +265,12 @@ export function ShippingDetailModal({
 
       setSelectedFiles([]);
       onUpdate();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to upload pictures",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to upload pictures",
         variant: "error",
       });
     } finally {

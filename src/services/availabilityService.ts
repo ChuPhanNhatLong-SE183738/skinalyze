@@ -11,7 +11,9 @@ export interface GetSlotsParams {
   status?: SlotStatus;
 }
 class AvailabilityService {
-  async createBatchSlots(dto: CreateAvailabilityDto): Promise<any> {
+  async createBatchSlots(
+    dto: CreateAvailabilityDto
+  ): Promise<{ success: boolean; message: string; data: AvailabilitySlot[] }> {
     try {
       const response = await http.post("/api/availability-slots", dto);
       return response;
@@ -30,7 +32,7 @@ class AvailabilityService {
     const endpoint = `/api/availability-slots?${query.toString()}`;
 
     try {
-      const response = await http.get<any>(endpoint);
+      const response = await http.get<{ data: AvailabilitySlot[] }>(endpoint);
       return response.data as AvailabilitySlot[];
     } catch (error) {
       console.error("Lỗi khi lấy lịch rảnh (service):", error);

@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(
   req: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = context.params;
+    const { id } = await context.params;
     const body = await req.json();
     const data = await api.patch(`/treatment-routines/${id}`, body, { req });
     return NextResponse.json(data);

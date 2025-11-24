@@ -54,8 +54,8 @@ export class UserService {
       }
 
       return result;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch users");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch users");
     }
   }
 
@@ -76,8 +76,8 @@ export class UserService {
 
       const result = await response.json();
       return result.data || result;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch user");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch user");
     }
   }
 
@@ -102,8 +102,8 @@ export class UserService {
 
       const result = await response.json();
       return result.data || result;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to create user");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to create user");
     }
   }
 
@@ -128,8 +128,8 @@ export class UserService {
 
       const result = await response.json();
       return result.data || result;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to update user");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to update user");
     }
   }
 
@@ -147,8 +147,8 @@ export class UserService {
         const error = await response.json();
         throw new Error(error.error || "Failed to delete user");
       }
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to delete user");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to delete user");
     }
   }
 
@@ -169,8 +169,8 @@ export class UserService {
 
       const result = await response.json();
       return result.data || result;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to reset password");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to reset password");
     }
   }
 }

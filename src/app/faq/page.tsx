@@ -7,7 +7,7 @@ const FAQ = () => {
   const [openItems, setOpenItems] = useState<Record<number, boolean>>({});
 
   const toggleItem = (index: number) => {
-    setOpenItems((prev: any) => ({
+    setOpenItems((prev: Record<number, boolean>) => ({
       ...prev,
       [index]: !prev[index],
     }));

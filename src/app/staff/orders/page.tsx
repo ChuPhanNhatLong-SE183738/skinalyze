@@ -111,7 +111,7 @@ export default function StaffOrdersPage() {
       const response = await orderService.getOrders();
       setOrders(response.data);
       setFilteredOrders(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to load orders:", error);
     } finally {
       setIsLoading(false);

@@ -5,9 +5,24 @@ import { motion } from "framer-motion";
 import { ArrowUpRight, Activity, Stethoscope } from "lucide-react";
 import GradientText from "@/components/ui/GradientText";
 
+interface BlogPost {
+  id: string;
+  title: string;
+  category: string;
+  date: string;
+  readTime: string;
+  image: string;
+  excerpt: string;
+  slug: string;
+  author: string;
+  featured?: boolean;
+}
+
 const BlogSection = () => {
   const [activeCategory, setActiveCategory] = useState("all");
-  const [blogPosts, setBlogPosts] = useState<any[]>([]);
+
+  // 2. Sử dụng Interface vào useState
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +41,7 @@ const BlogSection = () => {
         const posts = await getAllPosts();
         setBlogPosts(posts);
         setError(null);
-      } catch (err: any) {
+      } catch (err: unknown) {
         setError("Unable to load posts. Please try again later.");
         console.error("Error fetching posts:", err);
       } finally {
@@ -40,10 +55,9 @@ const BlogSection = () => {
   const filteredPosts =
     activeCategory === "all"
       ? blogPosts
-      : blogPosts.filter((post: any) => post.category === activeCategory);
+      : blogPosts.filter((post: BlogPost) => post.category === activeCategory);
 
-  const featuredPosts = blogPosts.filter((post: any) => post.featured);
-
+  const featuredPosts = blogPosts.filter((post: BlogPost) => post.featured);
   if (loading) {
     return (
       <section className="py-20 bg-[#0a0e1a]">
@@ -172,7 +186,7 @@ const BlogSection = () => {
               Featured Posts
             </h2>
             <div className="grid md:grid-cols-2 gap-6 md:gap-8">
-              {featuredPosts.map((post: any, index: number) => (
+              {featuredPosts.map((post: BlogPost, index: number) => (
                 <motion.div
                   key={post.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -249,7 +263,7 @@ const BlogSection = () => {
               {category.name} (
               {
                 blogPosts.filter(
-                  (post: any) =>
+                  (post: BlogPost) =>
                     category.id === "all" || post.category === category.id
                 ).length
               }
@@ -259,7 +273,7 @@ const BlogSection = () => {
         </div>{" "}
         {/* All Posts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {filteredPosts.map((post: any, index: number) => (
+          {filteredPosts.map((post: BlogPost, index: number) => (
             <motion.div
               key={post.id}
               initial={{ opacity: 0, y: 20 }}

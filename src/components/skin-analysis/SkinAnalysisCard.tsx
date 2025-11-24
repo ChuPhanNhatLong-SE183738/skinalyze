@@ -65,7 +65,7 @@ export function SkinAnalysisCard({ analysis }: SkinAnalysisCardProps) {
             <FileText className="h-6 w-6 text-primary" />
             <div className="flex-1">
               <CardTitle className="text-2xl">
-                Patient's Skin Analysis
+                patient&apos;s Skin Analysis
               </CardTitle>
               <CardDescription>
                 Analysis ID: {analysis.analysisId.substring(0, 8)}... (

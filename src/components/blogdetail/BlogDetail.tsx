@@ -2,26 +2,42 @@ import React, { useState, useEffect } from "react";
 import { getPostBySlug, getRelatedPosts } from "../../services/blogServices";
 import Link from "next/link";
 
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  excerpt: string;
+  image: string;
+  category: string;
+  authorAvatar?: string;
+  author: string;
+  date: string;
+  readTime: string;
+  slug: string;
+}
+
 const BlogDetail = ({ slug }: { slug: string }) => {
-  const [post, setPost] = useState(null);
-  const [relatedPosts, setRelatedPosts] = useState([]);
+  const [post, setPost] = useState<Post | null>(null);
+  const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPost = async () => {
       try {
         setLoading(true);
         const postData = await getPostBySlug(slug);
-        setPost(postData as any);
-
+        setPost(postData as unknown as Post);
         // Fetch related posts
-        const related = await getRelatedPosts(slug, postData.category);
+        const related = await getRelatedPosts(
+          slug,
+          (postData as unknown as Post).category
+        );
         setRelatedPosts(related);
 
         setError(null);
-      } catch (err: any) {
-        setError(err.message || "Unable to load post");
+      } catch (err: unknown) {
+        setError((err as Error).message || "Unable to load post");
         console.error("Error fetching post:", err);
       } finally {
         setLoading(false);
@@ -181,27 +197,27 @@ const BlogDetail = ({ slug }: { slug: string }) => {
               Related Posts
             </h3>
             <div className="grid md:grid-cols-3 gap-6">
-              {relatedPosts.map((relatedPost: any) => (
+              {relatedPosts.map((relatedPost: unknown) => (
                 <Link
-                  key={relatedPost.id}
-                  href={`/blog/${relatedPost.slug}`}
+                  key={(relatedPost as unknown as Post).id}
+                  href={`/blog/${(relatedPost as unknown as Post).slug}`}
                   className="block"
                 >
                   <article className="glass-card border border-white/10 rounded-xl overflow-hidden hover:border-emerald-400/50 transition-all cursor-pointer">
                     <img
-                      src={relatedPost.image}
-                      alt={relatedPost.title}
+                      src={(relatedPost as unknown as Post).image}
+                      alt={(relatedPost as unknown as Post).title}
                       className="w-full h-48 object-cover"
                     />
                     <div className="p-6">
                       <div className="text-sm text-gray-400 mb-2">
-                        {relatedPost.date}
+                        {(relatedPost as unknown as Post).date}
                       </div>
                       <h4 className="font-bold text-white mb-3 line-clamp-2 hover:text-emerald-400 transition-colors">
-                        {relatedPost.title}
+                        {(relatedPost as unknown as Post).title}
                       </h4>
                       <p className="text-gray-400 text-sm line-clamp-3">
-                        {relatedPost.excerpt}
+                        {(relatedPost as unknown as Post).excerpt}
                       </p>
                     </div>
                   </article>

@@ -35,8 +35,8 @@ const Terms = () => (
           commercial purposes without permission.
         </li>
         <li>
-          Do not arbitrarily modify, copy, distribute or exploit the system's AI
-          data.
+          Do not arbitrarily modify, copy, distribute or exploit the
+          system&apos;s AI data.
         </li>
         <li>
           Be responsible for the accuracy of images and information provided to
@@ -53,8 +53,8 @@ const Terms = () => (
           algorithms.
         </li>
         <li>
-          Secure users' personal information and images in accordance with legal
-          regulations.
+          Secure users&apos; personal information and images in accordance with
+          legal regulations.
         </li>
         <li>
           Not responsible for medical decisions based entirely on AI results
@@ -75,9 +75,10 @@ const Terms = () => (
         5. Privacy & Data Security
       </h2>
       <p className="mb-4 text-gray-300">
-        Skinalyze is committed to securing users' personal information, images
-        and medical data. Data is only used for AI analysis purposes and service
-        quality improvement, not shared with third parties without consent.
+        Skinalyze is committed to securing users&apos; personal information,
+        images and medical data. Data is only used for AI analysis purposes and
+        service quality improvement, not shared with third parties without
+        consent.
       </p>
 
       <h2 className="text-2xl font-semibold mt-8 mb-3 text-emerald-400">

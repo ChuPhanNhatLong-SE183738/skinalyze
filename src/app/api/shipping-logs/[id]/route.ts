@@ -38,7 +38,7 @@ export async function PATCH(
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating shipping log:", error);
     return NextResponse.json(
       { message: "Internal server error" },

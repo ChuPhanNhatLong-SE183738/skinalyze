@@ -96,10 +96,12 @@ function TreatmentRoutineForm() {
       try {
         const detailData = await routineDetailService.findByRoutineId(id);
         setDetails(detailData);
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           title: "Error",
-          description: error.message || "Failed to load routine details.",
+          description:
+            (error instanceof Error ? error.message : String(error)) ||
+            "Failed to load routine details.",
           variant: "error",
         });
       } finally {
@@ -122,10 +124,12 @@ function TreatmentRoutineForm() {
 
         const detailData = await routineDetailService.findByRoutineId(id);
         setDetails(detailData);
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           title: "Error",
-          description: error.message || "Failed to load routine.",
+          description:
+            (error instanceof Error ? error.message : String(error)) ||
+            "Failed to load routine.",
           variant: "error",
         });
         router.back();
@@ -164,7 +168,8 @@ function TreatmentRoutineForm() {
         }
 
         const dto: CreateTreatmentRoutineDto = {
-          ...values,
+          routineName: values.routineName,
+          status: values.status as RoutineStatus,
           dermatologistId,
           customerId,
           createdFromAppointmentId: createdFromAppointmentId || undefined,
@@ -178,7 +183,10 @@ function TreatmentRoutineForm() {
         });
         router.replace(`/dermatologist/routine/${newRoutine.routineId}`);
       } else {
-        const dto: UpdateTreatmentRoutineDto = values;
+        const dto: UpdateTreatmentRoutineDto = {
+          routineName: values.routineName,
+          status: values.status as RoutineStatus,
+        };
         await treatmentRoutineService.update(routineId, dto);
         toast({
           title: "Success",
@@ -186,10 +194,12 @@ function TreatmentRoutineForm() {
           variant: "success",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Operation failed.",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Operation failed.",
         variant: "error",
       });
     } finally {

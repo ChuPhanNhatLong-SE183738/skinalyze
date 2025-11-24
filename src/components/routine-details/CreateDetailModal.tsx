@@ -116,10 +116,10 @@ export function CreateDetailModal({
       }
       onDetailSaved();
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Operation failed.",
+        description: (error instanceof Error ? error.message : String(error)) || "Operation failed.",
         variant: "error",
       });
     } finally {

@@ -66,7 +66,7 @@ export default function AdminProductsPage() {
       const response = await productService.getProducts(1, 100);
       setProducts(response.products || []);
       setFilteredProducts(response.products || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to load products:", error);
       setProducts([]);
       setFilteredProducts([]);
@@ -115,11 +115,11 @@ export default function AdminProductsPage() {
         title: "Success",
         description: "Product deleted successfully",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "error",
         title: "Error",
-        description: error.message || "Failed to delete product",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to delete product",
       });
     }
   };
@@ -143,11 +143,11 @@ export default function AdminProductsPage() {
       }
       await loadProducts();
       setIsModalOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "error",
         title: "Error",
-        description: error.message || "Failed to save product",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to save product",
       });
     }
   };
@@ -175,11 +175,11 @@ export default function AdminProductsPage() {
       }
       await loadProducts();
       setIsModalOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: "error",
         title: "Error",
-        description: error.message || "Failed to save product",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to save product",
       });
       throw error;
     }

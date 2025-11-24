@@ -34,15 +34,21 @@ export class WithdrawalService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch withdrawal requests");
+    } catch (error: unknown) {
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch withdrawal requests"
+      );
     }
   }
 
   /**
    * Get withdrawal request by ID
    */
-  async getWithdrawalById(requestId: string): Promise<any> {
+  async getWithdrawalById(
+    requestId: string
+  ): Promise<{ data: import("@/types/withdrawal").WithdrawalRequest }> {
     try {
       const response = await fetch(`/api/withdrawals/${requestId}`, {
         method: "GET",
@@ -55,8 +61,12 @@ export class WithdrawalService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch withdrawal request");
+    } catch (error: unknown) {
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch withdrawal request"
+      );
     }
   }
 
@@ -66,7 +76,11 @@ export class WithdrawalService {
   async updateWithdrawalStatus(
     requestId: string,
     data: UpdateWithdrawalStatusRequest
-  ): Promise<any> {
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: import("@/types/withdrawal").WithdrawalRequest;
+  }> {
     try {
       const response = await fetch(`/api/withdrawals/${requestId}/status`, {
         method: "PATCH",
@@ -83,8 +97,12 @@ export class WithdrawalService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to update withdrawal status");
+    } catch (error: unknown) {
+      throw new Error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update withdrawal status"
+      );
     }
   }
 }

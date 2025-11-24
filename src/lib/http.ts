@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 class ApiError extends Error {
   status: number;
-  response: any;
+  response: unknown;
 
-  constructor(message: string, status: number, response: any) {
+  constructor(message: string, status: number, response: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -58,7 +58,7 @@ export const http = {
 
   post: <T>(
     endpoint: string,
-    body: any,
+    body: unknown,
     options: RequestInit = {}
   ): Promise<T> => {
     return baseRequest<T>(endpoint, {
@@ -70,7 +70,7 @@ export const http = {
 
   put: <T>(
     endpoint: string,
-    body: any,
+    body: unknown,
     options: RequestInit = {}
   ): Promise<T> => {
     return baseRequest<T>(endpoint, {
@@ -82,7 +82,7 @@ export const http = {
 
   patch: <T>(
     endpoint: string,
-    body: any,
+    body: unknown,
     options: RequestInit = {}
   ): Promise<T> => {
     return baseRequest<T>(endpoint, {

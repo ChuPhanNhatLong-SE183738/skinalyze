@@ -39,9 +39,9 @@ export interface Customer {
     phoneNumber?: string;
   };
   aiUsageAmount?: number;
-  allergicTo?: any;
-  pastDermatologicalHistory?: any;
-  purchaseHistory?: any[];
+  allergicTo?: string[];
+  pastDermatologicalHistory?: string[];
+  purchaseHistory?: string[];
   createdAt: string;
   updatedAt: string;
 }

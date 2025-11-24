@@ -41,7 +41,7 @@ export async function POST(
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error assigning staff:", error);
     return NextResponse.json(
       { message: "Internal server error" },
