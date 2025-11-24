@@ -24,6 +24,7 @@ import {
 } from '@nestjs/swagger';
 import { SkinAnalysisService } from './skin-analysis.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateManualAnalysisDto } from './dto/create-manual-analysis.dto';
 
 @ApiTags('Skin Analysis')
 @Controller('skin-analysis')
@@ -31,7 +32,7 @@ export class SkinAnalysisController {
   constructor(private readonly skinAnalysisService: SkinAnalysisService) {}
 
   // ==================================================================
-  // PIPELINE: DISEASE DETECTION (Checks Face + Sends Notes)
+  // 1. PIPELINE: DISEASE DETECTION (AI + Face Check + Notes)
   // ==================================================================
   @Post('disease-detection/:customerId')
   @UseGuards(JwtAuthGuard)
@@ -39,9 +40,9 @@ export class SkinAnalysisController {
   @ApiOperation({
     summary: 'Complete disease detection pipeline',
     description:
-      '1. Checks for face visibility (FastAPI)\n' +
+      '1. Checks for face visibility (Conditionally based on notes)\n' +
       '2. Uploads to Cloudinary\n' +
-      '3. Classifies disease & segments lesion (Sends note context)\n' +
+      '3. Classifies disease & segments lesion\n' +
       '4. Saves result to MySQL',
   })
   @ApiParam({
@@ -79,7 +80,7 @@ export class SkinAnalysisController {
   @UseInterceptors(FileInterceptor('file'))
   async diseaseDetection(
     @Param('customerId') customerId: string,
-    @Body('notes') notes: string, // Receive the note from Frontend
+    @Body('notes') notes: string,
     @UploadedFile(
       new ParseFilePipe({
         validators: [
@@ -98,7 +99,7 @@ export class SkinAnalysisController {
   }
 
   // ==================================================================
-  // PIPELINE: CONDITION DETECTION (Checks Face)
+  // 2. PIPELINE: CONDITION DETECTION (AI + Strict Face Check)
   // ==================================================================
   @Post('condition-detection/:customerId')
   @UseGuards(JwtAuthGuard)
@@ -106,7 +107,7 @@ export class SkinAnalysisController {
   @ApiOperation({
     summary: 'Complete condition detection pipeline',
     description:
-      '1. Checks for face visibility (FastAPI)\n' +
+      '1. Strictly checks for face visibility\n' +
       '2. Uploads to Cloudinary\n' +
       '3. Detects skin condition (Oily, Dry, Normal)\n' +
       '4. Saves result to MySQL',
@@ -120,6 +121,7 @@ export class SkinAnalysisController {
         file: {
           type: 'string',
           format: 'binary',
+          description: 'Image file (Max 5MB)',
         },
       },
     },
@@ -149,7 +151,51 @@ export class SkinAnalysisController {
   }
 
   // ==================================================================
-  // HELPER ENDPOINTS (Testing Only - Optional)
+  // 3. MANUAL ENTRY (No AI)
+  // ==================================================================
+  @Post('manual-entry/:customerId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Create manual skin analysis entry',
+    description:
+      'Uploads optional image and saves patient symptoms/complaints without AI processing.',
+  })
+  @ApiParam({ name: 'customerId', required: true })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Optional Image (Max 5MB)',
+        },
+        chiefComplaint: { type: 'string', example: 'Itchy skin' },
+        patientSymptoms: { type: 'string', example: 'Redness, swelling' },
+        notes: { type: 'string', nullable: true, example: 'Started yesterday' },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async manualEntry(
+    @Param('customerId') customerId: string,
+    @Body() body: CreateManualAnalysisDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    // Manual entry allows optional file, so we don't use ParseFilePipe here
+    // or we use a custom validator that allows undefined.
+    // For simplicity, we just check file type if file exists inside service or here manually.
+    return await this.skinAnalysisService.createManualEntry(
+      customerId,
+      body,
+      file,
+    );
+  }
+
+  // ==================================================================
+  // 4. HELPER ENDPOINTS (Testing Only - Optional)
   // ==================================================================
   @Post('classification')
   @UseInterceptors(FileInterceptor('file'))
@@ -167,7 +213,7 @@ export class SkinAnalysisController {
   }
 
   // ==================================================================
-  // RETRIEVAL ENDPOINTS
+  // 5. RETRIEVAL ENDPOINTS
   // ==================================================================
   @Get(':id')
   @UseGuards(JwtAuthGuard)
@@ -180,7 +226,7 @@ export class SkinAnalysisController {
   @Get('customer/:customerId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all analyses for a customer' })
+  @ApiOperation({ summary: 'Get all analyses for a specific customer' })
   async findByCustomerId(@Param('customerId') customerId: string) {
     return await this.skinAnalysisService.findByCustomerId(customerId);
   }
@@ -188,7 +234,7 @@ export class SkinAnalysisController {
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all skin analyses (Admin)' })
+  @ApiOperation({ summary: 'Get all skin analyses (Admin/Debug)' })
   async findAll() {
     return await this.skinAnalysisService.findAll();
   }
