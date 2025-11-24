@@ -37,8 +37,11 @@ const getStatusBadgeVariant = (
     case AppointmentStatus.IN_PROGRESS:
       return "info";
     case AppointmentStatus.COMPLETED:
+    case AppointmentStatus.SETTLED:
       return "success";
     case AppointmentStatus.CANCELLED:
+      return "yellow";
+    case AppointmentStatus.DISPUTED:
       return "destructive";
     case AppointmentStatus.NO_SHOW:
     case AppointmentStatus.INTERRUPTED:
@@ -58,6 +61,8 @@ const statusLabels: Record<AppointmentStatus, string> = {
   [AppointmentStatus.NO_SHOW]: "No-show",
   [AppointmentStatus.INTERRUPTED]: "Interrupted",
   [AppointmentStatus.PENDING_PAYMENT]: "Pending Payment",
+  [AppointmentStatus.DISPUTED]: "Disputed",
+  [AppointmentStatus.SETTLED]: "Settled",
 };
 
 export default function MyAppointmentsPage() {
@@ -108,7 +113,7 @@ export default function MyAppointmentsPage() {
     if (dermatologistId) {
       const filters: FindAppointmentsDto = {
         dermatologistId: dermatologistId,
-        status: statusFilter === "ALL" ? undefined : statusFilter,
+        status: statusFilter === "ALL" ? undefined : [statusFilter],
       };
       fetchAppointments(filters);
     } else {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType, ReactNode } from "react";
-import type { Appointment } from "@/types/appointment";
+import type { AppointmentDetailDto } from "@/types/appointment";
 import { AppointmentStatus } from "@/types/appointment";
 import { format } from "date-fns";
 import { enUS } from "date-fns/locale";
@@ -25,7 +25,19 @@ import {
   CheckCircle2,
   Check,
   XCircle,
+  AlertOctagon,
+  Flag,
+  MoreVertical,
+  ShieldCheck,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Badge, BadgeProps } from "@/components/ui/badge";
 
 const statusLabels: Record<AppointmentStatus, string> = {
@@ -36,9 +48,10 @@ const statusLabels: Record<AppointmentStatus, string> = {
   [AppointmentStatus.NO_SHOW]: "No-show",
   [AppointmentStatus.INTERRUPTED]: "Interrupted",
   [AppointmentStatus.PENDING_PAYMENT]: "Pending Payment",
+  [AppointmentStatus.DISPUTED]: "Disputed",
+  [AppointmentStatus.SETTLED]: "Settled",
 };
 
-// --- SỬA: Cập nhật logic màu sắc ---
 const getStatusBadgeVariant = (
   status: AppointmentStatus
 ): BadgeProps["variant"] => {
@@ -48,8 +61,10 @@ const getStatusBadgeVariant = (
     case AppointmentStatus.IN_PROGRESS:
       return "info";
     case AppointmentStatus.COMPLETED:
+    case AppointmentStatus.SETTLED:
       return "success";
     case AppointmentStatus.CANCELLED:
+    case AppointmentStatus.DISPUTED:
       return "destructive";
     case AppointmentStatus.NO_SHOW:
     case AppointmentStatus.INTERRUPTED:
@@ -70,17 +85,19 @@ const InfoRow = ({
   label: string;
   value: ReactNode;
 }) => (
-  <div className="flex items-center gap-3">
-    <Icon className="h-5 w-5 text-muted-foreground" />
+  <div className="flex items-start gap-3">
+    <Icon className="mt-1 h-5 w-5 text-muted-foreground" />
     <div className="flex-1">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <p className="font-semibold">{value ?? "Not provided"}</p>
+      <div className="mt-1 font-semibold">
+        {value ?? <span className="text-muted-foreground">Not provided</span>}
+      </div>
     </div>
   </div>
 );
 
 interface AppointmentActionsCardProps {
-  appointment: Appointment;
+  appointment: AppointmentDetailDto;
   isJoining: boolean;
   isCompletable: boolean;
   isCancellable: boolean;
@@ -89,6 +106,9 @@ interface AppointmentActionsCardProps {
   onJoinMeet: () => void;
   onCompleteClick: () => void;
   onCancelClick: () => void;
+
+  onReportNoShowClick: () => void;
+  onReportInterruptClick: () => void;
 }
 
 export function AppointmentActionsCard({
@@ -101,11 +121,48 @@ export function AppointmentActionsCard({
   onJoinMeet,
   onCompleteClick,
   onCancelClick,
+
+  onReportNoShowClick,
+  onReportInterruptClick,
 }: AppointmentActionsCardProps) {
+  const canReport =
+    appointment.appointmentStatus === AppointmentStatus.IN_PROGRESS ||
+    appointment.appointmentStatus === AppointmentStatus.COMPLETED;
+  const trimmedAdminNote = appointment.adminNote?.trim();
+  const resolutionMessage = trimmedAdminNote || appointment.statusMessage;
+
   return (
     <Card className="shadow-lg">
+      {/* Header */}
       <CardHeader>
-        <CardTitle className="text-xl">Appointment Details</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl">Appointment Details</CardTitle>
+          {/* Report Dropdown */}
+          {canReport && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="-mr-2 h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">Open menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" side="right">
+                <DropdownMenuLabel>Report Issue</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem onClick={onReportNoShowClick}>
+                  <Flag className="mr-2 h-4 w-4 text-red-600 focus:text-red-600" />
+                  <span>Report No-Show</span>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={onReportInterruptClick}>
+                  <AlertOctagon className="mr-2 h-4 w-4 text-orange-600 focus:text-orange-600" />
+                  <span>Report Interruption</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
         <CardDescription>ID: {appointment.appointmentId}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -149,14 +206,36 @@ export function AppointmentActionsCard({
             icon={CheckCircle2}
             label="Status"
             value={
-              <Badge
-                // Nếu Badge của bạn chưa có variant 'success',
-                // bạn có thể thêm className="bg-green-500 hover:bg-green-600" vào đây
-                variant={getStatusBadgeVariant(appointment.appointmentStatus)}
-              >
-                {statusLabels[appointment.appointmentStatus] ||
-                  appointment.appointmentStatus}
-              </Badge>
+              <div className="space-y-2">
+                <Badge
+                  variant={getStatusBadgeVariant(appointment.appointmentStatus)}
+                >
+                  {statusLabels[appointment.appointmentStatus] ||
+                    appointment.appointmentStatus}
+                </Badge>
+                {Boolean(resolutionMessage) && (
+                  <div
+                    className={`rounded-md border p-3 text-sm font-normal ${
+                      trimmedAdminNote
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                        : "border-amber-200 bg-amber-50 text-amber-800"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide mb-1">
+                      {trimmedAdminNote ? (
+                        <>
+                          <ShieldCheck className="h-4 w-4" /> Admin review
+                        </>
+                      ) : (
+                        <>System note</>
+                      )}
+                    </span>
+                    <p className="whitespace-pre-line leading-relaxed">
+                      {trimmedAdminNote || resolutionMessage}
+                    </p>
+                  </div>
+                )}
+              </div>
             }
           />
           <InfoRow
