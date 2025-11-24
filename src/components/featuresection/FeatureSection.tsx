@@ -202,11 +202,349 @@ const FeaturesSection = () => {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-3xl blur-2xl opacity-20"></div>
               <div className="relative">
-                <img
-                  src="./feature.png"
-                  alt="Skinalyze AI Features"
-                  className="w-full h-auto rounded-3xl shadow-2xl transform hover:scale-105 transition-transform duration-700"
-                />
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                  <defs>
+                    <radialGradient
+                      id="bgGrad"
+                      cx="50%"
+                      cy="50%"
+                      r="80%"
+                      fx="50%"
+                      fy="50%"
+                    >
+                      <stop offset="0%" stop-color="#1e293b" />
+                      <stop offset="100%" stop-color="#0f172a" />
+                    </radialGradient>
+
+                    <linearGradient
+                      id="bodyGrad"
+                      x1="0%"
+                      y1="0%"
+                      x2="0%"
+                      y2="100%"
+                    >
+                      <stop
+                        offset="0%"
+                        stop-color="#38bdf8"
+                        stop-opacity="0.8"
+                      />
+                      <stop
+                        offset="100%"
+                        stop-color="#38bdf8"
+                        stop-opacity="0.1"
+                      />
+                    </linearGradient>
+
+                    <linearGradient
+                      id="scanBeam"
+                      x1="0%"
+                      y1="0%"
+                      x2="0%"
+                      y2="100%"
+                    >
+                      <stop offset="0%" stop-color="#22d3ee" stop-opacity="0" />
+                      <stop
+                        offset="50%"
+                        stop-color="#22d3ee"
+                        stop-opacity="0.5"
+                      />
+                      <stop
+                        offset="51%"
+                        stop-color="#e0f2fe"
+                        stop-opacity="0.9"
+                      />
+                      <stop
+                        offset="100%"
+                        stop-color="#22d3ee"
+                        stop-opacity="0"
+                      />
+                    </linearGradient>
+
+                    <radialGradient id="virusGrad" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stop-color="#fca5a5" />
+                      <stop offset="60%" stop-color="#ef4444" />
+                      <stop offset="100%" stop-color="#991b1b" />
+                    </radialGradient>
+
+                    <linearGradient
+                      id="aiGrad"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
+                    >
+                      <stop offset="0%" stop-color="#a78bfa" />
+                      <stop offset="100%" stop-color="#8b5cf6" />
+                    </linearGradient>
+
+                    <filter
+                      id="glow"
+                      x="-20%"
+                      y="-20%"
+                      width="140%"
+                      height="140%"
+                    >
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feComposite
+                        in="SourceGraphic"
+                        in2="blur"
+                        operator="over"
+                      />
+                    </filter>
+                  </defs>
+
+                  <rect width="512" height="512" fill="url(#bgGrad)" />
+
+                  <g stroke="#334155" stroke-width="1" opacity="0.3">
+                    <line x1="0" y1="128" x2="512" y2="128" />
+                    <line x1="0" y1="256" x2="512" y2="256" />
+                    <line x1="0" y1="384" x2="512" y2="384" />
+                    <line x1="128" y1="0" x2="128" y2="512" />
+                    <line x1="256" y1="0" x2="256" y2="512" />
+                    <line x1="384" y1="0" x2="384" y2="512" />
+                  </g>
+
+                  <g transform="translate(106, 60)">
+                    <path
+                      d="M150,0 C120,0 100,25 100,55 C100,75 110,90 125,98 C90,105 60,130 50,170 L40,350 C40,380 150,380 150,380 C150,380 260,380 260,350 L250,170 C240,130 210,105 175,98 C190,90 200,75 200,55 C200,25 180,0 150,0 Z"
+                      fill="url(#bodyGrad)"
+                      stroke="#0ea5e9"
+                      stroke-width="2"
+                    />
+
+                    <path
+                      d="M110,140 Q140,140 145,190 Q148,230 120,250 Q90,230 90,190 Q90,150 110,140 Z"
+                      fill="#0f172a"
+                      opacity="0.4"
+                    />
+                    <path
+                      d="M190,140 Q160,140 155,190 Q152,230 180,250 Q210,230 210,190 Q210,150 190,140 Z"
+                      fill="#0f172a"
+                      opacity="0.4"
+                    />
+
+                    <g filter="url(#glow)">
+                      <circle cx="180" cy="180" r="12" fill="url(#virusGrad)" />
+                      <path
+                        d="M180,164 L180,196 M164,180 L196,180 M169,169 L191,191 M169,191 L191,169"
+                        stroke="#ef4444"
+                        stroke-width="2"
+                      />
+
+                      <circle cx="165" cy="200" r="8" fill="url(#virusGrad)" />
+                      <path
+                        d="M165,188 L165,212 M153,200 L177,200"
+                        stroke="#ef4444"
+                        stroke-width="1.5"
+                      />
+
+                      <circle cx="195" cy="210" r="6" fill="url(#virusGrad)" />
+                    </g>
+
+                    <g id="scannerMover">
+                      <rect
+                        x="20"
+                        y="0"
+                        width="260"
+                        height="40"
+                        fill="url(#scanBeam)"
+                        opacity="0.6"
+                      />
+                      <line
+                        x1="20"
+                        y1="20"
+                        x2="280"
+                        y2="20"
+                        stroke="#a5f3fc"
+                        stroke-width="1"
+                        opacity="0.8"
+                      />
+
+                      <animateTransform
+                        attributeName="transform"
+                        type="translate"
+                        values="0,0; 0,340; 0,0"
+                        keyTimes="0; 0.5; 1"
+                        dur="4s"
+                        repeatCount="indefinite"
+                      />
+                    </g>
+                    <g
+                      stroke="#ef4444"
+                      stroke-width="2"
+                      fill="none"
+                      opacity="0.9"
+                    >
+                      <path d="M140,150 L150,150 M140,150 L140,160" />{" "}
+                      <path d="M220,150 L210,150 M220,150 L220,160" />{" "}
+                      <path d="M140,230 L150,230 M140,230 L140,220" />{" "}
+                      <path d="M220,230 L210,230 M220,230 L220,220" />{" "}
+                    </g>
+
+                    <rect
+                      x="225"
+                      y="145"
+                      width="70"
+                      height="16"
+                      rx="2"
+                      fill="#ef4444"
+                    />
+                    <text
+                      x="230"
+                      y="157"
+                      font-family="sans-serif"
+                      font-size="9"
+                      font-weight="bold"
+                      fill="white"
+                    >
+                      DETECTED
+                    </text>
+                    <line
+                      x1="220"
+                      y1="155"
+                      x2="225"
+                      y2="155"
+                      stroke="#ef4444"
+                      stroke-width="1"
+                    />
+                  </g>
+
+                  <g transform="translate(360, 100)">
+                    <rect
+                      x="0"
+                      y="0"
+                      width="120"
+                      height="200"
+                      rx="8"
+                      fill="#1e293b"
+                      stroke="#475569"
+                      stroke-width="1"
+                      opacity="0.8"
+                    />
+
+                    <g transform="translate(35, 20)">
+                      <path
+                        d="M25,0 C11,0 0,11 0,25 C0,39 11,50 25,50 C39,50 50,39 50,25 C50,11 39,0 25,0 Z"
+                        fill="none"
+                        stroke="url(#aiGrad)"
+                        stroke-width="2"
+                      />
+                      <circle cx="25" cy="25" r="4" fill="url(#aiGrad)" />
+                      <circle cx="15" cy="15" r="3" fill="#a78bfa" />
+                      <circle cx="35" cy="15" r="3" fill="#a78bfa" />
+                      <circle cx="15" cy="35" r="3" fill="#a78bfa" />
+                      <circle cx="35" cy="35" r="3" fill="#a78bfa" />
+                      <path
+                        d="M25,25 L15,15 M25,25 L35,15 M25,25 L15,35 M25,25 L35,35"
+                        stroke="#a78bfa"
+                        stroke-width="1.5"
+                      />
+                    </g>
+
+                    <g transform="translate(20, 90)">
+                      <text
+                        x="0"
+                        y="-10"
+                        font-family="monospace"
+                        font-size="10"
+                        fill="#94a3b8"
+                      >
+                        ANALYSIS
+                      </text>
+                      <rect
+                        x="0"
+                        y="0"
+                        width="80"
+                        height="6"
+                        rx="3"
+                        fill="#334155"
+                      />
+                      <rect
+                        x="0"
+                        y="0"
+                        width="60"
+                        height="6"
+                        rx="3"
+                        fill="#22d3ee"
+                      />
+                      <rect
+                        x="0"
+                        y="15"
+                        width="80"
+                        height="6"
+                        rx="3"
+                        fill="#334155"
+                      />
+                      <rect
+                        x="0"
+                        y="15"
+                        width="75"
+                        height="6"
+                        rx="3"
+                        fill="#ef4444"
+                      />{" "}
+                      <rect
+                        x="0"
+                        y="30"
+                        width="80"
+                        height="6"
+                        rx="3"
+                        fill="#334155"
+                      />
+                      <rect
+                        x="0"
+                        y="30"
+                        width="40"
+                        height="6"
+                        rx="3"
+                        fill="#a78bfa"
+                      />
+                    </g>
+
+                    <path
+                      d="M-5,45 L-30,45 L-54,80"
+                      stroke="#a78bfa"
+                      stroke-width="1"
+                      fill="none"
+                      stroke-dasharray="4 2"
+                    />
+                    <circle cx="-5" cy="45" r="3" fill="#a78bfa" />
+                  </g>
+
+                  <g fill="#64748b">
+                    <circle cx="50" cy="450" r="2" />
+                    <circle cx="60" cy="450" r="2" />
+                    <circle cx="70" cy="450" r="2" />
+                    <rect x="50" y="460" width="100" height="2" rx="1" />
+                    <rect x="50" y="470" width="60" height="2" rx="1" />
+                  </g>
+
+                  <path
+                    d="M20,50 L20,20 L50,20"
+                    stroke="#22d3ee"
+                    stroke-width="3"
+                    fill="none"
+                  />
+                  <path
+                    d="M492,50 L492,20 L462,20"
+                    stroke="#22d3ee"
+                    stroke-width="3"
+                    fill="none"
+                  />
+                  <path
+                    d="M20,462 L20,492 L50,492"
+                    stroke="#22d3ee"
+                    stroke-width="3"
+                    fill="none"
+                  />
+                  <path
+                    d="M492,462 L492,492 L462,492"
+                    stroke="#22d3ee"
+                    stroke-width="3"
+                    fill="none"
+                  />
+                </svg>
+
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent rounded-3xl"></div>
               </div>
             </div>
