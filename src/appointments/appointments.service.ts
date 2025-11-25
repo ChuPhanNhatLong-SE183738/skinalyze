@@ -13,6 +13,7 @@ import {
   EntityManager,
   FindOneOptions,
   FindOptionsWhere,
+  In,
 } from 'typeorm';
 import { Appointment } from './entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
@@ -43,7 +44,10 @@ import { CreateSubscriptionAppointmentDto } from './dto/create-subscription-appo
 import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
 import { UserRole } from 'src/users/entities/user.entity';
 import { CompleteAppointmentDto } from './dto/complete-appointment.dto';
-import { FindAppointmentsDto } from './dto/find-appointment.dto';
+import {
+  AppointmentDetailDto,
+  FindAppointmentsDto,
+} from './dto/find-appointment.dto';
 import { UsersService } from 'src/users/users.service';
 import { AvailabilitySlot } from 'src/availability-slots/entities/availability-slot.entity';
 import { ReportNoShowDto } from './dto/report-no-show-dto';
@@ -68,15 +72,13 @@ export interface AppointmentActionResult {
   message: string;
   [key: string]: any;
 }
-
 @Injectable()
 export class AppointmentsService {
   private readonly logger = new Logger(AppointmentsService.name);
   private readonly GRACE_PERIOD_MS = 15 * 60 * 1000; // Waiting time for report NO_SHOW: 15 minutes
   private readonly BOOKING_FEE_RATE = 0.25; // 25% fee for booking
-  private readonly VALID_REPORT_HOURS = 24; // Hours allowed to report after completion
   private readonly CANCELLATION_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds for cancellation refund policy
-
+  readonly VALID_REPORT_HOURS = 24; // Hours allowed to report after completion
   constructor(
     @InjectRepository(Appointment)
     private readonly appointmentRepository: Repository<Appointment>,
@@ -511,8 +513,7 @@ export class AppointmentsService {
       const appointment = await appointmentRepo.findOne({
         where: { appointmentId },
         relations: [
-          'customer',
-          'dermatologist',
+          'dermatologist.user',
           'payment',
           'customerSubscription',
           'customer.user',
@@ -530,22 +531,42 @@ export class AppointmentsService {
           throw new ForbiddenException('Not your appointment');
       }
 
+      // 1. CHECK: Đã báo cáo chưa? (Tránh spam report 2 lần)
+      if (role === UserRole.CUSTOMER && appointment.customerReportReason) {
+        throw new BadRequestException('You have already submitted a report.');
+      }
+      if (
+        role === UserRole.DERMATOLOGIST &&
+        appointment.dermatologistReportReason
+      ) {
+        throw new BadRequestException('You have already submitted a report.');
+      }
+      // 2. VALIDATE STATUS: Cho phép thêm INTERRUPTED và DISPUTED
+      const allowedStatuses = [
+        AppointmentStatus.IN_PROGRESS,
+        AppointmentStatus.COMPLETED,
+        AppointmentStatus.INTERRUPTED,
+        AppointmentStatus.DISPUTED,
+      ];
+
+      if (!allowedStatuses.includes(appointment.appointmentStatus)) {
+        throw new BadRequestException(
+          `Cannot report interrupt for ${appointment.appointmentStatus}.`,
+        );
+      }
       const isInProgress =
         appointment.appointmentStatus === AppointmentStatus.IN_PROGRESS;
       const isCompleted =
         appointment.appointmentStatus === AppointmentStatus.COMPLETED;
+      const isDoubleReport = [
+        AppointmentStatus.INTERRUPTED,
+        AppointmentStatus.DISPUTED,
+      ].includes(appointment.appointmentStatus);
 
-      if (!isInProgress && !isCompleted) {
-        throw new BadRequestException(
-          `Cannot report interrupt for ${appointment.appointmentStatus} status.`,
-        );
-      }
-
-      // If completed, check valid report time window
-      if (isCompleted) {
-        const completionTime =
-          appointment.actualEndTime || appointment.updatedAt;
-        const hoursSinceEnd = (Date.now() - completionTime.getTime()) / 36e5;
+      // If completed or double reported, check valid report time window
+      if (isCompleted || isDoubleReport) {
+        const hoursSinceEnd =
+          (Date.now() - appointment.endTime.getTime()) / 36e5;
         if (hoursSinceEnd > this.VALID_REPORT_HOURS) {
           throw new BadRequestException(
             `Report window (${this.VALID_REPORT_HOURS}h) expired.`,
@@ -567,39 +588,51 @@ export class AppointmentsService {
       let message = 'Report recorded.';
       let refundTriggered = false;
 
+      // Dermatologist admits fault
+      if (
+        role === UserRole.DERMATOLOGIST &&
+        dto.reason === TerminationReason.DOCTOR_ISSUE
+      ) {
+        await this.processRefundForCustomer(appointment, manager);
+
+        appointment.appointmentStatus = AppointmentStatus.CANCELLED;
+        appointment.terminatedReason = TerminationReason.DOCTOR_CANCELLED;
+        appointment.terminationNote = `Auto-resolved: Doctor admitted fault. Note: ${noteContent}`;
+
+        // If InProgress -> add actualEndTime
+        // If Interrupt/Completed -> Keep the old time
+        if (isInProgress) {
+          appointment.actualEndTime = new Date();
+        }
+
+        message = 'Refunded to customer successfully (Doctor admitted fault).';
+        refundTriggered = true;
+
+        await appointmentRepo.save(appointment);
+        return { message, refundTriggered };
+      }
+
       // CASE A: In Progress
       if (isInProgress) {
         appointment.actualEndTime = new Date();
-
-        // A1. Dermatologist admits fault -> Refund 100%
-        if (
-          role === UserRole.DERMATOLOGIST &&
-          dto.reason === TerminationReason.DOCTOR_ISSUE
-        ) {
-          await this.processRefundForCustomer(appointment, manager);
-          // Cancel appointment
-          appointment.appointmentStatus = AppointmentStatus.CANCELLED;
-          appointment.terminatedReason = TerminationReason.DOCTOR_CANCELLED;
-          appointment.terminationNote = `Auto-resolved: Doctor admitted fault. Note: ${noteContent}`;
-
-          message =
-            'Refunded to customer successfully (Doctor admitted fault).';
-          refundTriggered = true;
-        }
-        // A2. Các trường hợp khác (Khách báo, hoặc Lỗi Platform) -> Treo tiền
-        else {
-          appointment.appointmentStatus = AppointmentStatus.INTERRUPTED;
-          // Do not set terminatedReason, to be set by Admin after review
-          message =
-            'Interruption recorded. Payment is frozen pending Admin review.';
-        }
+        appointment.appointmentStatus = AppointmentStatus.INTERRUPTED;
+        // Để terminatedReason trống hoặc null, chờ Admin set sau
+        message =
+          'Interruption recorded. Payment is frozen pending Admin review.';
       }
 
-      // CASE B: Already Completed (Late report)
+      // CASE B: Completed
       else if (isCompleted) {
         appointment.appointmentStatus = AppointmentStatus.DISPUTED;
-        // DO NOT update actualEndTime
+        // do not update actualEndTime
         message = 'Dispute raised. Admin will review the session logs.';
+      }
+
+      // CASE C: Double Reporting (Additional report on Interrupted/Disputed)
+      else {
+        appointment.appointmentStatus = AppointmentStatus.DISPUTED;
+        // do not update actualEndTime
+        message = 'Additional report recorded. Admin will review both sides.';
       }
 
       await appointmentRepo.save(appointment);
@@ -611,13 +644,6 @@ export class AppointmentsService {
       return { message, refundTriggered };
     });
   }
-
-  // async findAll(): Promise<Appointment[]> {
-  //   return this.appointmentRepository.find({
-  //     relations: ['customer', 'dermatologist', 'payment'],
-  //     order: { startTime: 'ASC' },
-  //   });
-  // }
 
   async findAll(filters: FindAppointmentsDto): Promise<Appointment[]> {
     const where: FindOptionsWhere<Appointment> = {};
@@ -631,7 +657,8 @@ export class AppointmentsService {
     }
 
     if (filters.status) {
-      where.appointmentStatus = filters.status;
+      // where.appointmentStatus = filters.status;
+      where.appointmentStatus = In(filters.status);
     }
     return this.appointmentRepository.find({
       where: where,
@@ -640,7 +667,7 @@ export class AppointmentsService {
     });
   }
 
-  async findOne(id: string): Promise<Appointment> {
+  async findOne(id: string): Promise<AppointmentDetailDto> {
     const appointment = await this.appointmentRepository.findOne({
       where: { appointmentId: id },
       relations: [
@@ -657,9 +684,60 @@ export class AppointmentsService {
       throw new NotFoundException(`Appointment with ID ${id} not found`);
     }
 
-    return appointment;
+    return {
+      ...appointment,
+      statusMessage: this.getDisplayStatusMessage(appointment),
+    } as AppointmentDetailDto;
   }
 
+  private getDisplayStatusMessage(appt: Appointment): string | null {
+    // Case 1: (DISPUTED)
+    if (appt.appointmentStatus === AppointmentStatus.DISPUTED) {
+      // Doctor reports customer no-show, but customer has check-in
+      if (
+        appt.dermatologistReportReason === TerminationReason.CUSTOMER_NO_SHOW &&
+        appt.customerJoinedAt
+      ) {
+        return 'System recorded No-Show report but Customer has Check-in history. Awaiting Admin review.';
+      }
+
+      // Customer reports doctor no-show, but doctor has check-in
+      if (
+        appt.customerReportReason === TerminationReason.DOCTOR_NO_SHOW &&
+        appt.dermatologistJoinedAt
+      ) {
+        return 'System recorded No-Show report but Doctor has Check-in history. Awaiting Admin review.';
+      }
+
+      return 'Appointment is under dispute resolution.';
+    }
+
+    // Case 2: (CANCELLED - PAYMENT_FAILED)
+    if (
+      appt.appointmentStatus === AppointmentStatus.CANCELLED &&
+      appt.terminatedReason === TerminationReason.PAYMENT_FAILED
+    ) {
+      return 'Cancelled due to payment failure/insufficient funds. Amount has been refunded to wallet.';
+    }
+    if (
+      appt.appointmentStatus === AppointmentStatus.NO_SHOW &&
+      appt.terminatedReason === TerminationReason.DOCTOR_NO_SHOW
+    ) {
+      return 'Cancelled due to Dermatologist No-Show. A 100% refund has been issued to the customer.';
+    }
+    if (
+      appt.appointmentStatus === AppointmentStatus.CANCELLED &&
+      appt.terminatedReason === TerminationReason.DOCTOR_CANCELLED
+    ) {
+      return 'Cancelled due to Dermatologist Cancellation. A 100% refund has been issued to the customer.';
+    }
+    if (appt.appointmentStatus === AppointmentStatus.INTERRUPTED) {
+      return 'Interruption reported. Payment is temporarily frozen pending Admin review.';
+    }
+
+    // Default
+    return null;
+  }
   async updateStatus(
     id: string,
     { status }: UpdateAppointmentStatusDto,
@@ -922,6 +1000,7 @@ export class AppointmentsService {
           // If dermatologist HAS joined -> DISPUTED
           else {
             appointment.appointmentStatus = AppointmentStatus.DISPUTED;
+            appointment.terminationNote = ' ';
             message =
               'Reported. Admin will review (Doctor has check-in record).';
           }
@@ -959,6 +1038,37 @@ export class AppointmentsService {
     appointment: Appointment,
     manager: EntityManager,
   ) {
+    const hasUser = !!appointment.customer?.user?.userId;
+    const hasPayment = !!appointment.payment;
+    const hasSubscription = !!appointment.customerSubscription;
+
+    const isMissingData = !hasUser || (!hasPayment && !hasSubscription);
+
+    if (isMissingData) {
+      this.logger.warn(
+        `Missing relations for refund (Appt: ${appointment.appointmentId}). Refetching...`,
+      );
+
+      const fullAppointment = await manager.findOne(Appointment, {
+        where: { appointmentId: appointment.appointmentId },
+        relations: [
+          'customer',
+          'customer.user',
+          'payment',
+          'customerSubscription',
+        ],
+      });
+
+      if (!fullAppointment) {
+        this.logger.error(
+          `Critical: Could not find appointment ${appointment.appointmentId} during refund process.`,
+        );
+        return;
+      }
+
+      appointment = fullAppointment;
+    }
+
     if (appointment.payment && appointment.customer?.user?.userId) {
       await this.usersService.updateBalance(
         appointment.customer.user.userId,
@@ -1302,24 +1412,6 @@ export class AppointmentsService {
 
     // Logic Refund only for DOCTOR_NO_SHOW
     if (shouldRefund) {
-      // if (appointment.payment && appointment.customer?.user?.userId) {
-      //   await this.usersService.updateBalance(
-      //     appointment.customer.user.userId,
-      //     Number(appointment.payment.amount),
-      //     manager,
-      //   );
-      //   this.logger.log(
-      //     `💰 Refunded to Customer Wallet for Appt ${appointmentId}`,
-      //   );
-      // } else if (appointment.customerSubscription) {
-      //   await this.customerSubscriptionService.refundSession(
-      //     appointment.customerSubscription.id,
-      //     manager,
-      //   );
-      //   this.logger.log(
-      //     `🔄 Refunded Session to Subscription for Appt ${appointmentId}`,
-      //   );
-      // }
       await this.processRefundForCustomer(appointment, manager);
     }
   }

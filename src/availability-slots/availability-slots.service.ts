@@ -62,11 +62,14 @@ export class AvailabilitySlotsService {
     const now = new Date();
     const maxAllowedDate = addDays(now, this.MAX_BOOKING_WINDOW_DAYS);
 
+    // 1: GENERATE INDIVIDUAL SLOTS FROM INPUT BLOCKS
     for (const block of dto.blocks) {
       const start = this.parseDate(block.startTime, 'block start time');
       const blockEnd = this.parseDate(block.endTime, 'block end time');
       const duration = block.slotDurationInMinutes;
       const priceForThisBlock = block.price ?? defaultSlotPrice;
+
+      // Validate block time range
       if (blockEnd <= start) {
         throw new BadRequestException(
           'Block end time must be after block start time.',
@@ -83,17 +86,22 @@ export class AvailabilitySlotsService {
           `Cannot create availability more than ${this.MAX_BOOKING_WINDOW_DAYS} days in advance. Block starts at ${start.toISOString()}`,
         );
       }
+
+      // Slice the block into smaller slots
       let currentSlotStart = start;
 
       while (isBefore(currentSlotStart, blockEnd)) {
         const currentSlotEnd = addMinutes(currentSlotStart, duration);
 
+        // Stop if the generated slot exceeds the max booking window
         if (isBefore(maxAllowedDate, currentSlotStart)) {
           this.logger.warn(
             `Skipping slot at ${currentSlotStart.toISOString()} for derm ${dermatologistId} as it is beyond the ${this.MAX_BOOKING_WINDOW_DAYS}-day limit.`,
           );
           break;
         }
+
+        // Ensure the slot fits within the block's end time
         if (
           isBefore(currentSlotEnd, blockEnd) ||
           isEqual(currentSlotEnd, blockEnd)
@@ -108,6 +116,7 @@ export class AvailabilitySlotsService {
           startTimesToCheck.push(currentSlotStart);
           currentSlotStart = currentSlotEnd;
         } else {
+          // If the slot does not fit, break out of the loop
           break;
         }
       }
@@ -117,16 +126,37 @@ export class AvailabilitySlotsService {
       throw new BadRequestException('No valid slots to create.');
     }
 
+    // 2: INTERNAL SELF-OVERLAP CHECK (Check payload for overlapping slots)
+
+    // Sort slots by start time to enable overlap checking
+    newSlotsToCreate.sort(
+      (a, b) => a.startTime.getTime() - b.startTime.getTime(),
+    );
+
+    for (let i = 0; i < newSlotsToCreate.length - 1; i++) {
+      const currentSlot = newSlotsToCreate[i];
+      const nextSlot = newSlotsToCreate[i + 1];
+
+      // Condition: If the Next Slot starts BEFORE the Current Slot ends -> OVERLAP
+      if (nextSlot.startTime < currentSlot.endTime) {
+        throw new ConflictException(
+          `Input blocks are overlapping. Slot start at ${currentSlot.startTime.toISOString()} overlaps with ${nextSlot.startTime.toISOString()}`,
+        );
+      }
+    }
+
+    // 3: BUILD DATABASE OVERLAP CONDITIONS
     //Check overlap: (OldStart < NewEnd) AND (OldEnd > NewStart)
     const overlapConditions: FindOptionsWhere<AvailabilitySlot>[] =
       newSlotsToCreate.map((newSlot) => {
         return {
           dermatologistId: dermatologistId,
-          startTime: LessThan(newSlot.endTime), // OldStart < NewEnd
-          endTime: MoreThan(newSlot.startTime), // OldEnd > NewStart
+          startTime: LessThan(newSlot.endTime), // Existing slot starts before new slot ends (OldStart < NewEnd)
+          endTime: MoreThan(newSlot.startTime), // Existing slot ends after new slot starts (OldEnd > NewStart)
         };
       });
 
+    //  4: FIND EXISTING OVERLAPS IN DATABASE
     // Find slots that overlap with any of the new slots
     const existingOverlaps = await this.slotRepository.find({
       where: overlapConditions, // OR conditions (typeorm handles this automatically)
@@ -138,6 +168,7 @@ export class AvailabilitySlotsService {
       );
     }
 
+    //  5: BULK INSERT & RACE CONDITION HANDLING
     try {
       await this.slotRepository.insert(newSlotsToCreate);
     } catch (error) {

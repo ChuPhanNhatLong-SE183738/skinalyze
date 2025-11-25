@@ -12,6 +12,8 @@ import { GoogleMeetModule } from 'src/google-meet/google-meet.module';
 import { CustomerSubscriptionModule } from 'src/customer-subscription/customer-subscription.module';
 import { UsersModule } from 'src/users/users.module';
 import { AppointmentsScheduler } from './appointments.schedule';
+import { AdminAppointmentsController } from './admin-appointments.controller';
+import { AdminAppointmentsService } from './admin-appointment.service';
 
 @Module({
   imports: [
@@ -25,8 +27,12 @@ import { AppointmentsScheduler } from './appointments.schedule';
     UsersModule,
     forwardRef(() => PaymentsModule),
   ],
-  controllers: [AppointmentsController],
-  providers: [AppointmentsService, AppointmentsScheduler],
+  controllers: [AppointmentsController, AdminAppointmentsController],
+  providers: [
+    AppointmentsService,
+    AppointmentsScheduler,
+    AdminAppointmentsService,
+  ],
   exports: [AppointmentsService],
 })
 export class AppointmentsModule {}

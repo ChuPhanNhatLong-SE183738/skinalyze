@@ -10,6 +10,8 @@ import { addMinutes, subMinutes, subHours } from 'date-fns';
 @Injectable()
 export class AppointmentsScheduler {
   private readonly logger = new Logger(AppointmentsScheduler.name);
+  private readonly MEET_LINK_LOOKAHEAD_MINUTES = 60;
+  private readonly STUCK_APPOINTMENT_GRACE_MINUTES = 15;
 
   constructor(
     @InjectRepository(Appointment)
@@ -25,7 +27,7 @@ export class AppointmentsScheduler {
     );
 
     const now = new Date();
-    const targetTime = addMinutes(now, 60);
+    const targetTime = addMinutes(now, this.MEET_LINK_LOOKAHEAD_MINUTES);
 
     const appointmentsToProcess = await this.appointmentRepository.find({
       where: {
@@ -53,7 +55,10 @@ export class AppointmentsScheduler {
   async handleCleanupEndedAppointments() {
     this.logger.log('Running Cron: Cleanup stuck appointments...');
 
-    const fifteenMinutesAgo = subMinutes(new Date(), 15);
+    const minutesAgo = subMinutes(
+      new Date(),
+      this.STUCK_APPOINTMENT_GRACE_MINUTES,
+    );
 
     const stuckAppointments = await this.appointmentRepository.find({
       select: [
@@ -65,11 +70,11 @@ export class AppointmentsScheduler {
       where: [
         {
           appointmentStatus: AppointmentStatus.SCHEDULED,
-          endTime: LessThan(fifteenMinutesAgo),
+          endTime: LessThan(minutesAgo),
         },
         {
           appointmentStatus: AppointmentStatus.IN_PROGRESS,
-          endTime: LessThan(fifteenMinutesAgo),
+          endTime: LessThan(minutesAgo),
         },
       ],
       relations: ['customerSubscription'],
@@ -88,8 +93,9 @@ export class AppointmentsScheduler {
           );
         });
       } catch (error) {
+        const err = error as Error;
         this.logger.error(
-          `Failed cleanup for ${stuckAppt.appointmentId}: ${error.message}`,
+          `Failed cleanup for ${stuckAppt.appointmentId}: ${err.message}`,
         );
       }
     }
@@ -101,7 +107,10 @@ export class AppointmentsScheduler {
 
     // Find COMPLETED appointment more than 24 hours ago (Dispute Window)
     // And not disputed, not settled
-    const disputeWindow = subHours(new Date(), 24);
+    const disputeWindow = subHours(
+      new Date(),
+      this.appointmentsService.VALID_REPORT_HOURS,
+    );
 
     const pendingSettlements = await this.appointmentRepository.find({
       where: {
@@ -123,8 +132,9 @@ export class AppointmentsScheduler {
           await this.appointmentsService.settleAppointment(appt, manager);
         });
       } catch (error) {
+        const err = error as Error;
         this.logger.error(
-          `Failed settlement for ${appt.appointmentId}: ${error.message}`,
+          `Failed settlement for ${appt.appointmentId}: ${err.message}`,
         );
       }
     }
