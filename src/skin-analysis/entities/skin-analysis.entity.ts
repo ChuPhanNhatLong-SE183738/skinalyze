@@ -1,53 +1,48 @@
 import {
   Entity,
-  Column,
   PrimaryGeneratedColumn,
+  Column,
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  OneToMany,
 } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
-import { Appointment } from 'src/appointments/entities/appointment.entity';
 
 @Entity('skin_analysis')
 export class SkinAnalysis {
   @PrimaryGeneratedColumn('uuid')
   analysisId: string;
 
-  @Column()
+  @Column({ type: 'varchar', length: 255 })
   customerId: string;
 
-  @Column({
-    type: 'enum',
-    enum: ['AI_SCAN', 'MANUAL'],
-  })
+  @Column({ type: 'enum', enum: ['AI_SCAN', 'MANUAL'] })
   source: string;
 
   @Column({ type: 'text', nullable: true })
-  chiefComplaint: string;
+  chiefComplaint: string | null;
 
   @Column({ type: 'text', nullable: true })
-  patientSymptoms: string;
+  patientSymptoms: string | null;
 
-  @Column('simple-array')
+  @Column({ type: 'simple-array' })
   imageUrls: string[];
 
   @Column({ type: 'text', nullable: true })
-  notes: string;
+  notes: string | null;
 
-  @Column({ nullable: true })
-  aiDetectedDisease: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  aiDetectedDisease: string | null;
 
-  @Column({ nullable: true })
-  aiDetectedCondition: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  aiDetectedCondition: string | null;
 
-  @Column('simple-json', { nullable: true })
-  aiRecommendedProducts: any[];
+  @Column({ type: 'json', nullable: true })
+  aiRecommendedProducts: any[] | null;
 
-  @Column({ type: 'longtext', nullable: true })
-  mask: string[];
+  @Column({ type: 'simple-array', nullable: true })
+  mask: string[] | null;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -55,11 +50,7 @@ export class SkinAnalysis {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // Relations
   @ManyToOne(() => Customer, (customer) => customer.skinAnalyses)
   @JoinColumn({ name: 'customerId' })
   customer: Customer;
-
-  @OneToMany(() => Appointment, (appointment) => appointment.skinAnalysis)
-  appointments: Appointment[];
 }

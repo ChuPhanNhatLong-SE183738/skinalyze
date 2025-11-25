@@ -46,7 +46,8 @@ export class ChatSessionsController {
   @ApiOperation({ summary: 'Delete a chat session and all its messages' })
   @ApiResponse({ status: 200, description: 'Chat session deleted successfully' })
   @ApiResponse({ status: 404, description: 'Chat session not found' })
-  remove(@Param('chatId') chatId: string) {
-    return this.chatSessionsService.remove(chatId);
+  async remove(@Param('chatId') chatId: string) {
+    await this.chatSessionsService.remove(chatId);
+    return { message: 'Chat session deleted successfully' };
   }
 }

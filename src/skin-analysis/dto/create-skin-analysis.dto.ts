@@ -9,11 +9,11 @@ export class CreateSkinAnalysisDto {
 
   @IsOptional()
   @IsString()
-  chiefComplaint?: string;
+  chiefComplaint?: string | null;
 
   @IsOptional()
   @IsString()
-  patientSymptoms?: string;
+  patientSymptoms?: string | null;
 
   @IsArray()
   @IsString({ each: true })
@@ -21,22 +21,22 @@ export class CreateSkinAnalysisDto {
 
   @IsOptional()
   @IsString()
-  notes?: string;
+  notes?: string | null;
 
   @IsOptional()
   @IsString()
-  aiDetectedDisease?: string;
+  aiDetectedDisease?: string | null;
 
   @IsOptional()
   @IsString()
-  aiDetectedCondition?: string;
+  aiDetectedCondition?: string | null;
 
   @IsOptional()
   @IsArray()
-  aiRecommendedProducts?: any[];
+  aiRecommendedProducts?: any[] | null;
 
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  mask?: string[];
+  mask?: string[] | null;
 }
