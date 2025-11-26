@@ -4,8 +4,16 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { appointmentService } from "@/services/appointmentService";
-import type { Appointment, ResolveDisputeDto } from "@/types/appointment";
-import { AppointmentStatus, DisputeDecision } from "@/types/appointment";
+import type {
+  Appointment,
+  ResolveDisputeDto,
+  AllowedDisputeReason,
+} from "@/types/appointment";
+import {
+  AppointmentStatus,
+  DisputeDecision,
+  ALLOWED_DISPUTE_REASONS,
+} from "@/types/appointment";
 import { format, differenceInMinutes } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +22,13 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +78,9 @@ export default function ReportResolutionPage() {
   const [refundPercentage, setRefundPercentage] = useState("");
   const [showPartialInput, setShowPartialInput] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [finalReason, setFinalReason] = useState<
+    AllowedDisputeReason | undefined
+  >();
 
   // State cho Confirmation Dialog
   const [confirmAction, setConfirmAction] = useState<DisputeDecision | null>(
@@ -106,6 +124,7 @@ export default function ReportResolutionPage() {
           confirmAction === DisputeDecision.PARTIAL_REFUND
             ? Math.round(refundValue)
             : undefined,
+        finalReason: finalReason ?? undefined,
       };
 
       await appointmentService.resolveDispute(appointment.appointmentId, dto);
@@ -784,7 +803,29 @@ export default function ReportResolutionPage() {
                   <span className="sr-only">Collapse verdict panel</span>
                 </Button>
                 {/* Input Note */}
-                <div className="flex-1 w-full space-y-3 pr-12">
+                <div className="flex-1 w-full space-y-5 pr-12">
+                  <div className="space-y-2">
+                    <Label className="text-base font-bold text-slate-800 flex items-center gap-2">
+                      Final Reason
+                    </Label>
+                    <Select
+                      value={finalReason}
+                      onValueChange={(value) =>
+                        setFinalReason(value as AllowedDisputeReason)
+                      }
+                    >
+                      <SelectTrigger className="h-12 bg-slate-50 text-left">
+                        <SelectValue placeholder="Select the final termination reason" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ALLOWED_DISPUTE_REASONS.map((reason) => (
+                          <SelectItem key={reason} value={reason}>
+                            {normalizeStatus(reason)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Label
                     htmlFor="adminNote"
                     className="text-base font-bold text-slate-800 flex items-center gap-2"
@@ -794,6 +835,7 @@ export default function ReportResolutionPage() {
                       (Required)
                     </span>
                   </Label>
+
                   <Textarea
                     id="adminNote"
                     placeholder="Explain your decision clearly (e.g., 'Verified system logs, Doctor was absent for 20 mins...')"
@@ -932,7 +974,9 @@ export default function ReportResolutionPage() {
                       <Button
                         variant="outline"
                         className="flex-1 h-14 flex-col gap-1 border-red-200 bg-white text-red-700 hover:bg-red-50 hover:text-red-800 hover:border-red-300 transition-all"
-                        disabled={!adminNote}
+                        disabled={
+                          !adminNote || finalReason === "CUSTOMER_NO_SHOW"
+                        }
                         onClick={() =>
                           setConfirmAction(DisputeDecision.REFUND_CUSTOMER)
                         }
@@ -948,7 +992,9 @@ export default function ReportResolutionPage() {
                       {/* Option B: Payout Doctor */}
                       <Button
                         className="flex-1 h-14 flex-col gap-1 bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all"
-                        disabled={!adminNote}
+                        disabled={
+                          !adminNote || finalReason === "DOCTOR_NO_SHOW"
+                        }
                         onClick={() =>
                           setConfirmAction(DisputeDecision.PAYOUT_DOCTOR)
                         }
@@ -975,50 +1021,58 @@ export default function ReportResolutionPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirm Final Resolution</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-4 pt-2">
-                <p>
-                  You are about to resolve this dispute with the following
-                  decision:
-                </p>
-
-                <div className="p-4 bg-slate-100 rounded-lg border border-slate-200 text-slate-800">
-                  <div className="font-bold text-lg mb-1">
-                    {confirmAction === DisputeDecision.REFUND_CUSTOMER &&
-                      "REFUND CUSTOMER (100%)"}
-                    {confirmAction === DisputeDecision.PAYOUT_DOCTOR &&
-                      "PAYOUT DOCTOR (100%)"}
-                    {confirmAction === DisputeDecision.PARTIAL_REFUND &&
-                      "PARTIAL REFUND (SPLIT)"}
+              <AlertDialogDescription asChild>
+                <div className="space-y-4 pt-2">
+                  <div>
+                    You are about to resolve this dispute with the following
+                    decision:
                   </div>
-                  <div className="text-sm text-slate-600">
-                    {confirmAction === DisputeDecision.REFUND_CUSTOMER &&
-                      "The customer will receive a full refund immediately. The doctor receives 0."}
-                    {confirmAction === DisputeDecision.PAYOUT_DOCTOR &&
-                      "The funds will be transferred to the doctor's wallet. The customer receives 0."}
-                    {confirmAction === DisputeDecision.PARTIAL_REFUND && (
-                      <ul className="list-disc list-inside mt-1">
-                        <li>
-                          Customer receives:
-                          <strong>
-                            {formatCurrency(refundValue)} =
-                            {formatPercent(refundPercent)}
-                          </strong>
-                        </li>
-                        <li>
-                          Doctor receives:
-                          <strong>
-                            {formatCurrency(doctorShare)} =
-                            {formatPercent(doctorPercent)}
-                          </strong>
-                        </li>
-                      </ul>
-                    )}
+
+                  <div className="p-4 bg-slate-100 rounded-lg border border-slate-200 text-slate-800">
+                    <div className="font-bold text-lg mb-1">
+                      {confirmAction === DisputeDecision.REFUND_CUSTOMER &&
+                        "REFUND CUSTOMER (100%)"}
+                      {confirmAction === DisputeDecision.PAYOUT_DOCTOR &&
+                        "PAYOUT DOCTOR (100%)"}
+                      {confirmAction === DisputeDecision.PARTIAL_REFUND &&
+                        "PARTIAL REFUND (SPLIT)"}
+                    </div>
+                    <div className="text-sm text-slate-600">
+                      {confirmAction === DisputeDecision.REFUND_CUSTOMER &&
+                        "The customer will receive a full refund immediately. The doctor receives 0."}
+                      {confirmAction === DisputeDecision.PAYOUT_DOCTOR &&
+                        "The funds will be transferred to the doctor's wallet. The customer receives 0."}
+                      {confirmAction === DisputeDecision.PARTIAL_REFUND && (
+                        <ul className="list-disc list-inside mt-1">
+                          <li>
+                            Customer receives:
+                            <strong>
+                              {formatCurrency(refundValue)} =
+                              {formatPercent(refundPercent)}
+                            </strong>
+                          </li>
+                          <li>
+                            Doctor receives:
+                            <strong>
+                              {formatCurrency(doctorShare)} =
+                              {formatPercent(doctorPercent)}
+                            </strong>
+                          </li>
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                  {finalReason && (
+                    <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                      <strong>Final reason confirmed:</strong>
+                      {normalizeStatus(finalReason)}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 font-bold text-red-600">
+                    <AlertTriangle className="h-4 w-4" />
+                    This action is irreversible.
                   </div>
                 </div>
-
-                <p className="font-bold text-red-600">
-                  ⚠️ This action is irreversible.
-                </p>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

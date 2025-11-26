@@ -6,7 +6,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { appointmentService } from "@/services/appointmentService";
 import type {
-  Appointment,
   AppointmentDetailDto,
   CompleteAppointmentDto,
   InterruptAppointmentDto,
@@ -32,6 +31,7 @@ import {
   FileText,
   Save,
   AlertCircle,
+  AlertTriangle,
   ClipboardCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -76,13 +76,11 @@ export default function AppointmentDetailPage() {
     null
   );
 
-  // --- STATE MỚI CHO REPORT ---
   const [reportDialogOpen, setReportDialogOpen] = useState<
     "noshow" | "interrupt" | null
   >(null);
   const [isReporting, setIsReporting] = useState(false);
 
-  // Form state cho Report
   const [reportNote, setReportNote] = useState("");
   const [interruptReason, setInterruptReason] = useState<TerminationReason>(
     TerminationReason.PLATFORM_ISSUE
@@ -169,7 +167,7 @@ export default function AppointmentDetailPage() {
       });
       setReportDialogOpen(null);
       setReportNote("");
-      await fetchAppointment(); // Tải lại
+      await fetchAppointment();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -181,7 +179,7 @@ export default function AppointmentDetailPage() {
     }
   };
 
-  // --- (MỚI) Handle Report Interrupt ---
+  // Handle Report Interrupt ---
   const handleReportInterrupt = async () => {
     if (!appointment) return;
     setIsReporting(true);
@@ -190,7 +188,6 @@ export default function AppointmentDetailPage() {
         reason: interruptReason,
         terminationNote: reportNote || undefined,
       };
-      // Gọi API
       await appointmentService.reportInterrupt(appointment.appointmentId, dto);
 
       toast({
@@ -491,7 +488,7 @@ export default function AppointmentDetailPage() {
             <SkinAnalysisCard analysis={appointment.skinAnalysis} />
           )}
 
-          {/* 3. (MỚI) Card Medical Note (Ghi chú Y khoa) */}
+          {/* 3.  Card Medical Note  */}
           {showMedicalNoteCard && (
             <Card className="shadow-lg border-blue-200 border-2">
               <CardHeader className="flex flex-row items-center justify-between pb-2 bg-blue-50/50">
@@ -574,7 +571,7 @@ export default function AppointmentDetailPage() {
           />
         </div>
       </div>
-      {/* --- (MỚI) Dialog Report No-Show --- */}
+      {/*  Dialog Report No-Show  */}
       <AlertDialog
         open={reportDialogOpen === "noshow"}
         onOpenChange={(open) => !open && setReportDialogOpen(null)}
@@ -608,7 +605,7 @@ export default function AppointmentDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* --- (MỚI) Dialog Report Interrupt --- */}
+      {/*  Dialog Report Interrupt  */}
       <AlertDialog
         open={reportDialogOpen === "interrupt"}
         onOpenChange={(open) => !open && setReportDialogOpen(null)}
@@ -644,6 +641,21 @@ export default function AppointmentDetailPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
+              {interruptReason === TerminationReason.DOCTOR_ISSUE && (
+                <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold">
+                      Confirm the issue is on your side?
+                    </p>
+                    <p>
+                      You are reporting that the interruption was caused by your
+                      actions. The appointment will be cancelled and 100% of the
+                      payment will be refunded to the customer immediately.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Detailed Description (Optional)</Label>

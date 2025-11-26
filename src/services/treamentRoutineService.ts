@@ -7,6 +7,17 @@ import type {
 import type { ApiResponse } from "@/types/api";
 
 class TreatmentRoutineService {
+  async findByDermatologist(
+    dermatologistId: string,
+    customerId?: string
+  ): Promise<TreatmentRoutine[]> {
+    const endpoint = `/api/treatment-routines/dermatologist/${dermatologistId}`;
+    const res = await http.get<ApiResponse<TreatmentRoutine[]>>(endpoint, {
+      params: { customerId },
+    });
+    return res.data;
+  }
+
   async getById(id: string): Promise<TreatmentRoutine> {
     const res = await http.get<ApiResponse<TreatmentRoutine>>(
       `/api/treatment-routines/${id}`

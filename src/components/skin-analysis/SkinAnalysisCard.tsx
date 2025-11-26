@@ -67,9 +67,8 @@ export function SkinAnalysisCard({ analysis }: SkinAnalysisCardProps) {
               <CardTitle className="text-2xl">
                 Patient's Skin Analysis
               </CardTitle>
-              <CardDescription>
-                Analysis ID: {analysis.analysisId.substring(0, 8)}... (
-                {analysis.source})
+              <CardDescription className="text-blue-500 font-semibold bg-blue-100 inline-block px-2 py-1 rounded-md mt-1">
+                {analysis.source}
               </CardDescription>
             </div>
           </div>

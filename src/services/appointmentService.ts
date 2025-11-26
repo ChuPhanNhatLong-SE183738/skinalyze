@@ -16,26 +16,17 @@ class AppointmentService {
     filters: FindAppointmentsDto = {}
   ): Promise<Appointment[]> {
     try {
-      // Tạo URLSearchParams
-      const params = new URLSearchParams();
-
-      if (filters.customerId) params.append("customerId", filters.customerId);
-      if (filters.dermatologistId)
-        params.append("dermatologistId", filters.dermatologistId);
-
-      // Handle status (can be array or single)
-      if (filters.status) {
-        if (Array.isArray(filters.status)) {
-          // If is an array append: ?status=A&status=B
-          filters.status.forEach((s) => params.append("status", s));
-        } else {
-          params.append("status", filters.status);
+      const { customerId, dermatologistId, status } = filters;
+      const response = await http.get<ApiResponse<Appointment[]>>(
+        "/api/appointments",
+        {
+          params: {
+            customerId,
+            dermatologistId,
+            status,
+          },
         }
-      }
-
-      const endpoint = `/api/appointments?${params.toString()}`;
-
-      const response = await http.get<ApiResponse<Appointment[]>>(endpoint);
+      );
       return response.data;
     } catch (error) {
       console.error("Lỗi khi lấy danh sách cuộc hẹn (service):", error);
@@ -71,7 +62,6 @@ class AppointmentService {
     note: string
   ): Promise<Appointment> {
     const dto: UpdateMedicalNoteDto = { medicalNote: note };
-    // Gọi BFF Route
     const response = await http.patch<ApiResponse<Appointment>>(
       `/api/appointments/dermatologist/medical-note/${appointmentId}`,
       dto
@@ -131,9 +121,6 @@ class AppointmentService {
     return response.data;
   }
 
-  /**
-   * (Admin) Giải quyết tranh chấp
-   */
   async resolveDispute(
     appointmentId: string,
     dto: ResolveDisputeDto

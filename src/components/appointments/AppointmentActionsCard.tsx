@@ -127,7 +127,12 @@ export function AppointmentActionsCard({
 }: AppointmentActionsCardProps) {
   const canReport =
     appointment.appointmentStatus === AppointmentStatus.IN_PROGRESS ||
-    appointment.appointmentStatus === AppointmentStatus.COMPLETED;
+    appointment.appointmentStatus === AppointmentStatus.COMPLETED ||
+    appointment.appointmentStatus === AppointmentStatus.INTERRUPTED ||
+    appointment.appointmentStatus === AppointmentStatus.DISPUTED;
+  const canReportNoShow =
+    appointment.appointmentStatus !== AppointmentStatus.INTERRUPTED &&
+    appointment.appointmentStatus !== AppointmentStatus.DISPUTED;
   const trimmedAdminNote = appointment.adminNote?.trim();
   const resolutionMessage = trimmedAdminNote || appointment.statusMessage;
 
@@ -149,12 +154,12 @@ export function AppointmentActionsCard({
               <DropdownMenuContent align="end" side="right">
                 <DropdownMenuLabel>Report Issue</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-
-                <DropdownMenuItem onClick={onReportNoShowClick}>
-                  <Flag className="mr-2 h-4 w-4 text-red-600 focus:text-red-600" />
-                  <span>Report No-Show</span>
-                </DropdownMenuItem>
-
+                {canReportNoShow && (
+                  <DropdownMenuItem onClick={onReportNoShowClick}>
+                    <Flag className="mr-2 h-4 w-4 text-red-600 focus:text-red-600" />
+                    <span>Report No-Show</span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={onReportInterruptClick}>
                   <AlertOctagon className="mr-2 h-4 w-4 text-orange-600 focus:text-orange-600" />
                   <span>Report Interruption</span>

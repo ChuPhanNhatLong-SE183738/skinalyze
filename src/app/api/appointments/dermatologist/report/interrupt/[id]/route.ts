@@ -6,9 +6,7 @@ export async function PATCH(
   context: { params: { id: string } }
 ) {
   try {
-    const pathname = req.nextUrl.pathname;
-    const parts = pathname.split("/");
-    const id = parts[parts.length - 2];
+    const { id } = context.params;
     const body = await req.json();
 
     const data = await api.patch(

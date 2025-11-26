@@ -47,6 +47,17 @@ export enum TerminationReason {
   PLATFORM_ISSUE = "PLATFORM_ISSUE",
 }
 
+export const ALLOWED_DISPUTE_REASONS = [
+  TerminationReason.DOCTOR_NO_SHOW,
+  TerminationReason.CUSTOMER_NO_SHOW,
+  TerminationReason.DOCTOR_ISSUE,
+  TerminationReason.CUSTOMER_ISSUE,
+  TerminationReason.PLATFORM_ISSUE,
+  TerminationReason.SYSTEM_CANCELLED,
+] as const satisfies readonly TerminationReason[];
+
+export type AllowedDisputeReason = (typeof ALLOWED_DISPUTE_REASONS)[number];
+
 export interface Appointment {
   appointmentId: string;
   startTime: string;
@@ -122,4 +133,5 @@ export interface ResolveDisputeDto {
   decision: DisputeDecision;
   adminNote: string;
   refundAmount?: number; // Required if PARTIAL_REFUND
+  finalReason?: AllowedDisputeReason;
 }

@@ -4,6 +4,7 @@ import type {
   CreateAvailabilityDto,
   SlotStatus,
 } from "@/types/availability-slot";
+import type { ApiResponse } from "@/types/api";
 
 export interface GetSlotsParams {
   startDate?: string;
@@ -22,16 +23,14 @@ class AvailabilityService {
   }
 
   async getMySlots(params: GetSlotsParams = {}): Promise<AvailabilitySlot[]> {
-    const query = new URLSearchParams();
-    if (params.startDate) query.set("startDate", params.startDate);
-    if (params.endDate) query.set("endDate", params.endDate);
-    if (params.status) query.set("status", params.status);
-
-    const endpoint = `/api/availability-slots?${query.toString()}`;
-
     try {
-      const response = await http.get<any>(endpoint);
-      return response.data as AvailabilitySlot[];
+      const response = await http.get<ApiResponse<AvailabilitySlot[]>>(
+        "/api/availability-slots",
+        {
+          params,
+        }
+      );
+      return response.data;
     } catch (error) {
       console.error("Lỗi khi lấy lịch rảnh (service):", error);
       throw error;

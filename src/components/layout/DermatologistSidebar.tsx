@@ -10,6 +10,8 @@ import {
   CalendarCheck,
   Award,
   User,
+  PanelsTopLeft,
+  Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,6 +39,11 @@ const menuItems = [
     title: "Subscription Plan",
     href: "/dermatologist/subscription-plan",
     icon: Award,
+  },
+  {
+    title: "My Patients",
+    href: "/dermatologist/patients",
+    icon: Stethoscope,
   },
   {
     title: "Profile",
