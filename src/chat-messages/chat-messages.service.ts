@@ -8,6 +8,7 @@ import { CreateChatMessageDto } from './dto/create-chat-message.dto';
 import { ChatMessage } from './entities/chat-message.entity';
 import { ChatSession } from '../chat-sessions/entities/chat-session.entity';
 import { ChatSessionsService } from '../chat-sessions/chat-sessions.service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 interface ConversationHistory {
   role: 'user' | 'ai';
@@ -40,6 +41,7 @@ export class ChatMessagesService {
     private chatSessionRepository: Repository<ChatSession>,
     private chatSessionsService: ChatSessionsService,
     private configService: ConfigService,
+    private cloudinaryService: CloudinaryService,
   ) {
     this.aiServiceUrl = this.configService.get<string>('AI_SERVICE_URL') || 'http://localhost:8000';
     
@@ -47,10 +49,10 @@ export class ChatMessagesService {
       throw new Error('AI_SERVICE_URL is not set in environment variables');
     }
 
-    // Initialize axios instance with a longer timeout for AI processing
+    // Initialize axios instance with a longer timeout for AI processing (VLM)
     this.axiosInstance = axios.create({
       baseURL: this.aiServiceUrl,
-      timeout: 60000, // 60 seconds timeout (VLM can take time)
+      timeout: 60000, // 60 seconds timeout
     });
   }
 
@@ -58,59 +60,68 @@ export class ChatMessagesService {
     createChatMessageDto: CreateChatMessageDto,
     imageFile?: Express.Multer.File,
   ): Promise<{ userMessage: ChatMessage; aiMessage: ChatMessage }> {
-    const { chatId, messageContent } = createChatMessageDto;
+    const { chatId } = createChatMessageDto;
+    // Handle optional text safely
+    const messageContent = createChatMessageDto.messageContent || '';
 
-    // Verify chat session exists
+    // 1. Verify chat session exists
     const chatSession = await this.chatSessionRepository.findOne({
       where: { chatId },
       relations: ['messages'],
-      order: { messages: { createdAt: 'ASC' } } // Ensure order for context
+      order: { messages: { createdAt: 'ASC' } }
     });
 
     if (!chatSession) {
       throw new NotFoundException(`Chat session with ID ${chatId} not found`);
     }
 
-    // Check if this is the first user message
-    const userMessages = chatSession.messages.filter(
-      (msg) => msg.sender === 'user',
-    );
-    const isFirstUserMessage = userMessages.length === 0;
+    // 2. Upload to Cloudinary (if image exists)
+    let savedImageUrl: string | null = null;
 
-    // 1. Save User Message
-    // If an image is attached, we append a marker to the text content stored in DB
-    // This helps the UI know an image was sent (if you don't have a separate image URL field)
-    const storedContent = imageFile 
-      ? `${messageContent}\n[Attached Image: ${imageFile.originalname}]`
-      : messageContent;
+    if (imageFile) {
+      try {
+        // Upload to a 'chat-images' folder in your Cloudinary bucket
+        const uploadResult = await this.cloudinaryService.uploadImage(imageFile, 'chat-images');
+        savedImageUrl = uploadResult.secure_url;
+      } catch (error) {
+        console.error('Error uploading to Cloudinary:', error);
+        throw new BadRequestException('Failed to upload image');
+      }
+    }
 
+    // 3. Save User Message (Store full Cloudinary URL)
     const userMessage = this.chatMessageRepository.create({
       chatId,
       sender: 'user',
-      messageContent: storedContent,
+      messageContent: messageContent,
+      imageUrl: savedImageUrl, 
     });
     await this.chatMessageRepository.save(userMessage);
 
-    // Update chat title if this is the first user message
-    if (isFirstUserMessage) {
+    // 4. Update Chat Title (if this is the first user message)
+    const userMessagesCount = chatSession.messages.filter(m => m.sender === 'user').length;
+    // Only update title if there is actual text content
+    if (userMessagesCount === 0 && messageContent) {
       await this.chatSessionsService.updateTitleFromMessage(
         chatId,
         messageContent,
       );
     }
 
-    // 2. Get AI response from FastAPI backend
+    // 5. Call AI Service
+    // We pass the raw buffer to the AI for processing, but the DB has the Cloudinary URL
     const aiResponse = await this.getAIResponse(
       messageContent,
       chatSession.messages,
       imageFile,
     );
 
-    // 3. Save AI message
+    // 6. Save AI Message
     const aiMessage = this.chatMessageRepository.create({
       chatId,
       sender: 'ai',
       messageContent: aiResponse,
+      imageUrl: null,
     });
     await this.chatMessageRepository.save(aiMessage);
 
@@ -126,23 +137,21 @@ export class ChatMessagesService {
       const formData = new FormData();
 
       // A. Append Question
-      formData.append('question', userMessage);
+      const promptToSend = userMessage.trim() === '' ? 'Analyze this image' : userMessage;
+      formData.append('question', promptToSend);
 
       // B. Append History
-      // Filter out greeting and clean up history
       const greetingMessage = "Greeting, I'm Skinalyze AI, how can i help you today?";
       const conversationHistory: ConversationHistory[] = previousMessages
         .filter((msg) => msg.messageContent !== greetingMessage)
         .map((msg) => ({
           role: msg.sender === 'user' ? 'user' : 'ai',
-          // Remove internal image markers from history to not confuse the AI text model
-          content: msg.messageContent.replace(/\[Attached Image:.*?\]/g, '').trim(),
+          content: msg.messageContent,
         }));
 
-      // FastAPI expects history as a JSON string in form-data
       formData.append('conversation_history', JSON.stringify(conversationHistory));
 
-      // C. Append Image (if exists)
+      // C. Append Image Buffer for AI Analysis (if exists)
       if (imageFile) {
         formData.append('image', imageFile.buffer, {
           filename: imageFile.originalname,
@@ -151,7 +160,6 @@ export class ChatMessagesService {
       }
 
       // Call FastAPI /chat endpoint
-      // Note: We must spread formData.getHeaders() to set the correct Content-Type boundary
       const response = await this.axiosInstance.post<ChatResponse>('/chat', formData, {
         headers: {
           ...formData.getHeaders(),
@@ -180,12 +188,12 @@ export class ChatMessagesService {
     }
   }
 
+  // --- Legacy / Standalone Analysis Method ---
   async analyzeImage(
     chatId: string,
     imageFile: Express.Multer.File,
     additionalText?: string,
   ): Promise<{ userMessage: ChatMessage; aiMessage: ChatMessage }> {
-    // Verify chat session exists
     const chatSession = await this.chatSessionRepository.findOne({
       where: { chatId },
     });
@@ -194,10 +202,19 @@ export class ChatMessagesService {
       throw new NotFoundException(`Chat session with ID ${chatId} not found`);
     }
 
+    // Upload to Cloudinary
+    let savedImageUrl: string | null = null;
     try {
-      // Create FormData for image upload
+        const uploadResult = await this.cloudinaryService.uploadImage(imageFile, 'chat-images');
+        savedImageUrl = uploadResult.secure_url;
+    } catch (e) {
+        console.error('Failed to upload analysis image to Cloudinary', e);
+        // We continue processing with AI even if upload fails (optional decision)
+        // But typically you'd want to throw here if storage is critical
+    }
+
+    try {
       const formData = new FormData();
-      
       formData.append('image', imageFile.buffer, {
         filename: imageFile.originalname,
         contentType: imageFile.mimetype,
@@ -207,7 +224,6 @@ export class ChatMessagesService {
         formData.append('additional_text', additionalText);
       }
 
-      // Call FastAPI /analyze-image endpoint
       const response = await this.axiosInstance.post<ImageAnalysisResponse>(
         '/analyze-image',
         formData,
@@ -218,25 +234,23 @@ export class ChatMessagesService {
         },
       );
 
-      // Save user message (image upload notification)
+      // Save user message
       const userMessage = this.chatMessageRepository.create({
         chatId,
         sender: 'user',
         messageContent: additionalText || '[Uploaded an image for analysis]',
+        imageUrl: savedImageUrl,
       });
       await this.chatMessageRepository.save(userMessage);
 
       // Format AI response
       let aiResponseText = '';
-      
       if (response.data.skin_analysis) {
         aiResponseText += `**Phân tích da:**\n${response.data.skin_analysis}\n\n`;
       }
-      
       if (response.data.product_recommendation) {
         aiResponseText += `**Gợi ý sản phẩm:**\n${response.data.product_recommendation}\n\n`;
       }
-      
       if (response.data.severity_warning) {
         aiResponseText += `⚠️ **Cảnh báo:**\n${response.data.severity_warning}`;
       }
@@ -246,6 +260,7 @@ export class ChatMessagesService {
         chatId,
         sender: 'ai',
         messageContent: aiResponseText.trim(),
+        imageUrl: null,
       });
       await this.chatMessageRepository.save(aiMessage);
 
@@ -286,6 +301,10 @@ export class ChatMessagesService {
     if (!message) {
       throw new NotFoundException(`Message with ID ${messageId} not found`);
     }
+
+    // Note: We do NOT automatically delete from Cloudinary here to prevent accidental data loss.
+    // If you want to enable this, use: await this.cloudinaryService.deleteImage(publicId);
+    // You would need to extract the publicId from the secure_url first.
     
     await this.chatMessageRepository.remove(message);
   }
