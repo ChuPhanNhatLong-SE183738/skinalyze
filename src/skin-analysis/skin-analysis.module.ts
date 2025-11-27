@@ -6,10 +6,12 @@ import { SkinAnalysisService } from './skin-analysis.service';
 import { SkinAnalysis } from './entities/skin-analysis.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { CustomersModule } from 'src/customers/customers.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([SkinAnalysis, Customer]),
+    CustomersModule,
     ConfigModule,
     CloudinaryModule,
   ],

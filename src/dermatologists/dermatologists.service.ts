@@ -6,19 +6,30 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { Dermatologist } from './entities/dermatologist.entity';
 import {
   CreateDermatologistDto,
   UpdateDermatologistDto,
 } from './dto/create-dermatologist.dto';
 import { UsersService } from 'src/users/users.service';
+import {
+  GetMyPatientsDto,
+  PatientListItemDto,
+} from './dto/get-my-patients.dto';
+import { Customer } from 'src/customers/entities/customer.entity';
+import { differenceInYears, isSameDay } from 'date-fns';
+import { Brackets } from 'typeorm';
+import { Appointment } from 'src/appointments/entities/appointment.entity';
+import { AppointmentStatus } from 'src/appointments/types/appointment.types';
 
 @Injectable()
 export class DermatologistsService {
   constructor(
     @InjectRepository(Dermatologist)
     private readonly dermatologistRepository: Repository<Dermatologist>,
+    @InjectRepository(Customer)
+    private readonly customerRepository: Repository<Customer>,
     private readonly usersService: UsersService,
   ) {}
 
@@ -76,8 +87,6 @@ export class DermatologistsService {
 
   async findByUserId(userId: string): Promise<Dermatologist> {
     try {
-      // console.log('Long log ID', userId);
-
       const dermatologist = await this.dermatologistRepository.findOne({
         where: { user: { userId } },
         relations: ['user'],
@@ -146,5 +155,154 @@ export class DermatologistsService {
     }
 
     throw new InternalServerErrorException(message);
+  }
+
+  /**
+   * ⭐️ HÀM MỚI: Lấy danh sách bệnh nhân của bác sĩ
+   * Logic: Bệnh nhân của tôi là người CÓ Appointment HOẶC CÓ TreatmentRoutine với tôi.
+   */
+  async getPatientsForDermatologist(
+    userId: string,
+    filters: GetMyPatientsDto,
+  ): Promise<{
+    data: PatientListItemDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    try {
+      const dermatologist = await this.findByUserId(userId);
+      const dermatologistId = dermatologist.dermatologistId;
+
+      const { search, page = 1, limit = 10 } = filters;
+      const skip = (page - 1) * limit;
+
+      // 2. Query Builder để tìm Customer
+      const query = this.customerRepository
+        .createQueryBuilder('customer')
+        .leftJoinAndSelect('customer.user', 'user')
+        // Join các quan hệ liên quan đến bác sĩ này để filter
+        .leftJoin(
+          'customer.appointments',
+          'appointment',
+          'appointment.dermatologistId = :dermatologistId',
+          { dermatologistId },
+        )
+        .leftJoin(
+          'customer.treatmentRoutines',
+          'routine',
+          'routine.dermatologistId = :dermatologistId',
+          { dermatologistId },
+        )
+        // Filter: Phải có ít nhất 1 cuộc hẹn hoặc 1 lộ trình với bác sĩ này
+        .where(
+          new Brackets((qb) => {
+            qb.where('appointment.appointmentId IS NOT NULL').orWhere(
+              'routine.routineId IS NOT NULL',
+            );
+          }),
+        );
+
+      // 3. Tìm kiếm (Search)
+      if (search) {
+        query.andWhere(
+          new Brackets((qb) => {
+            qb.where('user.fullName LIKE :search', { search: `%${search}%` })
+              .orWhere('user.phone LIKE :search', { search: `%${search}%` })
+              .orWhere('user.email LIKE :search', { search: `%${search}%` });
+          }),
+        );
+      }
+
+      // 4. Phân trang
+      query.skip(skip).take(limit);
+
+      // Lấy danh sách customer và tổng số
+      const [customers, total] = await query.getManyAndCount();
+
+      // 5. Map dữ liệu sang DTO (Cần query thêm để lấy thông tin chi tiết cho từng người)
+      // (Để tối ưu, bước này có thể dùng sub-query trong SQL, nhưng xử lý ở code sẽ dễ đọc hơn cho logic phức tạp)
+      const populatedData = await Promise.all(
+        customers.map(async (customer) => {
+          return this.mapToPatientListItem(customer, dermatologistId);
+        }),
+      );
+
+      return {
+        data: populatedData,
+        total,
+        page,
+        limit,
+      };
+    } catch (error) {
+      this.handleError(error, 'Failed to get patients list');
+    }
+  }
+
+  /**
+   * Helper: Tính toán thông tin hiển thị cho từng bệnh nhân
+   */
+  private async mapToPatientListItem(
+    customer: Customer,
+    dermatologistId: string,
+  ): Promise<PatientListItemDto> {
+    const now = new Date();
+    const appRepo = this.customerRepository.manager.getRepository(Appointment);
+
+    // A. Get last Appointment
+    const lastAppt = await appRepo.findOne({
+      where: {
+        customer: { customerId: customer.customerId },
+        dermatologist: { dermatologistId: dermatologistId },
+        startTime: LessThan(now),
+        // (Optional: Chỉ lấy status COMPLETED hoặc NO_SHOW?)
+        // appointmentStatus: In([AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW])
+      },
+      order: { startTime: 'DESC' },
+    });
+
+    // B. Get next Appointment
+    const nextAppt = await appRepo.findOne({
+      where: {
+        customer: { customerId: customer.customerId },
+        dermatologist: { dermatologistId: dermatologistId },
+        startTime: MoreThanOrEqual(now),
+        appointmentStatus: AppointmentStatus.SCHEDULED,
+      },
+      order: { startTime: 'ASC' },
+    });
+
+    return {
+      customerId: customer.customerId,
+      userId: customer.user.userId,
+      fullName: customer.user.fullName,
+      photoUrl: customer.user.photoUrl,
+      phone: customer.user.phone,
+      gender: customer.user.gender,
+      age: customer.user.dob
+        ? differenceInYears(now, new Date(customer.user.dob))
+        : null,
+
+      //  Last Appointment Info
+      lastAppointment: lastAppt
+        ? {
+            appointmentId: lastAppt.appointmentId,
+            date: lastAppt.startTime,
+            status: lastAppt.appointmentStatus,
+            type: lastAppt.appointmentType,
+          }
+        : null,
+
+      //  Next Appointment Info
+      nextAppointment: nextAppt
+        ? {
+            appointmentId: nextAppt.appointmentId,
+            date: nextAppt.startTime,
+            status: nextAppt.appointmentStatus,
+            type: nextAppt.appointmentType,
+            isToday: isSameDay(new Date(nextAppt.startTime), now),
+          }
+        : null,
+    };
   }
 }

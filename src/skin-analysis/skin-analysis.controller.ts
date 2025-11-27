@@ -11,8 +11,9 @@ import {
   UseGuards,
   HttpStatus,
   Body,
+  UploadedFiles,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiConsumes,
@@ -25,6 +26,8 @@ import {
 import { SkinAnalysisService } from './skin-analysis.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateManualAnalysisDto } from './dto/create-manual-analysis.dto';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
+import { User } from 'src/users/entities/user.entity';
 
 @ApiTags('Skin Analysis')
 @Controller('skin-analysis')
@@ -153,7 +156,7 @@ export class SkinAnalysisController {
   // ==================================================================
   // 3. MANUAL ENTRY (No AI)
   // ==================================================================
-  @Post('manual-entry/:customerId')
+  @Post('manual-entry')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
@@ -178,19 +181,19 @@ export class SkinAnalysisController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FilesInterceptor('file'))
   async manualEntry(
-    @Param('customerId') customerId: string,
+    @GetUser() user: User,
     @Body() body: CreateManualAnalysisDto,
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFiles() files?: Express.Multer.File[],
   ) {
     // Manual entry allows optional file, so we don't use ParseFilePipe here
     // or we use a custom validator that allows undefined.
     // For simplicity, we just check file type if file exists inside service or here manually.
     return await this.skinAnalysisService.createManualEntry(
-      customerId,
+      user.userId,
       body,
-      file,
+      files,
     );
   }
 

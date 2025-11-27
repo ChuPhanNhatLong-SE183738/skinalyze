@@ -11,12 +11,12 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial } from 'typeorm';
 import { SkinAnalysis } from './entities/skin-analysis.entity';
-import { CreateSkinAnalysisDto } from './dto/create-skin-analysis.dto';
 import { CreateManualAnalysisDto } from './dto/create-manual-analysis.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { Customer } from '../customers/entities/customer.entity';
 import axios from 'axios';
 import * as FormData from 'form-data';
+import { CustomersService } from 'src/customers/customers.service';
 
 @Injectable()
 export class SkinAnalysisService {
@@ -30,6 +30,7 @@ export class SkinAnalysisService {
     private customerRepository: Repository<Customer>,
     private configService: ConfigService,
     private cloudinaryService: CloudinaryService,
+    private readonly customersService: CustomersService,
   ) {
     this.aiServiceUrl =
       this.configService.get<string>('AI_SERVICE_URL') ||
@@ -64,10 +65,7 @@ export class SkinAnalysisService {
         'Cannot connect to AI Service. Please try again later.',
       );
     }
-    throw new HttpException(
-      'Internal Error',
-      HttpStatus.INTERNAL_SERVER_ERROR,
-    );
+    throw new HttpException('Internal Error', HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
   private async validateCustomer(customerId: string): Promise<Customer> {
@@ -187,30 +185,36 @@ export class SkinAnalysisService {
   // ==================================================================
 
   async createManualEntry(
-    customerId: string,
+    userId: string,
     dto: CreateManualAnalysisDto,
-    file?: Express.Multer.File,
+    files?: Express.Multer.File[],
   ): Promise<SkinAnalysis> {
-    this.logger.log(`Creating manual entry for: ${customerId}`);
-    await this.validateCustomer(customerId);
+    const customer = await this.customersService.findByUserId(userId);
 
     let imageUrls: string[] = [];
-    if (file) {
-      this.logger.debug('Uploading manual image to Cloudinary...');
+    if (files && files.length > 0) {
+      this.logger.debug(
+        `Uploading ${files.length} manual images to Cloudinary...`,
+      );
       try {
-        const uploadResult = await this.cloudinaryService.uploadImage(
-          file,
-          'skin-analysis/manual-uploads',
+        const uploadPromises = files.map((file) =>
+          this.cloudinaryService.uploadImage(
+            file,
+            'skin-analysis/manual-uploads',
+          ),
         );
-        imageUrls = [uploadResult.secure_url];
+
+        const uploadResults = await Promise.all(uploadPromises);
+
+        imageUrls = uploadResults.map((result) => result.secure_url);
       } catch (error) {
         this.logger.error('Cloudinary Upload Failed', error);
-        throw new BadGatewayException('Failed to upload image');
+        throw new BadGatewayException('Failed to upload one or more images');
       }
     }
 
     const analysisData: DeepPartial<SkinAnalysis> = {
-      customerId,
+      customerId: customer.customerId,
       source: 'MANUAL',
       chiefComplaint: dto.chiefComplaint,
       patientSymptoms: dto.patientSymptoms,

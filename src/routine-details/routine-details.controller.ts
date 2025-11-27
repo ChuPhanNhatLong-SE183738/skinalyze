@@ -15,8 +15,9 @@ import { UpdateRoutineDetailDto } from './dto/update-routine-detail.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../users/entities/user.entity';
+import { User, UserRole } from '../users/entities/user.entity';
 import { ResponseHelper } from '../utils/responses';
+import { GetUser } from 'src/auth/decorators/get-user.decorator';
 
 @ApiTags('Routine Details')
 @ApiBearerAuth()
@@ -28,8 +29,12 @@ export class RoutineDetailsController {
   @Post()
   @Roles(UserRole.DERMATOLOGIST, UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a new Routine detail' })
-  async create(@Body() createRoutineDetailDto: CreateRoutineDetailDto) {
+  async create(
+    @GetUser() user: User,
+    @Body() createRoutineDetailDto: CreateRoutineDetailDto,
+  ) {
     const detail = await this.routineDetailsService.create(
+      user.userId,
       createRoutineDetailDto,
     );
     return ResponseHelper.created(
@@ -71,28 +76,55 @@ export class RoutineDetailsController {
     );
   }
 
+  // @Patch(':id')
+  // @Roles(UserRole.DERMATOLOGIST, UserRole.ADMIN)
+  // @ApiOperation({ summary: 'Update a Routine detail' })
+  // async update(
+  //   @Param('id') id: string,
+  //   @Body() updateRoutineDetailDto: UpdateRoutineDetailDto,
+  // ) {
+  //   const detail = await this.routineDetailsService.update(
+  //     id,
+  //     updateRoutineDetailDto,
+  //   );
+  //   return ResponseHelper.success(
+  //     'Routine detail updated successfully',
+  //     detail,
+  //   );
+  // }
+
+  // @Delete(':id')
+  // @Roles(UserRole.DERMATOLOGIST, UserRole.ADMIN)
+  // @ApiOperation({ summary: 'Delete a Routine detail' })
+  // async remove(@Param('id') id: string) {
+  //   await this.routineDetailsService.remove(id);
+  //   return ResponseHelper.success('Routine detail deleted successfully');
+  // }
+
   @Patch(':id')
-  @Roles(UserRole.DERMATOLOGIST, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update a Routine detail' })
+  @Roles(UserRole.DERMATOLOGIST)
+  @ApiOperation({ summary: 'Update a Routine detail (Versioning)' })
   async update(
+    @GetUser() user: User,
     @Param('id') id: string,
     @Body() updateRoutineDetailDto: UpdateRoutineDetailDto,
   ) {
-    const detail = await this.routineDetailsService.update(
+    const detail = await this.routineDetailsService.updateWithVersioning(
+      user.userId,
       id,
       updateRoutineDetailDto,
     );
     return ResponseHelper.success(
-      'Routine detail updated successfully',
+      'Routine detail updated successfully (new version created)',
       detail,
     );
   }
 
   @Delete(':id')
-  @Roles(UserRole.DERMATOLOGIST, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete a Routine detail' })
-  async remove(@Param('id') id: string) {
-    await this.routineDetailsService.remove(id);
-    return ResponseHelper.success('Routine detail deleted successfully');
+  @Roles(UserRole.DERMATOLOGIST)
+  @ApiOperation({ summary: 'Soft delete a Routine detail' })
+  async remove(@GetUser() user: User, @Param('id') id: string) {
+    await this.routineDetailsService.softRemove(user.userId, id);
+    return ResponseHelper.success('Routine detail deactivated successfully');
   }
 }

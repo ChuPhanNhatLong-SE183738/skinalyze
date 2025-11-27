@@ -32,6 +32,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { ResponseHelper } from '../utils/responses';
+import { FindProductsDto } from './dto/find-products.dto';
 
 @ApiTags('Products')
 @Controller('products')
@@ -126,8 +127,8 @@ export class ProductsController {
   @Get()
   @ApiOperation({ summary: 'Get all products' })
   @ApiResponse({ status: 200, description: 'Returns all products' })
-  async findAll() {
-    const products = await this.productsService.findAll();
+  async findAll(@Query() filters: FindProductsDto) {
+    const products = await this.productsService.findAll(filters);
     return ResponseHelper.success('Products retrieved successfully', products);
   }
 
@@ -180,7 +181,9 @@ export class ProductsController {
   @UseInterceptors(FilesInterceptor('images', 5)) // Max 5 new images
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Update product (with optional image upload) (Admin only)' })
+  @ApiOperation({
+    summary: 'Update product (with optional image upload) (Admin only)',
+  })
   @ApiParam({ name: 'id', type: String, description: 'Product UUID' })
   @ApiBody({
     schema: {
@@ -217,25 +220,30 @@ export class ProductsController {
   ) {
     // Parse FormData fields
     const updateData: Partial<UpdateProductDto> = {};
-    
+
     if (body.productName) updateData.productName = body.productName;
-    if (body.productDescription) updateData.productDescription = body.productDescription;
+    if (body.productDescription)
+      updateData.productDescription = body.productDescription;
     if (body.stock) updateData.stock = parseInt(body.stock, 10);
     if (body.brand) updateData.brand = body.brand;
-    if (body.sellingPrice) updateData.sellingPrice = parseFloat(body.sellingPrice);
+    if (body.sellingPrice)
+      updateData.sellingPrice = parseFloat(body.sellingPrice);
     if (body.ingredients) updateData.ingredients = body.ingredients;
-    if (body.salePercentage) updateData.salePercentage = parseFloat(body.salePercentage);
-    
+    if (body.salePercentage)
+      updateData.salePercentage = parseFloat(body.salePercentage);
+
     if (body.categoryIds) {
-      updateData.categoryIds = typeof body.categoryIds === 'string'
-        ? JSON.parse(body.categoryIds)
-        : body.categoryIds;
+      updateData.categoryIds =
+        typeof body.categoryIds === 'string'
+          ? JSON.parse(body.categoryIds)
+          : body.categoryIds;
     }
-    
+
     if (body.suitableFor) {
-      updateData.suitableFor = typeof body.suitableFor === 'string'
-        ? JSON.parse(body.suitableFor)
-        : body.suitableFor;
+      updateData.suitableFor =
+        typeof body.suitableFor === 'string'
+          ? JSON.parse(body.suitableFor)
+          : body.suitableFor;
     }
 
     // Parse imagesToKeep

@@ -712,7 +712,7 @@ export class AppointmentsService {
       return 'Appointment is under dispute resolution.';
     }
 
-    // Case 2: (CANCELLED - PAYMENT_FAILED)
+    // Case 2: (CANCELLED )
     if (
       appt.appointmentStatus === AppointmentStatus.CANCELLED &&
       appt.terminatedReason === TerminationReason.PAYMENT_FAILED
@@ -720,10 +720,16 @@ export class AppointmentsService {
       return 'Cancelled due to payment failure/insufficient funds. Amount has been refunded to wallet.';
     }
     if (
-      appt.appointmentStatus === AppointmentStatus.NO_SHOW &&
-      appt.terminatedReason === TerminationReason.DOCTOR_NO_SHOW
+      appt.appointmentStatus === AppointmentStatus.CANCELLED &&
+      appt.terminatedReason === TerminationReason.CUSTOMER_CANCELLED_EARLY
     ) {
-      return 'Cancelled due to Dermatologist No-Show. A 100% refund has been issued to the customer.';
+      return 'Cancelled by Customer (in 24 hours advance). A 100% refund has been issued to the customer.';
+    }
+    if (
+      appt.appointmentStatus === AppointmentStatus.CANCELLED &&
+      appt.terminatedReason === TerminationReason.CUSTOMER_CANCELLED_LATE
+    ) {
+      return 'Cancelled by Customer (in less than 24 hours). No refund has been issued.';
     }
     if (
       appt.appointmentStatus === AppointmentStatus.CANCELLED &&
@@ -731,6 +737,14 @@ export class AppointmentsService {
     ) {
       return 'Cancelled due to Dermatologist Cancellation. A 100% refund has been issued to the customer.';
     }
+    // Case 3: (NO_SHOW)
+    if (
+      appt.appointmentStatus === AppointmentStatus.NO_SHOW &&
+      appt.terminatedReason === TerminationReason.DOCTOR_NO_SHOW
+    ) {
+      return 'Cancelled due to Dermatologist No-Show. A 100% refund has been issued to the customer.';
+    }
+    // Case 4: (INTERRUPTED)
     if (appt.appointmentStatus === AppointmentStatus.INTERRUPTED) {
       return 'Interruption reported. Payment is temporarily frozen pending Admin review.';
     }
@@ -886,6 +900,9 @@ export class AppointmentsService {
       }
 
       if (appointment.availabilitySlot) {
+        this.logger.log(
+          `Releasing slot ${appointment.availabilitySlot.slotId} for Appt ${appointment.appointmentId}`,
+        );
         await this.availabilitySlotsService.releaseSlot(
           appointment.availabilitySlot.slotId,
           manager,

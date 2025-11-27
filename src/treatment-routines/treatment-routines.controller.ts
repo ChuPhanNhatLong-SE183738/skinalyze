@@ -7,6 +7,9 @@ import {
   Param,
   Delete,
   UseGuards,
+  ParseUUIDPipe,
+  Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { TreatmentRoutinesService } from './treatment-routines.service';
@@ -16,7 +19,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
-import { ResponseHelper } from '../utils/responses';
+import { ResponseHelper, SuccessResponse } from '../utils/responses';
+import { isUUID } from 'class-validator';
+import { TimelineEventDto } from './dto/treatment-timeline.dto';
 
 @ApiTags('Treatment Routines')
 @ApiBearerAuth()
@@ -54,9 +59,18 @@ export class TreatmentRoutinesController {
   @Get('dermatologist/:dermatologistId')
   @Roles(UserRole.DERMATOLOGIST, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all Routines by dermatologist' })
-  async findByDermatologist(@Param('dermatologistId') dermatologistId: string) {
-    const Routines =
-      await this.treatmentRoutinesService.findByDermatologist(dermatologistId);
+  async findByDermatologist(
+    @Param('dermatologistId') dermatologistId: string,
+    @Query('customerId') customerId?: string,
+  ) {
+    if (customerId && !isUUID(customerId)) {
+      throw new BadRequestException('customerId must be a valid UUID');
+    }
+
+    const Routines = await this.treatmentRoutinesService.findByDermatologist(
+      dermatologistId,
+      customerId,
+    );
     return ResponseHelper.success(
       'Dermatologist Routines retrieved successfully',
       Routines,
@@ -66,12 +80,35 @@ export class TreatmentRoutinesController {
   @Get('customer/:customerId')
   @Roles(UserRole.DERMATOLOGIST, UserRole.CUSTOMER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all Routines by customer' })
-  async findByCustomer(@Param('customerId') customerId: string) {
-    const Routines =
-      await this.treatmentRoutinesService.findByCustomer(customerId);
+  async findByCustomer(
+    @Param('customerId') customerId: string,
+    @Query('dermatologistId') dermatologistId?: string,
+  ) {
+    if (dermatologistId && !isUUID(dermatologistId)) {
+      throw new BadRequestException('dermatologistId must be a valid UUID');
+    }
+
+    const Routines = await this.treatmentRoutinesService.findByCustomer(
+      customerId,
+      dermatologistId,
+    );
     return ResponseHelper.success(
       'Customer Routines retrieved successfully',
       Routines,
+    );
+  }
+
+  @Get(':id/timeline')
+  @Roles(UserRole.DERMATOLOGIST, UserRole.CUSTOMER, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get visual timeline of a treatment routine' })
+  async getTimeline(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<SuccessResponse<TimelineEventDto[]>> {
+    const timeline =
+      await this.treatmentRoutinesService.getTreatmentTimeline(id);
+    return ResponseHelper.success(
+      'Treatment timeline retrieved successfully',
+      timeline,
     );
   }
   @Get(':id')

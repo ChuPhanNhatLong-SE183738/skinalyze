@@ -33,6 +33,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { GetAvailabilitySummaryDto } from './dto/get-availability-summary.dto';
+import { GetMyPatientsDto } from './dto/get-my-patients.dto';
 
 @ApiTags('Dermatologists')
 @Controller('dermatologists')
@@ -161,6 +162,24 @@ export class DermatologistsController {
       'Dermatologist updated successfully',
       dermatologist,
     );
+  }
+
+  @Get('my-patients')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.DERMATOLOGIST)
+  @ApiOperation({
+    summary: 'Get list of my patients (with status and upcoming appointments)',
+  })
+  @ApiOkResponse({ description: 'List of patients retrieved successfully' })
+  async getMyPatients(
+    @GetUser() user: User,
+    @Query() filters: GetMyPatientsDto,
+  ) {
+    const result = await this.dermatologistsService.getPatientsForDermatologist(
+      user.userId,
+      filters,
+    );
+    return ResponseHelper.success('Patients retrieved successfully', result);
   }
 
   @Patch('admin/:id')

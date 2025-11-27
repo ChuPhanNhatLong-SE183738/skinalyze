@@ -1,6 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import {
+  Repository,
+  In,
+  FindOptionsWhere,
+  ILike,
+  MoreThan,
+  MoreThanOrEqual,
+  LessThanOrEqual,
+  Between,
+} from 'typeorm';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Product } from './entities/product.entity';
@@ -9,7 +18,15 @@ import { InventoryService } from '../inventory/inventory.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { OrderItem } from '../orders/entities/order-item.entity';
 import { BadRequestException } from '@nestjs/common';
+import { FindProductsDto } from './dto/find-products.dto';
 
+export interface FindProductsResult {
+  data: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 @Injectable()
 export class ProductsService {
   constructor(
@@ -77,10 +94,81 @@ export class ProductsService {
     return this.create(productDto);
   }
 
-  async findAll(): Promise<Product[]> {
-    return await this.productRepository.find({ relations: ['categories'] });
-  }
+  async findAll(
+    filters: FindProductsDto = {} as FindProductsDto,
+  ): Promise<FindProductsResult> {
+    const {
+      search,
+      categoryId,
+      brand,
+      minPrice,
+      maxPrice,
+      inStock,
+      page = 1,
+      limit = 10,
+    } = filters;
 
+    if (
+      minPrice !== undefined &&
+      maxPrice !== undefined &&
+      minPrice > maxPrice
+    ) {
+      throw new BadRequestException('minPrice cannot be greater than maxPrice');
+    }
+
+    const baseWhere: FindOptionsWhere<Product> = {};
+
+    if (brand) {
+      baseWhere.brand = ILike(brand);
+    }
+
+    if (categoryId) {
+      baseWhere.categories = { categoryId };
+    }
+
+    if (inStock === true) {
+      baseWhere.stock = MoreThan(0);
+    }
+
+    if (minPrice !== undefined && maxPrice !== undefined) {
+      baseWhere.sellingPrice = Between(minPrice, maxPrice);
+    } else if (minPrice !== undefined) {
+      baseWhere.sellingPrice = MoreThanOrEqual(minPrice);
+    } else if (maxPrice !== undefined) {
+      baseWhere.sellingPrice = LessThanOrEqual(maxPrice);
+    }
+
+    let where: FindOptionsWhere<Product> | FindOptionsWhere<Product>[] =
+      baseWhere;
+
+    if (search) {
+      const pattern = `%${search}%`;
+      where = [
+        { ...baseWhere, productName: ILike(pattern) },
+        { ...baseWhere, productDescription: ILike(pattern) },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await this.productRepository.findAndCount({
+      where,
+      relations: ['categories'],
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: items,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
   async findOne(id: string): Promise<Product> {
     const product = await this.productRepository.findOne({
       where: { productId: id },
@@ -115,13 +203,16 @@ export class ProductsService {
 
     // Update basic product data
     if (updateData.productName) product.productName = updateData.productName;
-    if (updateData.productDescription) product.productDescription = updateData.productDescription;
+    if (updateData.productDescription)
+      product.productDescription = updateData.productDescription;
     if (updateData.stock !== undefined) product.stock = updateData.stock;
     if (updateData.brand) product.brand = updateData.brand;
-    if (updateData.sellingPrice !== undefined) product.sellingPrice = updateData.sellingPrice;
+    if (updateData.sellingPrice !== undefined)
+      product.sellingPrice = updateData.sellingPrice;
     if (updateData.ingredients) product.ingredients = updateData.ingredients;
     if (updateData.suitableFor) product.suitableFor = updateData.suitableFor;
-    if (updateData.salePercentage !== undefined) product.salePercentage = updateData.salePercentage;
+    if (updateData.salePercentage !== undefined)
+      product.salePercentage = updateData.salePercentage;
 
     // Update categories if provided
     if (updateData.categoryIds && updateData.categoryIds.length > 0) {

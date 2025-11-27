@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateTreatmentRoutineDto } from './dto/create-treatment-routine.dto';
 import { UpdateTreatmentRoutineDto } from './dto/update-treatment-routine.dto';
 import {
@@ -15,6 +15,13 @@ import { Dermatologist } from '../dermatologists/entities/dermatologist.entity';
 import { Customer } from '../customers/entities/customer.entity';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { SkinAnalysis } from '../skin-analysis/entities/skin-analysis.entity';
+import { TimelineEventDto } from './dto/treatment-timeline.dto';
+import {
+  AppointmentStatus,
+  AppointmentType,
+} from 'src/appointments/types/appointment.types';
+import { RoutineDetail } from 'src/routine-details/entities/routine-detail.entity';
+import { endOfDay } from 'date-fns';
 
 @Injectable()
 export class TreatmentRoutinesService {
@@ -29,6 +36,8 @@ export class TreatmentRoutinesService {
     private readonly appointmentRepository: Repository<Appointment>,
     @InjectRepository(SkinAnalysis)
     private readonly skinAnalysisRepository: Repository<SkinAnalysis>,
+    @InjectRepository(RoutineDetail)
+    private readonly routineDetailRepository: Repository<RoutineDetail>,
   ) {}
 
   async create(
@@ -140,10 +149,19 @@ export class TreatmentRoutinesService {
 
   async findByDermatologist(
     dermatologistId: string,
+    customerId?: string,
   ): Promise<TreatmentRoutine[]> {
-    return await this.treatmentRoutineRepository.find({
-      where: { dermatologist: { dermatologistId } },
+    const where = customerId
+      ? {
+          dermatologist: { dermatologistId },
+          customer: { customerId },
+        }
+      : { dermatologist: { dermatologistId } };
+
+    return this.treatmentRoutineRepository.find({
+      where,
       relations: [
+        'dermatologist',
         'customer',
         'originalAnalysis',
         'createdFromAppointment',
@@ -153,11 +171,22 @@ export class TreatmentRoutinesService {
     });
   }
 
-  async findByCustomer(customerId: string): Promise<TreatmentRoutine[]> {
-    return await this.treatmentRoutineRepository.find({
-      where: { customer: { customerId } },
+  async findByCustomer(
+    customerId: string,
+    dermatologistId?: string,
+  ): Promise<TreatmentRoutine[]> {
+    const where = dermatologistId
+      ? {
+          customer: { customerId },
+          dermatologist: { dermatologistId },
+        }
+      : { customer: { customerId } };
+
+    return this.treatmentRoutineRepository.find({
+      where,
       relations: [
         'dermatologist',
+        'customer',
         'originalAnalysis',
         'createdFromAppointment',
         'routineDetails',
@@ -236,5 +265,100 @@ export class TreatmentRoutinesService {
   async remove(id: string): Promise<void> {
     const routine = await this.findOne(id);
     await this.treatmentRoutineRepository.remove(routine);
+  }
+
+  async getTreatmentTimeline(routineId: string): Promise<TimelineEventDto[]> {
+    const routine = await this.treatmentRoutineRepository.findOne({
+      where: { routineId },
+      relations: [
+        'createdFromAppointment',
+        'createdFromAppointment.skinAnalysis',
+        'originalAnalysis', // Backup appraisal images
+      ],
+    });
+
+    if (!routine) {
+      throw new NotFoundException('Treatment routine not found');
+    }
+
+    const timeline: TimelineEventDto[] = [];
+
+    // --- Stage 1: New Problem (START) ---
+    // Based on createdFromAppointment or originalAnalysisId
+    if (routine.createdFromAppointment) {
+      const startAppt = routine.createdFromAppointment;
+      const initialDetails = await this.findRoutineDetailsAtTime(
+        routineId,
+        startAppt.endTime,
+      );
+
+      timeline.push({
+        id: startAppt.appointmentId,
+        date: startAppt.endTime,
+        type: AppointmentType.NEW_PROBLEM,
+        doctorNote: startAppt.medicalNote || 'Initial consultation.',
+        skinAnalysisImages:
+          startAppt.skinAnalysis?.imageUrls ||
+          routine.originalAnalysis?.imageUrls ||
+          [],
+        routine: {
+          routineName: routine.routineName,
+          details: initialDetails,
+        },
+      });
+    }
+
+    // --- Stage 2, 3...: Follow-up Appointments (FOLLOW_UP) ---
+    // Find completed follow-up appointments belonging to this routine
+    const followUpAppointments = await this.appointmentRepository.find({
+      where: {
+        trackingRoutine: { routineId: routineId },
+        appointmentStatus: In([
+          AppointmentStatus.COMPLETED,
+          AppointmentStatus.SETTLED,
+        ]),
+      },
+      relations: ['skinAnalysis'],
+      order: { endTime: 'ASC' },
+    });
+
+    for (const appt of followUpAppointments) {
+      const detailsAtTime = await this.findRoutineDetailsAtTime(
+        routineId,
+        appt.endTime,
+      );
+
+      timeline.push({
+        id: appt.appointmentId,
+        date: appt.endTime,
+        type: AppointmentType.FOLLOW_UP,
+        doctorNote: appt.medicalNote || 'Follow-up appointment.',
+        skinAnalysisImages: appt.skinAnalysis?.imageUrls || [],
+        routine: {
+          routineName: routine.routineName,
+          details: detailsAtTime,
+        },
+      });
+    }
+
+    return timeline;
+  }
+
+  private async findRoutineDetailsAtTime(routineId: string, timePoint: Date) {
+    //Timepoint is adjusted to the end of the meeting day to include all details created/updated on that day
+    const adjustedTimePoint = endOfDay(timePoint);
+
+    const details = await this.routineDetailRepository
+      .createQueryBuilder('detail')
+      .where('detail.routineId = :routineId', { routineId })
+      // 1. Routine detial is created ON OR BEFORE that time point
+      .andWhere('detail.createdAt <= :point', { point: adjustedTimePoint })
+      // 2. Not inactive or deactivated AFTER that time point
+      .andWhere('(detail.isActive = true OR detail.updatedAt > :point)', {
+        point: adjustedTimePoint,
+      })
+      .getMany();
+
+    return details;
   }
 }
