@@ -2,16 +2,18 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const DownloadCTASection = () => {
+  const { t } = useTranslation();
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
 
   const stats = [
-    { number: "500K+", label: "DOWNLOADS" },
-    { number: "95%", label: "ACCURACY" },
-    { number: "4.8★", label: "RATING" },
-    { number: "24/7", label: "SUPPORT" },
+    { number: t("download.stat1"), label: t("download.stat1Label") },
+    { number: t("download.stat2"), label: t("download.stat2Label") },
+    { number: t("download.stat3"), label: t("download.stat3Label") },
+    { number: t("download.stat4"), label: t("download.stat4Label") },
   ];
 
   const handleDownload = () => {
@@ -41,7 +43,7 @@ const DownloadCTASection = () => {
         >
           <span className="inline-flex items-center px-4 py-2 rounded-full text-xs font-mono uppercase tracking-widest glass-card text-emerald-300 border-emerald-300/30">
             <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></span>
-            GET STARTED
+            {t("download.badge")}
           </span>
         </motion.div>
 
@@ -52,7 +54,8 @@ const DownloadCTASection = () => {
           transition={{ delay: 0.1 }}
           className="text-4xl md:text-7xl font-black text-white mb-6 uppercase tracking-tight"
         >
-          DOWNLOAD <span className="gradient-text">NOW</span>
+          {t("download.title")}{" "}
+          <span className="gradient-text">{t("download.titleHighlight")}</span>
         </motion.h2>
 
         <motion.p
@@ -62,8 +65,7 @@ const DownloadCTASection = () => {
           transition={{ delay: 0.2 }}
           className="text-xl text-gray-400 mb-12 max-w-3xl mx-auto leading-relaxed font-light"
         >
-          Start your smart skin care journey with advanced AI technology.
-          Completely free and easy to use.
+          {t("download.subtitle")}
         </motion.p>
 
         <motion.div
@@ -97,12 +99,12 @@ const DownloadCTASection = () => {
             <div className="text-left">
               <div className="text-xs opacity-60 font-mono">
                 {downloading
-                  ? "DOWNLOADING..."
+                  ? t("download.downloading")
                   : downloaded
-                  ? "DOWNLOADED"
-                  : "DOWNLOAD FOR"}
+                  ? t("download.downloaded")
+                  : t("download.downloadFor")}
               </div>
-              <div className="text-lg font-bold">ANDROID</div>
+              <div className="text-lg font-bold">{t("download.android")}</div>
             </div>
             {downloaded && <Check className="w-5 h-5 ml-3 text-emerald-300" />}
           </motion.button>

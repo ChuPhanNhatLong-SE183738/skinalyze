@@ -1,12 +1,16 @@
+"use client";
+
 import Navbar from "@/components/navbar/Navbar";
 import React from "react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const About = () => {
+  const { t } = useTranslation();
   const stats = [
-    { number: "94%", label: "AI Accuracy" },
-    { number: "1M+", label: "Images Analyzed" },
-    { number: "50+", label: "Skin Conditions Detected" },
-    { number: "24/7", label: "Customer Support" },
+    { number: "94%", label: t("about.stat1") },
+    { number: "1M+", label: t("about.stat2") },
+    { number: "50+", label: t("about.stat3") },
+    { number: "24/7", label: t("about.stat4") },
   ];
 
   const timeline = [
@@ -85,15 +89,14 @@ const About = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center px-4 py-2 glass-card border border-emerald-400/30 rounded-full text-sm font-medium mb-6">
             <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></span>
-            <span className="gradient-text">Về chúng tôi</span>
+            <span className="gradient-text">{t("about.badge")}</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            We are <span className="gradient-text">Skinalyze</span>
+            {t("about.title")}{" "}
+            <span className="gradient-text">{t("about.titleHighlight")}</span>
           </h1>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-            Pioneering the application of artificial intelligence to
-            revolutionize the skin health care industry, bringing intelligent
-            and accurate diagnostic solutions to everyone.
+            {t("about.subtitle")}
           </p>
         </div>
       </section>
@@ -104,29 +107,25 @@ const About = () => {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="text-3xl font-bold text-white mb-8">
-                Mission & Vision
+                {t("about.missionVisionTitle")}
               </h2>
 
               <div className="space-y-8">
                 <div className="border-l-4 border-emerald-500 pl-6">
                   <h3 className="text-xl font-semibold text-white mb-3">
-                    Mission
+                    {t("about.missionTitle")}
                   </h3>
                   <p className="text-gray-400 leading-relaxed">
-                    Democratize access to skin health care through advanced AI
-                    technology, helping everyone detect and manage
-                    dermatological issues effectively and conveniently.
+                    {t("about.missionDesc")}
                   </p>
                 </div>
 
                 <div className="border-l-4 border-teal-500 pl-6">
                   <h3 className="text-xl font-semibold text-white mb-3">
-                    Vision
+                    {t("about.visionTitle")}
                   </h3>
                   <p className="text-gray-400 leading-relaxed">
-                    To become the world&apos;s leading AI platform in dermatological
-                    diagnostics, contributing to a future where skin health care
-                    is easy, accurate, and accessible to everyone.
+                    {t("about.visionDesc")}
                   </p>
                 </div>
               </div>
@@ -151,11 +150,9 @@ const About = () => {
                     </svg>
                   </div>
                   <h3 className="text-2xl font-bold text-white mb-4">
-                    Innovation First
+                    {t("about.innovationTitle")}
                   </h3>
-                  <p className="text-gray-400">
-                    Continuously innovating and improving technology
-                  </p>
+                  <p className="text-gray-400">{t("about.innovationDesc")}</p>
                 </div>
               </div>
             </div>
@@ -168,10 +165,10 @@ const About = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-white mb-4">
-              Our Achievements
+              {t("about.achievementsTitle")}
             </h2>
             <p className="text-lg text-gray-400">
-              Impressive numbers in Skinalyze&apos;s development journey
+              {t("about.achievementsDesc")}
             </p>
           </div>
 

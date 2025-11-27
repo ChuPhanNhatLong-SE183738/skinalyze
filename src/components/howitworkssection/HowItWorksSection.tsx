@@ -1,29 +1,29 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const HowItWorksSection = () => {
+  const { t } = useTranslation();
+
   const steps = [
     {
-      step: "01",
-      title: "Take Photo",
-      description:
-        "Use your phone camera to capture the skin area that needs examination with natural lighting",
-      icon: "📱",
+      step: t("howItWorks.step1Number"),
+      title: t("howItWorks.step1Title"),
+      description: t("howItWorks.step1Desc"),
+      icon: t("howItWorks.step1Icon"),
     },
     {
-      step: "02",
-      title: "AI Analysis",
-      description:
-        "AI algorithm analyzes the image and compares it with millions of medical data samples",
-      icon: "🤖",
+      step: t("howItWorks.step2Number"),
+      title: t("howItWorks.step2Title"),
+      description: t("howItWorks.step2Desc"),
+      icon: t("howItWorks.step2Icon"),
     },
     {
-      step: "03",
-      title: "Get Results",
-      description:
-        "View detailed report and receive advice from dermatology specialists",
-      icon: "📊",
+      step: t("howItWorks.step3Number"),
+      title: t("howItWorks.step3Title"),
+      description: t("howItWorks.step3Desc"),
+      icon: t("howItWorks.step3Icon"),
     },
   ];
 
@@ -38,7 +38,7 @@ const HowItWorksSection = () => {
             className="mb-6"
           >
             <span className="inline-flex items-center px-4 py-2 rounded-full text-xs font-mono uppercase tracking-widest glass-card text-teal-300 border-teal-300/30">
-              HOW IT WORKS
+              {t("howItWorks.badge")}
             </span>
           </motion.div>
           <motion.h2
@@ -48,7 +48,10 @@ const HowItWorksSection = () => {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tight"
           >
-            HOW IT <span className="gradient-text">WORKS</span>
+            {t("howItWorks.title")}{" "}
+            <span className="gradient-text">
+              {t("howItWorks.titleHighlight")}
+            </span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -57,8 +60,7 @@ const HowItWorksSection = () => {
             transition={{ delay: 0.2 }}
             className="text-xl text-gray-400 max-w-3xl mx-auto font-light"
           >
-            With just 3 simple steps, you can get detailed analysis about your
-            skin condition
+            {t("howItWorks.subtitle")}
           </motion.p>
         </div>
 

@@ -2,8 +2,10 @@
 
 import Navbar from "@/components/navbar/Navbar";
 import React, { useState } from "react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const FAQ = () => {
+  const { t } = useTranslation();
   const [openItems, setOpenItems] = useState<Record<number, boolean>>({});
 
   const toggleItem = (index: number) => {
@@ -15,55 +17,44 @@ const FAQ = () => {
 
   const faqData = [
     {
-      question: "How does Skinalyze AI work?",
-      answer:
-        "Skinalyze uses advanced artificial intelligence technology to analyze skin images. The system is trained on millions of dermatological images and uses deep learning algorithms to identify abnormalities, providing assessments and reference recommendations.",
+      question: t("faq.q1"),
+      answer: t("faq.a1"),
     },
     {
-      question: "What is the accuracy rate of Skinalyze AI?",
-      answer:
-        "Skinalyze AI achieves up to 94% accuracy in detecting common skin problems. However, results are for reference only and do not replace professional medical diagnosis.",
+      question: t("faq.q2"),
+      answer: t("faq.a2"),
     },
     {
-      question: "Can I fully trust the AI results?",
-      answer:
-        "No. Results from Skinalyze AI are only a reference support tool. You should always consult with a dermatologist for accurate diagnosis and appropriate treatment methods.",
+      question: t("faq.q3"),
+      answer: t("faq.a3"),
     },
     {
-      question: "What types of skin conditions can Skinalyze detect?",
-      answer:
-        "Skinalyze can identify and assess common skin issues such as: acne, dermatitis, melasma, freckles, cysts, abnormal moles, and many other skin conditions. The system is continuously updated to expand recognition capabilities.",
+      question: t("faq.q4"),
+      answer: t("faq.a4"),
     },
     {
-      question: "How to take proper skin photos?",
-      answer:
-        "For best results: (1) Take photos in natural light or white LED light, (2) Keep camera about 15-20cm from the skin area, (3) Ensure images are clear and not blurry, (4) The skin area to be analyzed should occupy at least 50% of the frame.",
+      question: t("faq.q5"),
+      answer: t("faq.a5"),
     },
     {
-      question: "Is my data and images secure?",
-      answer:
-        "Yes. Skinalyze is committed to absolute confidentiality of users' personal information and images. Data is encrypted and stored securely, not shared with third parties without your consent.",
+      question: t("faq.q6"),
+      answer: t("faq.a6"),
     },
     {
-      question: "Is Skinalyze free?",
-      answer:
-        "Skinalyze offers a free version with basic features. The Premium version with advanced features such as detailed analysis, history tracking, and expert consultation is paid.",
+      question: t("faq.q7"),
+      answer: t("faq.a7"),
     },
     {
-      question: "Can I use Skinalyze on my phone?",
-      answer:
-        "Yes. Skinalyze has mobile applications for both iOS and Android. You can also use the web version on mobile browsers.",
+      question: t("faq.q8"),
+      answer: t("faq.a8"),
     },
     {
-      question: "Is Skinalyze suitable for children?",
-      answer:
-        "Skinalyze is designed for all ages, however for children under 13, parents need to supervise and consult with a pediatrician before using the analysis results.",
+      question: t("faq.q9"),
+      answer: t("faq.a9"),
     },
     {
-      question:
-        "If I'm not satisfied with the results, can I file a complaint?",
-      answer:
-        "If you have questions about the analysis results, please contact our support team via email support@Skinalyze.ai or live chat. We will review and assist you within 24 hours.",
+      question: t("faq.q10"),
+      answer: t("faq.a10"),
     },
   ];
 
@@ -76,14 +67,14 @@ const FAQ = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center px-4 py-2 glass-card border border-emerald-400/30 rounded-full text-sm font-medium mb-6">
             <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></span>
-            <span className="gradient-text">Customer Support</span>
+            <span className="gradient-text">{t("faq.badge")}</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Frequently Asked <span className="gradient-text">Questions</span>
+            {t("faq.title")}{" "}
+            <span className="gradient-text">{t("faq.titleHighlight")}</span>
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-            Learn more about Skinalyze AI and how to use the intelligent skin
-            analysis system
+            {t("faq.subtitle")}
           </p>
         </div>
       </section>

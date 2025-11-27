@@ -1,8 +1,10 @@
 "use client";
 
 import { Activity } from "lucide-react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 export default function Footer() {
+  const { t } = useTranslation();
   return (
     <footer className="relative z-10 py-12 md:py-16 bg-black/80 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
@@ -12,7 +14,7 @@ export default function Footer() {
             SKINALYZE
           </div>
           <div className="flex gap-2 text-xs font-mono text-gray-400">
-            <span>Future of Dermatology © 2025</span>
+            <span>{t("footer.tagline")}</span>
           </div>
         </div>
 
@@ -22,14 +24,14 @@ export default function Footer() {
             className="text-gray-400 hover:text-white font-bold uppercase text-xs tracking-widest transition-colors cursor-pointer"
             data-hover="true"
           >
-            Privacy Policy
+            {t("footer.privacy")}
           </a>
           <a
             href="#"
             className="text-gray-400 hover:text-white font-bold uppercase text-xs tracking-widest transition-colors cursor-pointer"
             data-hover="true"
           >
-            Terms of Service
+            {t("footer.terms")}
           </a>
         </div>
       </div>

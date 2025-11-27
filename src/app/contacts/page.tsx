@@ -2,8 +2,10 @@
 
 import Navbar from "@/components/navbar/Navbar";
 import React, { useState } from "react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const Contacts = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -25,7 +27,7 @@ const Contacts = () => {
     e.preventDefault();
     // Handle form submission here
     console.log("Form submitted:", formData);
-    alert("Thank you for contacting us! We will respond within 24 hours.");
+    alert(t("contacts.successMessage"));
     setFormData({ name: "", email: "", subject: "", message: "" });
   };
 
@@ -37,13 +39,16 @@ const Contacts = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center px-4 py-2 glass-card border border-emerald-400/30 rounded-full text-sm font-medium mb-6">
             <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></span>
-            <span className="gradient-text">Contact Us</span>
+            <span className="gradient-text">{t("contacts.badge")}</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Connect with <span className="gradient-text">Skinalyze</span>
+            {t("contacts.title")}{" "}
+            <span className="gradient-text">
+              {t("contacts.titleHighlight")}
+            </span>
           </h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-            We are always ready to support you on your skin care journey
+            {t("contacts.subtitle")}
           </p>
         </div>
       </section>
@@ -55,11 +60,10 @@ const Contacts = () => {
             <div className="space-y-8">
               <div>
                 <h2 className="text-3xl font-bold text-white mb-6">
-                  Contact Information
+                  {t("contacts.infoTitle")}
                 </h2>
                 <p className="text-lg text-gray-400 mb-8">
-                  Contact us for the best consultation and support on AI skin
-                  analysis technology.
+                  {t("contacts.infoSubtitle")}
                 </p>
               </div>
 
@@ -83,9 +87,11 @@ const Contacts = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-1">
-                      Email
+                      {t("contacts.email")}
                     </h3>
-                    <p className="text-gray-400 mb-2">Send us an email</p>
+                    <p className="text-gray-400 mb-2">
+                      {t("contacts.emailDesc")}
+                    </p>
                     <a
                       href="mailto:dtrong206@gmail.com"
                       className="text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
@@ -113,9 +119,11 @@ const Contacts = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-1">
-                      Phone
+                      {t("contacts.phone")}
                     </h3>
-                    <p className="text-gray-400 mb-2">Call us</p>
+                    <p className="text-gray-400 mb-2">
+                      {t("contacts.phoneDesc")}
+                    </p>
                     <a
                       href="tel:+84123456789"
                       className="text-teal-400 font-medium hover:text-teal-300 transition-colors"
@@ -149,9 +157,11 @@ const Contacts = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-1">
-                      Office Address
+                      {t("contacts.address")}
                     </h3>
-                    <p className="text-gray-400 mb-2">Head Office</p>
+                    <p className="text-gray-400 mb-2">
+                      {t("contacts.addressDesc")}
+                    </p>
                     <p className="text-cyan-400 font-medium">
                       123 Nguyen Hue, District 1<br />
                       Ho Chi Minh City, Vietnam
@@ -177,9 +187,11 @@ const Contacts = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-white mb-1">
-                      Business Hours
+                      {t("contacts.businessHours")}
                     </h3>
-                    <p className="text-gray-400 mb-2">Support Time</p>
+                    <p className="text-gray-400 mb-2">
+                      {t("contacts.businessHoursDesc")}
+                    </p>
                     <p className="text-emerald-400 font-medium">
                       Monday - Friday: 8:00 AM - 6:00 PM
                       <br />
@@ -192,7 +204,7 @@ const Contacts = () => {
               {/* Social Media */}
               <div className="pt-8">
                 <h3 className="text-lg font-semibold text-white mb-4">
-                  Follow Us
+                  {t("contacts.followUs")}
                 </h3>
                 <div className="flex space-x-4">
                   <a
@@ -238,7 +250,7 @@ const Contacts = () => {
             {/* Contact Form */}
             <div className="glass-card border border-white/10 rounded-3xl p-8">
               <h2 className="text-3xl font-bold text-white mb-6">
-                Send Message
+                {t("contacts.formTitle")}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
@@ -246,7 +258,7 @@ const Contacts = () => {
                     htmlFor="name"
                     className="block text-sm font-medium text-gray-300 mb-2"
                   >
-                    Full Name *
+                    {t("contacts.formName")} *
                   </label>
                   <input
                     type="text"
@@ -265,7 +277,7 @@ const Contacts = () => {
                     htmlFor="email"
                     className="block text-sm font-medium text-gray-300 mb-2"
                   >
-                    Email *
+                    {t("contacts.formEmail")} *
                   </label>
                   <input
                     type="email"
@@ -284,7 +296,7 @@ const Contacts = () => {
                     htmlFor="subject"
                     className="block text-sm font-medium text-gray-300 mb-2"
                   >
-                    Subject (Optional)
+                    {t("contacts.formSubject")}
                   </label>
                   <input
                     type="text"
@@ -302,7 +314,7 @@ const Contacts = () => {
                     htmlFor="message"
                     className="block text-sm font-medium text-gray-300 mb-2"
                   >
-                    Message *
+                    {t("contacts.formMessage")} *
                   </label>
                   <textarea
                     id="message"
@@ -320,7 +332,7 @@ const Contacts = () => {
                   type="submit"
                   className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200 shadow-lg hover:shadow-xl glow-emerald"
                 >
-                  Send Message
+                  {t("contacts.formSubmit")}
                 </button>
               </form>
             </div>

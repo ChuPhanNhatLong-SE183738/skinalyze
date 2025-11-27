@@ -2,8 +2,10 @@
 
 import { motion, useScroll, useTransform } from "framer-motion";
 import GradientText from "@/components/ui/GradientText";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 export default function HeroSection() {
+  const { t } = useTranslation();
   const { scrollYProgress } = useScroll();
   const y = useTransform(scrollYProgress, [0, 1], [0, -100]);
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
@@ -17,7 +19,7 @@ export default function HeroSection() {
         {/* Main Title */}
         <div className="relative w-full flex justify-center items-center flex-col">
           <GradientText
-            text="SKINALYZE"
+            text={t("hero.title")}
             as="h1"
             className="text-[12vw] md:text-[10vw] leading-[0.9] font-black tracking-tighter text-center drop-shadow-[0_0_30px_rgba(52,211,153,0.5)]"
           />
@@ -42,8 +44,8 @@ export default function HeroSection() {
           transition={{ delay: 0.8, duration: 1 }}
           className="text-base md:text-xl font-light max-w-xl mx-auto text-white leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
         >
-          Instant AI analysis. Board-certified dermatologists. <br />
-          Complete skin care in your pocket.
+          {t("hero.subtitle")} <br />
+          {t("hero.subtitle2")}
         </motion.p>
       </motion.div>
 
@@ -60,11 +62,11 @@ export default function HeroSection() {
                   key={i}
                   className="text-2xl md:text-4xl font-black px-8 flex items-center gap-4"
                 >
-                  AI DIAGNOSTICS{" "}
+                  {t("hero.scrollText1")}{" "}
                   <span className="text-emerald-400 text-2xl">●</span>
-                  INSTANT RESULTS{" "}
+                  {t("hero.scrollText2")}{" "}
                   <span className="text-emerald-400 text-2xl">●</span>
-                  24/7 SPECIALIST ACCESS{" "}
+                  {t("hero.scrollText3")}{" "}
                   <span className="text-emerald-400 text-2xl">●</span>
                 </span>
               ))}

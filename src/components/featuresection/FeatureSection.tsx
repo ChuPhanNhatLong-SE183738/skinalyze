@@ -2,8 +2,11 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const FeaturesSection = () => {
+  const { t } = useTranslation();
+
   const keyFeatures = [
     {
       icon: (
@@ -21,9 +24,8 @@ const FeaturesSection = () => {
           />
         </svg>
       ),
-      title: "Schedule",
-      description:
-        "Track your skin health with smart personalized examination calendar",
+      title: t("features.keyFeature1Title"),
+      description: t("features.keyFeature1Desc"),
       gradient: "from-blue-500 to-cyan-500",
     },
     {
@@ -48,9 +50,8 @@ const FeaturesSection = () => {
           />
         </svg>
       ),
-      title: "Smart AI Camera",
-      description:
-        "Advanced AI technology helps capture high-quality photos and accurate analysis",
+      title: t("features.keyFeature2Title"),
+      description: t("features.keyFeature2Desc"),
       gradient: "from-green-500 to-emerald-500",
     },
     {
@@ -69,9 +70,8 @@ const FeaturesSection = () => {
           />
         </svg>
       ),
-      title: "Expert Consultation",
-      description:
-        "Connect directly with top dermatologists for in-depth consultation",
+      title: t("features.keyFeature3Title"),
+      description: t("features.keyFeature3Desc"),
       gradient: "from-purple-500 to-pink-500",
     },
   ];
@@ -79,43 +79,38 @@ const FeaturesSection = () => {
   const features = [
     {
       icon: "🎯",
-      title: "Accurate Diagnosis",
-      description: "Up to 95% accuracy verified by leading medical experts",
+      title: t("features.feature1Title"),
+      description: t("features.feature1Desc"),
       color: "bg-blue-50 text-blue-600 border-blue-200",
     },
     {
       icon: "⚡",
-      title: "Instant Results",
-      description:
-        "Receive detailed analysis results in just seconds after taking a photo",
+      title: t("features.feature2Title"),
+      description: t("features.feature2Desc"),
       color: "bg-green-50 text-green-600 border-green-200",
     },
     {
       icon: "📊",
-      title: "Track Progress",
-      description:
-        "Store history and scientifically track skin changes over time",
+      title: t("features.feature3Title"),
+      description: t("features.feature3Desc"),
       color: "bg-purple-50 text-purple-600 border-purple-200",
     },
     {
       icon: "🔒",
-      title: "Absolute Security",
-      description:
-        "Data encrypted end-to-end and protected by international medical standards",
+      title: t("features.feature4Title"),
+      description: t("features.feature4Desc"),
       color: "bg-red-50 text-red-600 border-red-200",
     },
     {
       icon: "💡",
-      title: "Personal Advice",
-      description:
-        "AI analyzes and provides personalized skin care recommendations for each individual",
+      title: t("features.feature5Title"),
+      description: t("features.feature5Desc"),
       color: "bg-yellow-50 text-yellow-600 border-yellow-200",
     },
     {
       icon: "👨‍⚕️",
-      title: "Expert Support",
-      description:
-        "Professional dermatology team ready to consult and support 24/7",
+      title: t("features.feature6Title"),
+      description: t("features.feature6Desc"),
       color: "bg-indigo-50 text-indigo-600 border-indigo-200",
     },
   ];
@@ -132,7 +127,7 @@ const FeaturesSection = () => {
             className="inline-flex items-center px-4 py-2 glass-card text-emerald-300 rounded-full text-xs font-mono uppercase tracking-widest mb-6 border border-emerald-300/30"
           >
             <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2 animate-pulse"></span>
-            CÔNG NGHỆ AI TIÊN TIẾN
+            {t("features.badge")}
           </motion.div>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -141,7 +136,10 @@ const FeaturesSection = () => {
             transition={{ delay: 0.1 }}
             className="text-5xl md:text-6xl font-black text-white mb-6 leading-tight tracking-tight uppercase"
           >
-            TÍNH NĂNG <span className="gradient-text">ĐỘT PHÁ</span>
+            {t("features.title")}{" "}
+            <span className="gradient-text">
+              {t("features.titleHighlight")}
+            </span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -150,8 +148,7 @@ const FeaturesSection = () => {
             transition={{ delay: 0.2 }}
             className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed font-light"
           >
-            Experience intelligent skin care technology with AI developed by
-            leading medical experts
+            {t("features.subtitle")}
           </motion.p>
         </div>
 
@@ -616,7 +613,11 @@ const FeaturesSection = () => {
             viewport={{ once: true }}
             className="text-4xl font-black text-white mb-4 uppercase tracking-tight"
           >
-            WHY CHOOSE <span className="gradient-text">SKINALYZE</span>?
+            {t("features.whyChoose")}{" "}
+            <span className="gradient-text">
+              {t("features.whyChooseHighlight")}
+            </span>
+            ?
           </motion.h3>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -625,7 +626,7 @@ const FeaturesSection = () => {
             transition={{ delay: 0.1 }}
             className="text-xl text-gray-400 max-w-3xl mx-auto font-light"
           >
-            Outstanding benefits that only Skinalyze can provide
+            {t("features.whyChooseDesc")}
           </motion.p>
         </div>
 

@@ -2,45 +2,48 @@
 
 import React, { useRef, useState } from "react";
 import Link from "next/link";
+import { useTranslation } from "@/contexts/LanguageContext";
+import LanguageSelector from "@/components/shared/LanguageSelector";
 
 const Navbar = () => {
+  const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<number | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const menuItems = [
     {
-      title: "For home use",
+      title: t("nav.forHomeUse"),
       href: "/",
       dropdown: [
-        { title: "Skinalyze app", href: "/" },
-        { title: "Skin Conditions List", href: "/" },
-        { title: "Download app", href: "/app" },
+        { title: t("nav.skinalyzeApp"), href: "/" },
+        { title: t("nav.skinConditionsList"), href: "/" },
+        { title: t("nav.downloadApp"), href: "/app" },
       ],
     },
     {
-      title: "For Clinicians",
+      title: t("nav.forClinicians"),
       href: "/",
       dropdown: [
-        { title: "Skinalyze MD app", href: "/staff/login" },
-        { title: "Dermatological Atlas", href: "/blog" },
-        { title: "Download app", href: "/app" },
+        { title: t("nav.skinalyzeMD"), href: "/staff/login" },
+        { title: t("nav.dermatologicalAtlas"), href: "/blog" },
+        { title: t("nav.downloadApp"), href: "/app" },
       ],
     },
     {
-      title: "About",
+      title: t("nav.about"),
       href: "/about",
     },
     {
-      title: "Blog",
+      title: t("nav.blog"),
       href: "/blog",
     },
     {
-      title: "Support",
+      title: t("nav.support"),
       href: "/contacts",
       dropdown: [
-        { title: "Terms & Conditions", href: "/terms" },
-        { title: "FAQ", href: "/faq" },
-        { title: "Contacts", href: "/contacts" },
+        { title: t("nav.termsConditions"), href: "/terms" },
+        { title: t("nav.faq"), href: "/faq" },
+        { title: t("nav.contacts"), href: "/contacts" },
       ],
     },
   ];
@@ -160,15 +163,21 @@ const Navbar = () => {
               ))}
             </nav>
           </div>
-          {/* Right Side - Social & CTA */}
+          {/* Right Side - Language & CTA */}
           <div className="hidden lg:flex items-center space-x-4 ml-8 flex-shrink-0">
+            {/* Language Selector */}
+            <LanguageSelector />
             {/* CTA Button */}{" "}
             <Link
               href="/app"
               className="bg-gradient-to-r from-[#4fb7b3] to-[#a8fbd3] hover:from-[#a8fbd3] hover:to-[#4fb7b3] text-black px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl whitespace-nowrap"
             >
-              <span className="hidden xl:inline">GET FREE APP</span>{" "}
-              <span className="xl:hidden">GET STARTED</span>
+              <span className="hidden xl:inline">
+                {t("nav.downloadApp").toUpperCase()}
+              </span>{" "}
+              <span className="xl:hidden">
+                {t("nav.getStarted").toUpperCase()}
+              </span>
             </Link>
           </div>{" "}
           {/* Mobile menu button */}
@@ -233,6 +242,11 @@ const Navbar = () => {
                 </div>
               ))}
 
+              {/* Mobile Language Selector */}
+              <div className="pt-2 px-4">
+                <LanguageSelector />
+              </div>
+
               {/* Mobile CTA */}
               <div className="pt-4">
                 {" "}
@@ -241,7 +255,7 @@ const Navbar = () => {
                   className="bg-gradient-to-r from-[#4fb7b3] to-[#a8fbd3] hover:from-[#a8fbd3] hover:to-[#4fb7b3] text-black block px-4 py-3 rounded-xl text-base font-semibold text-center transition-all duration-200 shadow-lg"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  GET FREE APP
+                  {t("nav.downloadApp").toUpperCase()}
                 </Link>
               </div>
             </div>

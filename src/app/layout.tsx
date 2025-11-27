@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import FluidBackground from "@/components/ui/FluidBackground";
 import CustomCursor from "@/components/ui/CustomCursor";
 
@@ -34,7 +35,9 @@ export default function RootLayout({
       >
         <FluidBackground />
         <CustomCursor />
-        <AuthProvider>{children}</AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </LanguageProvider>
         <Toaster />
       </body>
     </html>

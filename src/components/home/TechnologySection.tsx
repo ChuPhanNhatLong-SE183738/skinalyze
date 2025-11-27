@@ -3,20 +3,23 @@
 import { motion } from "framer-motion";
 import { Activity } from "lucide-react";
 import GradientText from "@/components/ui/GradientText";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 export default function TechnologySection() {
+  const { t } = useTranslation();
+
   const features = [
     {
-      title: "Computer Vision",
-      desc: "Real-time lesion tracking and analysis.",
+      title: t("technology.feature1Title"),
+      desc: t("technology.feature1Desc"),
     },
     {
-      title: "HIPAA Encrypted",
-      desc: "Military-grade data security for patient privacy.",
+      title: t("technology.feature2Title"),
+      desc: t("technology.feature2Desc"),
     },
     {
-      title: "Global Access",
-      desc: "Connect with specialists worldwide instantly.",
+      title: t("technology.feature3Title"),
+      desc: t("technology.feature3Desc"),
     },
   ];
 
@@ -34,14 +37,14 @@ export default function TechnologySection() {
               viewport={{ once: true }}
             >
               <h2 className="text-4xl md:text-7xl font-black mb-6 md:mb-8 leading-tight uppercase">
-                NEURAL <br />
-                <GradientText text="NETWORK" className="text-5xl md:text-8xl" />
+                {t("technology.title1")} <br />
+                <GradientText
+                  text={t("technology.title2")}
+                  className="text-5xl md:text-8xl"
+                />
               </h2>
               <p className="text-lg md:text-xl text-gray-300 mb-8 md:mb-12 font-light leading-relaxed">
-                Our core engine processes skin imagery with clinical precision.
-                Combining pattern recognition with a vast database of
-                dermatological case studies, Skinalyze offers hospital-grade
-                screening at home.
+                {t("technology.description")}
               </p>
 
               <div className="space-y-6 md:space-y-8">
@@ -92,7 +95,7 @@ export default function TechnologySection() {
                   99.8%
                 </div>
                 <div className="text-lg md:text-xl font-bold tracking-widest uppercase mt-2 text-white">
-                  Diagnostic Accuracy
+                  {t("technology.accuracyLabel")}
                 </div>
               </div>
             </motion.div>
