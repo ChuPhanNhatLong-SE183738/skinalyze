@@ -7,10 +7,10 @@ export class CreateChatMessageDto {
   @IsNotEmpty()
   chatId: string;
 
-  @ApiProperty({ description: 'Message content', example: 'Does this product look good for my skin?' })
+  @ApiProperty({ description: 'Message content', example: 'Does this product look good for my skin?', required: false })
   @IsString()
   @IsNotEmpty()
-  messageContent: string;
+  messageContent?: string;
 
   @ApiProperty({ 
     type: 'string', 

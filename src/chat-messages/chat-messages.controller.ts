@@ -27,13 +27,27 @@ export class ChatMessagesController {
   @ApiOperation({ summary: 'Send a message (Text + Optional Image) in a chat session' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 201, description: 'Message sent successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request (Invalid file or missing content)' })
   @ApiResponse({ status: 404, description: 'Chat session not found' })
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @Body() createChatMessageDto: CreateChatMessageDto,
     @UploadedFile() image?: Express.Multer.File,
   ) {
-    // Validate file if it exists
+    // 1. Validation: Ensure either text OR image exists
+    // The DTO allows optional text, but we can't have BOTH missing.
+    if (!createChatMessageDto.messageContent && !image) {
+      throw new BadRequestException('Message must contain either text or an image');
+    }
+
+    // 2. Default Text Logic:
+    // If user sends ONLY an image, default the text to a standard prompt.
+    // This ensures the AI service always receives a valid string prompt.
+    if (!createChatMessageDto.messageContent && image) {
+      createChatMessageDto.messageContent = 'Analyze this image';
+    }
+
+    // 3. File Validation
     if (image) {
       const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
       if (!allowedMimeTypes.includes(image.mimetype)) {
@@ -71,10 +85,10 @@ export class ChatMessagesController {
       throw new BadRequestException('Image file is required');
     }
 
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
     if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException(
-        'Invalid file type. Only JPEG and PNG images are allowed',
+        'Invalid file type. Only JPEG, PNG and WebP images are allowed',
       );
     }
 
