@@ -3,6 +3,7 @@ import type {
   TreatmentRoutine,
   CreateTreatmentRoutineDto,
   UpdateTreatmentRoutineDto,
+  TimelineEvent,
 } from "@/types/treatment-routine";
 import type { ApiResponse } from "@/types/api";
 
@@ -41,6 +42,15 @@ class TreatmentRoutineService {
       `/api/treatment-routines/${id}`,
       dto
     );
+    return res.data;
+  }
+
+  async getTreatmentTimeline(routineId: string): Promise<TimelineEvent[]> {
+    const res = await http.get<ApiResponse<TimelineEvent[]>>(
+      `/api/treatment-routines/${routineId}/timeline`
+    );
+    console.log("Time line", res);
+
     return res.data;
   }
 }

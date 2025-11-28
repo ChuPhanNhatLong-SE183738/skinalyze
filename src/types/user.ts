@@ -5,6 +5,7 @@ export interface User {
   fullName: string;
   balance?: string;
   dob?: string | null;
+  gernder?: boolean | null; // true: Male, false: Female
   photoUrl?: string | null;
   phone: string | null;
   role: "admin" | "staff" | "customer" | "dermatologist";

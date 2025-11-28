@@ -33,17 +33,21 @@ export function DeleteDetailDialog({
     if (!detail) return;
     setIsDeleting(true);
     try {
-      await routineDetailService.remove(detail.routineDetailId);
+      const response = await routineDetailService.remove(
+        detail.routineDetailId
+      );
       toast({
-        title: "Deleted",
-        description: "Routine detail has been deleted.",
+        title: "Detail deactivated",
+        description: response.message || "Routine detail has been deactivated.",
         variant: "success",
       });
       onDetailDeleted();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete detail.";
       toast({
         title: "Error",
-        description: error.message || "Failed to delete detail.",
+        description: message,
         variant: "error",
       });
     } finally {
@@ -56,12 +60,11 @@ export function DeleteDetailDialog({
     <AlertDialog open={!!detail} onOpenChange={onClose}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogTitle>Deactivate routine detail?</AlertDialogTitle>
           <AlertDialogDescription>
-            Do you want to delete this detail:{" "}
-            <span className="font-bold">{detail?.description}</span>?
-            <br />
-            This action cannot be undone.
+            This will archive the latest version of{" "}
+            <span className="font-bold">{detail?.description}</span> for your
+            patient. You can re-create the step later if needed.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

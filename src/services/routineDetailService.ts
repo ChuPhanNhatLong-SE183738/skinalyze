@@ -33,8 +33,11 @@ class RoutineDetailService {
     return res.data;
   }
 
-  async remove(detailId: string): Promise<void> {
-    await http.delete<void>(`/api/routine-details/${detailId}`);
+  async remove(detailId: string): Promise<ApiResponse<null>> {
+    const res = await http.delete<ApiResponse<null>>(
+      `/api/routine-details/${detailId}`
+    );
+    return res;
   }
 }
 

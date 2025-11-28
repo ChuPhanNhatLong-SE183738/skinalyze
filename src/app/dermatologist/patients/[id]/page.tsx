@@ -46,6 +46,7 @@ import type { Appointment } from "@/types/appointment";
 import { AppointmentStatus, AppointmentType } from "@/types/appointment";
 import type { TreatmentRoutine } from "@/types/treatment-routine";
 import { RoutineStatus } from "@/types/treatment-routine";
+import Link from "next/link";
 
 const UPCOMING_STATUSES: AppointmentStatus[] = [
   AppointmentStatus.SCHEDULED,
@@ -660,9 +661,10 @@ export default function PatientProfilePage() {
             <CardContent className="space-y-4">
               {sortedRoutines.length > 0 ? (
                 sortedRoutines.map((routine) => (
-                  <div
+                  <Link
+                    href={`/dermatologist/routine/${routine.routineId}`}
                     key={routine.routineId}
-                    className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+                    className="block rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition hover:border-sky-200 hover:bg-sky-50/70"
                   >
                     <div className="flex flex-col gap-3">
                       <div className="flex items-start justify-between gap-4">
@@ -694,7 +696,7 @@ export default function PatientProfilePage() {
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
                 <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 text-slate-500">

@@ -36,6 +36,18 @@ export interface ProductsResponse {
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
+}
+
+export interface ProductQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  categoryId?: string;
+  brand?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
 }
 
 export interface CreateProductRequest {

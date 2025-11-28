@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,11 @@ import { Button } from "@/components/ui/button";
 import { ProductFormModal } from "@/components/products/ProductFormModal";
 import { authService } from "@/services/authService";
 import { productService } from "@/services/productService";
-import type { Product, CreateProductRequest } from "@/types/product";
+import type {
+  Product,
+  CreateProductRequest,
+  ProductQueryParams,
+} from "@/types/product";
 import { useToast } from "@/hooks/use-toast";
 import {
   Package,
@@ -52,7 +57,7 @@ export default function AdminProductsPage() {
 
         // Load products
         await loadProducts();
-      } catch (error) {
+      } catch {
         router.push("/login");
       }
     };
@@ -60,13 +65,17 @@ export default function AdminProductsPage() {
     checkAuthAndLoadProducts();
   }, [router]);
 
-  const loadProducts = async () => {
+  const loadProducts = async (params: Partial<ProductQueryParams> = {}) => {
     try {
       setIsLoading(true);
-      const response = await productService.getProducts(1, 100);
+      const response = await productService.getProducts({
+        page: 1,
+        limit: 100,
+        ...params,
+      });
       setProducts(response.products || []);
       setFilteredProducts(response.products || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to load products:", error);
       setProducts([]);
       setFilteredProducts([]);
@@ -80,9 +89,13 @@ export default function AdminProductsPage() {
     if (searchQuery) {
       const filtered = products.filter(
         (product) =>
-          product.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.productName
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
           product.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.productDescription.toLowerCase().includes(searchQuery.toLowerCase())
+          product.productDescription
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
       );
       setFilteredProducts(filtered);
     } else {
@@ -153,7 +166,7 @@ export default function AdminProductsPage() {
   };
 
   const handleFormSubmitWithFiles = async (
-    data: Omit<CreateProductRequest, 'productImages'>,
+    data: Omit<CreateProductRequest, "productImages">,
     files: File[],
     imagesToKeep?: string[]
   ) => {
@@ -166,7 +179,12 @@ export default function AdminProductsPage() {
           description: "Product created successfully with uploaded images",
         });
       } else if (selectedProduct?.productId) {
-        await productService.updateProductWithImages(selectedProduct.productId, data, files, imagesToKeep);
+        await productService.updateProductWithImages(
+          selectedProduct.productId,
+          data,
+          files,
+          imagesToKeep
+        );
         toast({
           variant: "success",
           title: "Success",
@@ -196,17 +214,21 @@ export default function AdminProductsPage() {
     if (!products || products.length === 0) {
       return { totalValue: 0, totalStock: 0, lowStock: 0, onSale: 0 };
     }
-    
+
     const totalValue = products.reduce(
       (sum, product) => sum + product.sellingPrice * product.stock,
       0
     );
-    const totalStock = products.reduce((sum, product) => sum + product.stock, 0);
+    const totalStock = products.reduce(
+      (sum, product) => sum + product.stock,
+      0
+    );
     const lowStock = products.filter((product) => product.stock < 10).length;
     const onSale = products.filter((product) => {
-      const salePercentage = typeof product.salePercentage === 'string' 
-        ? parseFloat(product.salePercentage) 
-        : product.salePercentage;
+      const salePercentage =
+        typeof product.salePercentage === "string"
+          ? parseFloat(product.salePercentage)
+          : product.salePercentage;
       return salePercentage > 0;
     }).length;
 
@@ -257,7 +279,9 @@ export default function AdminProductsPage() {
               <Package className="h-4 w-4 text-slate-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-900">{products?.length || 0}</div>
+              <div className="text-2xl font-bold text-slate-900">
+                {products?.length || 0}
+              </div>
             </CardContent>
           </Card>
 
@@ -269,7 +293,9 @@ export default function AdminProductsPage() {
               <ShoppingBag className="h-4 w-4 text-slate-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-900">{stats.totalStock}</div>
+              <div className="text-2xl font-bold text-slate-900">
+                {stats.totalStock}
+              </div>
             </CardContent>
           </Card>
 
@@ -295,8 +321,12 @@ export default function AdminProductsPage() {
               <AlertCircle className="h-4 w-4 text-red-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-900">{stats.lowStock}</div>
-              <p className="text-xs text-slate-600 mt-1">Items below 10 units</p>
+              <div className="text-2xl font-bold text-slate-900">
+                {stats.lowStock}
+              </div>
+              <p className="text-xs text-slate-600 mt-1">
+                Items below 10 units
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -365,9 +395,12 @@ export default function AdminProductsPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             {product.productImages[0] && (
-                              <img
+                              <Image
                                 src={product.productImages[0]}
                                 alt={product.productName}
+                                width={40}
+                                height={40}
+                                unoptimized
                                 className="h-10 w-10 rounded object-cover"
                               />
                             )}
@@ -382,13 +415,17 @@ export default function AdminProductsPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-slate-700">{product.brand}</span>
+                          <span className="text-sm text-slate-700">
+                            {product.brand}
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-slate-900">
                             {formatCurrency(product.sellingPrice)}
                           </div>
-                          {(typeof product.salePercentage === 'string' ? parseFloat(product.salePercentage) : product.salePercentage) > 0 && (
+                          {(typeof product.salePercentage === "string"
+                            ? parseFloat(product.salePercentage)
+                            : product.salePercentage) > 0 && (
                             <div className="text-xs text-green-600">
                               {product.salePercentage}% off
                             </div>
@@ -408,10 +445,14 @@ export default function AdminProductsPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {(typeof product.salePercentage === 'string' ? parseFloat(product.salePercentage) : product.salePercentage) > 0 ? (
+                          {(typeof product.salePercentage === "string"
+                            ? parseFloat(product.salePercentage)
+                            : product.salePercentage) > 0 ? (
                             <div className="flex items-center gap-1 text-green-600">
                               <TrendingUp className="h-3 w-3" />
-                              <span className="text-sm">{product.salePercentage}%</span>
+                              <span className="text-sm">
+                                {product.salePercentage}%
+                              </span>
                             </div>
                           ) : (
                             <span className="text-slate-500 text-sm">-</span>
@@ -419,17 +460,30 @@ export default function AdminProductsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex flex-wrap gap-1">
-                            {(product.categories || product.categoryIds || []).slice(0, 2).map((cat) => (
-                              <span
-                                key={typeof cat === 'string' ? cat : cat.categoryId}
-                                className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-500/10 text-green-700"
-                              >
-                                {typeof cat === 'string' ? cat : cat.categoryName}
-                              </span>
-                            ))}
-                            {(product.categories?.length || product.categoryIds?.length || 0) > 2 && (
+                            {(product.categories || product.categoryIds || [])
+                              .slice(0, 2)
+                              .map((cat) => (
+                                <span
+                                  key={
+                                    typeof cat === "string"
+                                      ? cat
+                                      : cat.categoryId
+                                  }
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-green-500/10 text-green-700"
+                                >
+                                  {typeof cat === "string"
+                                    ? cat
+                                    : cat.categoryName}
+                                </span>
+                              ))}
+                            {(product.categories?.length ||
+                              product.categoryIds?.length ||
+                              0) > 2 && (
                               <span className="text-xs text-slate-600">
-                                +{(product.categories?.length || product.categoryIds?.length || 0) - 2}
+                                +
+                                {(product.categories?.length ||
+                                  product.categoryIds?.length ||
+                                  0) - 2}
                               </span>
                             )}
                           </div>
@@ -446,7 +500,10 @@ export default function AdminProductsPage() {
                               Edit
                             </Button>
                             <Button
-                              onClick={() => product.productId && handleDeleteProduct(product.productId)}
+                              onClick={() =>
+                                product.productId &&
+                                handleDeleteProduct(product.productId)
+                              }
                               size="sm"
                               variant="ghost"
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
