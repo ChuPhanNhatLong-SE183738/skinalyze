@@ -63,8 +63,9 @@ export default function LoginPage() {
           });
           setIsLoading(false);
       }
-    } catch (err: any) {
-      const errorMessage = err.message || "An error occurred during login";
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as Error).message || "An error occurred during login";
       setError(errorMessage);
       toast({
         variant: "error",

@@ -33,8 +33,8 @@ export class AuthService {
       }
 
       return result.user;
-    } catch (error: any) {
-      throw new Error(error.message || "Login failed");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Login failed");
     }
   }
 

@@ -19,7 +19,7 @@ export interface SendToUserNotificationRequest {
   type: NotificationType | string;
   title: string;
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   actionUrl?: string;
   imageUrl?: string;
   priority?: NotificationPriority | string;
@@ -29,7 +29,7 @@ export interface BroadcastNotificationRequest {
   type: NotificationType | string;
   title: string;
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   actionUrl?: string;
   imageUrl?: string;
   priority?: NotificationPriority | string;
@@ -38,5 +38,5 @@ export interface BroadcastNotificationRequest {
 export interface NotificationResponse {
   success: boolean;
   message: string;
-  data?: any;
+  data?: unknown;
 }

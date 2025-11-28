@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000/api/v1";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,10 +10,7 @@ export async function GET(request: NextRequest) {
     const token = cookieStore.get("access_token")?.value;
 
     if (!token) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const response = await fetch(`${API_BASE_URL}/shipping-logs`, {
@@ -33,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching shipping logs:", error);
     return NextResponse.json(
       { message: "Internal server error" },
@@ -48,10 +46,7 @@ export async function POST(request: NextRequest) {
     const token = cookieStore.get("access_token")?.value;
 
     if (!token) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -78,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating shipping log:", error);
     return NextResponse.json(
       { message: "Internal server error" },

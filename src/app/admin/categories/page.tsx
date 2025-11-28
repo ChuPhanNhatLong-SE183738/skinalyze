@@ -67,11 +67,11 @@ export default function CategoriesPage() {
       setIsLoading(true);
       const data = await categoryService.getCategories();
       setCategories(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setToast({
         variant: "error",
         title: "Error",
-        description: error.message || "Failed to load categories",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to load categories",
       });
     } finally {
       setIsLoading(false);
@@ -103,11 +103,11 @@ export default function CategoriesPage() {
         title: "Success",
         description: "Category deleted successfully",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       setToast({
         variant: "error",
         title: "Error",
-        description: error.message || "Failed to delete category",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to delete category",
       });
     }
   };
@@ -133,11 +133,11 @@ export default function CategoriesPage() {
       }
       await loadCategories();
       setIsModalOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setToast({
         variant: "error",
         title: "Error",
-        description: error.message || "Failed to save category",
+        description: (error instanceof Error ? error.message : String(error)) || "Failed to save category",
       });
     }
   };
@@ -195,7 +195,7 @@ export default function CategoriesPage() {
 
         {/* Stats Card */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">
@@ -253,7 +253,7 @@ export default function CategoriesPage() {
             filteredCategories.map((category) => (
               <Card
                 key={category.categoryId}
-                className="overflow-hidden hover:shadow-lg transition-shadow"
+                className="overflow-hidden hover:shadow-lg transition-shadow bg-white border-slate-200"
               >
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">

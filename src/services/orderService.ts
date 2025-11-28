@@ -1,4 +1,4 @@
-import type { OrdersResponse } from "@/types/order";
+import type { OrdersResponse, Order } from "@/types/order";
 
 export class OrderService {
   /**
@@ -26,8 +26,11 @@ export class OrderService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch orders");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to fetch orders"
+      );
     }
   }
 
@@ -38,7 +41,7 @@ export class OrderService {
     orderId: string,
     status: string,
     rejectionReason?: string
-  ): Promise<any> {
+  ): Promise<{ success: boolean; message: string; data: Order }> {
     try {
       const response = await fetch(`/api/orders/${orderId}/status`, {
         method: "PATCH",
@@ -55,15 +58,18 @@ export class OrderService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to update order status");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to update order status"
+      );
     }
   }
 
   /**
    * Get order details by ID
    */
-  async getOrderById(orderId: string): Promise<any> {
+  async getOrderById(orderId: string): Promise<{ data: Order }> {
     try {
       const response = await fetch(`/api/orders/${orderId}`, {
         method: "GET",
@@ -76,15 +82,22 @@ export class OrderService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch order details");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to fetch order details"
+      );
     }
   }
 
   /**
    * Confirm order
    */
-  async confirmOrder(orderId: string, processedBy: string, note?: string): Promise<any> {
+  async confirmOrder(
+    orderId: string,
+    processedBy: string,
+    note?: string
+  ): Promise<{ success: boolean; message: string; data: Order }> {
     try {
       const response = await fetch(`/api/orders/${orderId}/confirm`, {
         method: "POST",
@@ -101,15 +114,22 @@ export class OrderService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to confirm order");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to confirm order"
+      );
     }
   }
 
   /**
    * Cancel order
    */
-  async cancelOrder(orderId: string, reason: string, cancelledBy?: string): Promise<any> {
+  async cancelOrder(
+    orderId: string,
+    reason: string,
+    cancelledBy?: string
+  ): Promise<{ success: boolean; message: string; data: Order }> {
     try {
       const response = await fetch(`/api/orders/${orderId}/cancel`, {
         method: "POST",
@@ -126,8 +146,11 @@ export class OrderService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to cancel order");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to cancel order"
+      );
     }
   }
 }

@@ -12,10 +12,13 @@ export interface GetSlotsParams {
   status?: SlotStatus;
 }
 class AvailabilityService {
-  async createBatchSlots(dto: CreateAvailabilityDto): Promise<any> {
+  async createBatchSlots(dto: CreateAvailabilityDto) {
     try {
-      const response = await http.post("/api/availability-slots", dto);
-      return response;
+      const response = await http.post<ApiResponse<AvailabilitySlot[]>>(
+        "/api/availability-slots",
+        dto
+      );
+      return response.data;
     } catch (error) {
       console.error("Lỗi khi tạo lịch rảnh (service):", error);
       throw error;

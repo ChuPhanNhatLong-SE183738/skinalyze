@@ -29,8 +29,8 @@ export class CategoryService {
       }
 
       return [];
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch categories");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch categories");
     }
   }
 
@@ -56,8 +56,8 @@ export class CategoryService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to create category");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to create category");
     }
   }
 
@@ -84,8 +84,8 @@ export class CategoryService {
       }
 
       return await response.json();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to update category");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to update category");
     }
   }
 
@@ -103,8 +103,8 @@ export class CategoryService {
         const error = await response.json();
         throw new Error(error.error || "Failed to delete category");
       }
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to delete category");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to delete category");
     }
   }
 }

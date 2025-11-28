@@ -1,10 +1,10 @@
-import type { 
-  Inventory, 
-  StockAdjustmentRequest, 
+import type {
+  Inventory,
+  StockAdjustmentRequest,
   StockAdjustmentResponse,
   PendingAdjustment,
   AdjustmentApprovalRequest,
-  DirectStockAdjustment
+  DirectStockAdjustment,
 } from "@/types/inventory";
 
 export class InventoryService {
@@ -20,24 +20,30 @@ export class InventoryService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to fetch inventory");
+        throw new Error(
+          (error instanceof Error ? error.message : String(error)) ||
+            "Failed to fetch inventory"
+        );
       }
 
       const result = await response.json();
-      
+
       // Handle if backend returns array directly
       if (Array.isArray(result)) {
         return result;
       }
-      
+
       // Handle backend response format { data: [...] }
       if (result.data && Array.isArray(result.data)) {
         return result.data;
       }
-      
+
       return [];
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch inventory");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to fetch inventory"
+      );
     }
   }
 
@@ -53,20 +59,28 @@ export class InventoryService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to fetch inventory");
+        throw new Error(
+          (error instanceof Error ? error.message : String(error)) ||
+            "Failed to fetch inventory"
+        );
       }
 
       const result = await response.json();
       return result.data;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch inventory");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to fetch inventory"
+      );
     }
   }
 
   /**
    * Create a stock adjustment request
    */
-  async createStockAdjustment(request: StockAdjustmentRequest): Promise<StockAdjustmentResponse> {
+  async createStockAdjustment(
+    request: StockAdjustmentRequest
+  ): Promise<StockAdjustmentResponse> {
     try {
       const response = await fetch("/api/inventory/adjustment", {
         method: "POST",
@@ -79,13 +93,19 @@ export class InventoryService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to create stock adjustment request");
+        throw new Error(
+          (error instanceof Error ? error.message : String(error)) ||
+            "Failed to create stock adjustment request"
+        );
       }
 
       const result: StockAdjustmentResponse = await response.json();
       return result;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to create stock adjustment request");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to create stock adjustment request"
+      );
     }
   }
 
@@ -101,31 +121,39 @@ export class InventoryService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to fetch pending adjustments");
+        throw new Error(
+          (error instanceof Error ? error.message : String(error)) ||
+            "Failed to fetch pending adjustments"
+        );
       }
 
       const result = await response.json();
-      
+
       // Handle if backend returns array directly
       if (Array.isArray(result)) {
         return result;
       }
-      
+
       // Handle backend response format { data: [...] }
       if (result.data && Array.isArray(result.data)) {
         return result.data;
       }
-      
+
       return [];
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch pending adjustments");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to fetch pending adjustments"
+      );
     }
   }
 
   /**
    * Approve or reject adjustment request (Admin only)
    */
-  async reviewAdjustment(request: AdjustmentApprovalRequest): Promise<any> {
+  async reviewAdjustment(
+    request: AdjustmentApprovalRequest
+  ): Promise<{ success: boolean; message: string }> {
     try {
       const response = await fetch("/api/inventory/adjustments/review", {
         method: "POST",
@@ -138,20 +166,28 @@ export class InventoryService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to review adjustment");
+        throw new Error(
+          (error instanceof Error ? error.message : String(error)) ||
+            "Failed to review adjustment"
+        );
       }
 
       const result = await response.json();
       return result;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to review adjustment");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to review adjustment"
+      );
     }
   }
 
   /**
    * Direct stock adjustment (Admin only)
    */
-  async adjustStockDirect(request: DirectStockAdjustment): Promise<any> {
+  async adjustStockDirect(
+    request: DirectStockAdjustment
+  ): Promise<{ success: boolean; message: string }> {
     try {
       const response = await fetch("/api/inventory/adjust", {
         method: "POST",
@@ -164,13 +200,19 @@ export class InventoryService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to adjust stock");
+        throw new Error(
+          (error instanceof Error ? error.message : String(error)) ||
+            "Failed to adjust stock"
+        );
       }
 
       const result = await response.json();
       return result;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to adjust stock");
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to adjust stock"
+      );
     }
   }
 }

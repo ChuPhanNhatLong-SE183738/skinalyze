@@ -105,7 +105,11 @@ export default function AppointmentDetailPage() {
       }
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Unable to load appointment.";
+        error instanceof Error
+          ? error instanceof Error
+            ? error.message
+            : String(error)
+          : "Unable to load appointment.";
       toast({
         title: "Error",
         description: message,
@@ -136,10 +140,12 @@ export default function AppointmentDetailPage() {
       });
       // Không cần fetch lại toàn bộ trang để tránh giật,
       // vì state 'medicalNote' đang là mới nhất rồi.
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to save medical note.",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to save medical note.",
         variant: "error",
       });
     } finally {
@@ -240,10 +246,12 @@ export default function AppointmentDetailPage() {
       }
       window.open(meetLink, "_blank");
       await fetchAppointment();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to join meeting.",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to join meeting.",
         variant: "error",
       });
     } finally {
@@ -278,10 +286,12 @@ export default function AppointmentDetailPage() {
       });
       setDialogOpen(null);
       await fetchAppointment();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to complete appointment.",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to complete appointment.",
         variant: "error",
       });
     } finally {
@@ -301,10 +311,12 @@ export default function AppointmentDetailPage() {
       });
       setDialogOpen(null);
       await fetchAppointment();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to cancel appointment.",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to cancel appointment.",
         variant: "error",
       });
     } finally {
@@ -539,7 +551,7 @@ export default function AppointmentDetailPage() {
                 />
                 <p className="text-xs text-muted-foreground mt-2 italic">
                   * Note: This content is saved automatically when you click
-                  "Save Draft" or "Complete Appointment".
+                  &quot;Save Draft&quot; or &quot;Complete Appointment&quot;.
                 </p>
               </CardContent>
             </Card>
@@ -733,7 +745,8 @@ export default function AppointmentDetailPage() {
                 placeholder="Ensure your medical notes are complete..."
               />
               <p className="text-xs text-muted-foreground">
-                * These notes will be saved to the patient's medical record.
+                * These notes will be saved to the patient&apos;s medical
+                record.
               </p>
             </div>
 

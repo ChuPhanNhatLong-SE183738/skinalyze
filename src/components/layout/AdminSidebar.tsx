@@ -47,7 +47,7 @@ const menuItems = [
     icon: Wallet,
   },
   {
-    title: "Shipping Logs",
+    title: "Shipping",
     href: "/admin/shipping-logs",
     icon: Truck,
   },
@@ -71,11 +71,6 @@ const menuItems = [
     href: "/admin/users",
     icon: Users,
   },
-  // {
-  //   title: "Reports",
-  //   href: "/admin/reports",
-  //   icon: FileText,
-  // },
 ];
 
 export function AdminSidebar({ onLogout }: AdminSidebarProps) {

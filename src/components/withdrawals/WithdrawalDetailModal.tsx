@@ -164,14 +164,14 @@ export default function WithdrawalDetailModal({
 
         <div className="space-y-6 py-4">
           {/* Status and Amount */}
-          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
             <div>
               <p className="text-sm text-slate-500 mb-1">Status</p>
               {getStatusBadge(withdrawal.status)}
             </div>
             <div className="text-right">
               <p className="text-sm text-slate-500 mb-1">Amount</p>
-              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              <p className="text-2xl font-bold text-slate-900">
                 {formatCurrency(withdrawal.amount)}
               </p>
             </div>
@@ -263,8 +263,8 @@ export default function WithdrawalDetailModal({
                 <FileText className="h-5 w-5 text-slate-600" />
                 Customer Notes
               </h3>
-              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                <p className="text-slate-700 dark:text-slate-300">
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <p className="text-slate-700">
                   {withdrawal.notes}
                 </p>
               </div>
@@ -322,7 +322,7 @@ export default function WithdrawalDetailModal({
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Provide a reason for rejection..."
-                  className="mt-1"
+                  className="mt-1 bg-white border-slate-300 text-slate-900"
                   rows={3}
                 />
               </div>

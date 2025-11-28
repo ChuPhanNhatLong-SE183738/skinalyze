@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { api, handleApiError } from "@/lib/api";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000/api/v1";
 
 export async function GET(req: NextRequest) {
   try {

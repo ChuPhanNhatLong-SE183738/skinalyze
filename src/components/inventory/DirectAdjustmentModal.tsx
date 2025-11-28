@@ -35,7 +35,9 @@ export default function DirectAdjustmentModal({
   inventory,
   onSubmit,
 }: DirectAdjustmentModalProps) {
-  const [adjustmentType, setAdjustmentType] = useState<"INCREASE" | "DECREASE">("INCREASE");
+  const [adjustmentType, setAdjustmentType] = useState<"INCREASE" | "DECREASE">(
+    "INCREASE"
+  );
   const [quantity, setQuantity] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -51,7 +53,7 @@ export default function DirectAdjustmentModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!inventory) return;
 
     const quantityNum = parseInt(quantity);
@@ -64,7 +66,9 @@ export default function DirectAdjustmentModal({
     if (adjustmentType === "DECREASE") {
       const availableStock = inventory.currentStock - inventory.reservedStock;
       if (quantityNum > availableStock) {
-        setError(`Cannot decrease by ${quantityNum}. Available stock: ${availableStock}`);
+        setError(
+          `Cannot decrease by ${quantityNum}. Available stock: ${availableStock}`
+        );
         return;
       }
     }
@@ -80,8 +84,8 @@ export default function DirectAdjustmentModal({
     try {
       await onSubmit(adjustment);
       onClose();
-    } catch (err: any) {
-      setError(err.message || "Failed to adjust stock");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Failed to adjust stock");
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +116,9 @@ export default function DirectAdjustmentModal({
                 <h3 className="font-semibold text-slate-900">
                   {inventory.product.productName}
                 </h3>
-                <p className="text-sm text-slate-600">{inventory.product.brand}</p>
+                <p className="text-sm text-slate-600">
+                  {inventory.product.brand}
+                </p>
               </div>
             </div>
 

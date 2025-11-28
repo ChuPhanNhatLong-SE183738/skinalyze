@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000/api/v1";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       email: fullUser.email,
       fullName: fullUser.fullName,
       role: fullUser.role,
+      isActive: fullUser.isActive,
       // (Remove 'photoUrl', 'addresses', 'balance', 'createdAt', etc.)
     };
 
@@ -66,9 +67,9 @@ export async function POST(request: NextRequest) {
     });
 
     return res;
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: (error instanceof Error ? error.message : String(error)) || "Internal server error" },
       { status: 500 }
     );
   }

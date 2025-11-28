@@ -29,7 +29,11 @@ import {
 
 const statusConfig: Record<
   string,
-  { label: string; icon: any; color: string }
+  {
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+  }
 > = {
   PENDING: {
     label: "Pending",
@@ -193,10 +197,12 @@ export default function StaffShippingPage() {
         description: "You have successfully claimed this delivery",
       });
       await fetchAllData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to claim delivery",
+        description:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Failed to claim delivery",
         variant: "error",
       });
     }
@@ -320,7 +326,7 @@ export default function StaffShippingPage() {
 
         {/* Stats Cards */}
         <div className="mb-6 grid gap-6 md:grid-cols-4">
-          <Card className="p-4">
+          <Card className="p-4 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600">Total Shipments</p>
@@ -332,7 +338,7 @@ export default function StaffShippingPage() {
             </div>
           </Card>
 
-          <Card className="p-4">
+          <Card className="p-4 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600">In Transit</p>
@@ -347,7 +353,7 @@ export default function StaffShippingPage() {
             </div>
           </Card>
 
-          <Card className="p-4">
+          <Card className="p-4 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600">Out for Delivery</p>
@@ -363,7 +369,7 @@ export default function StaffShippingPage() {
             </div>
           </Card>
 
-          <Card className="p-4">
+          <Card className="p-4 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-600">Delivered</p>
@@ -380,7 +386,7 @@ export default function StaffShippingPage() {
         </div>
 
         {/* Search and Filters */}
-        <Card className="mb-6 p-4">
+        <Card className="mb-6 p-4 bg-white border-slate-200">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -389,7 +395,7 @@ export default function StaffShippingPage() {
                 placeholder="Search by Shipping ID, Order ID, or Carrier..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
               />
             </div>
             <select
@@ -411,7 +417,7 @@ export default function StaffShippingPage() {
         </Card>
 
         {/* Shipping Logs Table */}
-        <Card>
+        <Card className="bg-white border-slate-200">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="border-b bg-slate-50">
@@ -454,7 +460,8 @@ export default function StaffShippingPage() {
                 ) : (
                   filteredLogs.map((log) => {
                     const StatusIcon = statusConfig[log.status].icon;
-                    const statusStyle = statusConfig[log.status].color;
+                    const statusStyle = statusConfig[log.status]
+                      .color as string;
 
                     return (
                       <tr
@@ -504,7 +511,7 @@ export default function StaffShippingPage() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => setSelectedLog(log)}
-                                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50 bg-white"
                                 >
                                   View Details
                                 </Button>
@@ -514,7 +521,7 @@ export default function StaffShippingPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setSelectedLog(log)}
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                className="text-green-600 hover:text-green-700 hover:bg-green-50 bg-white"
                               >
                                 View Details
                               </Button>

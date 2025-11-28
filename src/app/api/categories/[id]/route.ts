@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000/api/v1";
 
 export async function PATCH(
   request: NextRequest,
@@ -38,10 +38,10 @@ export async function PATCH(
     }
 
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating category:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: (error instanceof Error ? error.message : String(error)) || "Internal server error" },
       { status: 500 }
     );
   }
@@ -76,10 +76,10 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: "Category deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting category:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: (error instanceof Error ? error.message : String(error)) || "Internal server error" },
       { status: 500 }
     );
   }

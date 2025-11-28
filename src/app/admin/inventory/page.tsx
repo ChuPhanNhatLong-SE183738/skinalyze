@@ -91,8 +91,8 @@ export default function AdminInventoryPage() {
       await fetchInventory();
       setShowDirectModal(false);
       setSelectedInventory(null);
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to adjust stock");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to adjust stock");
     }
   };
 
@@ -106,8 +106,8 @@ export default function AdminInventoryPage() {
       };
       await inventoryService.reviewAdjustment(request);
       await Promise.all([fetchInventory(), fetchPendingAdjustments()]);
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to approve adjustment");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to approve adjustment");
     }
   };
 
@@ -121,8 +121,8 @@ export default function AdminInventoryPage() {
       };
       await inventoryService.reviewAdjustment(request);
       await fetchPendingAdjustments();
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to reject adjustment");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to reject adjustment");
     }
   };
 
@@ -183,7 +183,7 @@ export default function AdminInventoryPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Total Products</p>
@@ -195,7 +195,7 @@ export default function AdminInventoryPage() {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Total Value</p>
@@ -209,7 +209,7 @@ export default function AdminInventoryPage() {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Low Stock</p>
@@ -221,7 +221,7 @@ export default function AdminInventoryPage() {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Out of Stock</p>
@@ -233,7 +233,7 @@ export default function AdminInventoryPage() {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Pending Requests</p>
@@ -288,14 +288,14 @@ export default function AdminInventoryPage() {
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
             />
           </div>
         </div>
 
         {/* Content */}
         {activeTab === "inventory" ? (
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden bg-white border-slate-200">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
@@ -385,7 +385,7 @@ export default function AdminInventoryPage() {
             </div>
           </Card>
         ) : (
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden bg-white border-slate-200">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">

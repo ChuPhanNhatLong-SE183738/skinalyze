@@ -46,7 +46,7 @@ export function SubscriptionPlanToolbar({
 
   const handleFilterChange = (
     key: keyof FindSubscriptionPlansDto,
-    value: any
+    value: string | number | boolean | undefined
   ) => {
     // If value is "ALL", set undefined to remove the filter
     const newValue = value === "ALL" ? undefined : value;

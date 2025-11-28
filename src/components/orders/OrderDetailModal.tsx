@@ -41,9 +41,9 @@ interface Order {
       phoneNumber?: string;
     };
     aiUsageAmount?: number;
-    allergicTo?: any;
-    pastDermatologicalHistory?: any;
-    purchaseHistory?: any[];
+    allergicTo?: unknown;
+    pastDermatologicalHistory?: unknown;
+    purchaseHistory?: unknown[];
     createdAt: string;
     updatedAt: string;
   };
@@ -74,7 +74,7 @@ interface Order {
       productImages: string[];
       ingredients?: string;
       suitableFor?: string[];
-      reviews?: any[];
+      reviews?: unknown[];
       salePercentage?: string;
       createdAt: string;
       updatedAt: string;
@@ -144,7 +144,7 @@ export function OrderDetailModal({
       setError("");
       const response = await orderService.getOrderById(orderId);
       setOrder(response.data);
-      
+
       // Fetch processed by user if available
       if (response.data.processedBy) {
         try {
@@ -161,8 +161,10 @@ export function OrderDetailModal({
       } else {
         setProcessedByUser(null);
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to load order details");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load order details"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -178,17 +180,26 @@ export function OrderDetailModal({
         setError("User not authenticated");
         return;
       }
-      
+
       // Confirm the order
-      await orderService.confirmOrder(orderId, user.userId, confirmNote || undefined);
-      
+      await orderService.confirmOrder(
+        orderId,
+        user.userId,
+        confirmNote || undefined
+      );
+
       // Send notification to customer
       try {
         await notificationService.sendToUser({
           userId: order.customerId,
           type: NotificationType.ORDER,
           title: "✅ Đơn hàng đã được xác nhận",
-          message: `Đơn hàng #${orderId.slice(0, 8)} đã được xác nhận và đang được chuẩn bị. ${confirmNote ? `Ghi chú: ${confirmNote}` : ""}`,
+          message: `Đơn hàng #${orderId.slice(
+            0,
+            8
+          )} đã được xác nhận và đang được chuẩn bị. ${
+            confirmNote ? `Ghi chú: ${confirmNote}` : ""
+          }`,
           data: {
             orderId: orderId,
             status: "CONFIRMED",
@@ -201,13 +212,13 @@ export function OrderDetailModal({
         console.error("Failed to send notification:", notifError);
         // Don't block the flow if notification fails
       }
-      
+
       onOrderUpdated();
       onOpenChange(false);
       setShowConfirmDialog(false);
       setConfirmNote("");
-    } catch (err: any) {
-      setError(err.message || "Failed to confirm order");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to confirm order");
     } finally {
       setIsProcessing(false);
     }
@@ -217,7 +228,7 @@ export function OrderDetailModal({
     if (!orderId || !order) return;
 
     const finalReason = cancelReason === "custom" ? customReason : cancelReason;
-    
+
     if (!finalReason.trim()) {
       setError("Please provide a reason for cancellation");
       return;
@@ -226,17 +237,20 @@ export function OrderDetailModal({
     try {
       setIsProcessing(true);
       const user = authService.getUserFromCookie();
-      
+
       // Cancel the order
       await orderService.cancelOrder(orderId, finalReason, user?.userId);
-      
+
       // Send notification to customer
       try {
         await notificationService.sendToUser({
           userId: order.customerId,
           type: NotificationType.ORDER,
           title: "❌ Đơn hàng bị từ chối",
-          message: `Đơn hàng #${orderId.slice(0, 8)} đã bị từ chối. Lý do: ${finalReason}`,
+          message: `Đơn hàng #${orderId.slice(
+            0,
+            8
+          )} đã bị từ chối. Lý do: ${finalReason}`,
           data: {
             orderId: orderId,
             status: "REJECTED",
@@ -249,14 +263,14 @@ export function OrderDetailModal({
         console.error("Failed to send notification:", notifError);
         // Don't block the flow if notification fails
       }
-      
+
       onOrderUpdated();
       onOpenChange(false);
       setShowCancelDialog(false);
       setCancelReason("");
       setCustomReason("");
-    } catch (err: any) {
-      setError(err.message || "Failed to cancel order");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to cancel order");
     } finally {
       setIsProcessing(false);
     }
@@ -264,12 +278,12 @@ export function OrderDetailModal({
 
   const formatCurrency = (amount: string | number) => {
     const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
-    
+
     // Check if valid number
     if (isNaN(numAmount)) {
       return "0 ₫";
     }
-    
+
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
@@ -322,10 +336,18 @@ export function OrderDetailModal({
                 disabled={isProcessing}
               >
                 <option value="">-- Select a reason --</option>
-                <option value="Sản phẩm tạm hết hàng">Sản phẩm tạm hết hàng</option>
-                <option value="Khách hàng yêu cầu hủy">Khách hàng yêu cầu hủy</option>
-                <option value="Địa chỉ giao hàng không hợp lệ">Địa chỉ giao hàng không hợp lệ</option>
-                <option value="Không thể xác nhận thanh toán">Không thể xác nhận thanh toán</option>
+                <option value="Sản phẩm tạm hết hàng">
+                  Sản phẩm tạm hết hàng
+                </option>
+                <option value="Khách hàng yêu cầu hủy">
+                  Khách hàng yêu cầu hủy
+                </option>
+                <option value="Địa chỉ giao hàng không hợp lệ">
+                  Địa chỉ giao hàng không hợp lệ
+                </option>
+                <option value="Không thể xác nhận thanh toán">
+                  Không thể xác nhận thanh toán
+                </option>
                 <option value="custom">Other reason...</option>
               </select>
             </div>
@@ -361,7 +383,11 @@ export function OrderDetailModal({
             <Button
               variant="destructive"
               onClick={handleCancel}
-              disabled={isProcessing || !cancelReason || (cancelReason === "custom" && !customReason.trim())}
+              disabled={
+                isProcessing ||
+                !cancelReason ||
+                (cancelReason === "custom" && !customReason.trim())
+              }
             >
               {isProcessing ? "Cancelling..." : "Cancel Order"}
             </Button>
@@ -428,7 +454,7 @@ export function OrderDetailModal({
               {isProcessing ? "Confirming..." : "Confirm Order"}
             </Button>
           </DialogFooter>
-          
+
           {showShippingModal && order && (
             <CreateShippingLogModal
               isOpen={showShippingModal}
@@ -448,7 +474,7 @@ export function OrderDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Order Details</DialogTitle>
           <DialogDescription>
@@ -502,7 +528,10 @@ export function OrderDetailModal({
                     <span className="font-medium text-slate-900 dark:text-slate-100">
                       {processedByUser.fullName}
                     </span>
-                    <span className="text-slate-400"> ({processedByUser.role})</span>
+                    <span className="text-slate-400">
+                      {" "}
+                      ({processedByUser.role})
+                    </span>
                   </div>
                 </div>
               )}
@@ -637,9 +666,9 @@ export function OrderDetailModal({
                   <div className="flex justify-between">
                     <span className="text-slate-500">Payment ID:</span>
                     <span className="font-mono text-slate-900 dark:text-slate-100">
-                      {order.paymentId && typeof order.paymentId === 'string' 
-                        ? order.paymentId.slice(0, 12) + '...' 
-                        : 'N/A'}
+                      {order.paymentId && typeof order.paymentId === "string"
+                        ? order.paymentId.slice(0, 12) + "..."
+                        : "N/A"}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -680,16 +709,13 @@ export function OrderDetailModal({
                     </span>
                     <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
                       {(() => {
-                        const total = order.orderItems.reduce(
-                          (sum, item) => {
-                            const price = parseFloat(item.priceAtTime);
-                            const qty = item.quantity;
-                            return sum + (price * qty);
-                          },
-                          0
-                        );
-                        console.log('Order Items:', order.orderItems);
-                        console.log('Calculated Total:', total);
+                        const total = order.orderItems.reduce((sum, item) => {
+                          const price = parseFloat(item.priceAtTime);
+                          const qty = item.quantity;
+                          return sum + price * qty;
+                        }, 0);
+                        console.log("Order Items:", order.orderItems);
+                        console.log("Calculated Total:", total);
                         return formatCurrency(total);
                       })()}
                     </span>
@@ -765,7 +791,7 @@ export function OrderDetailModal({
           )}
         </DialogFooter>
       </DialogContent>
-      
+
       {showShippingModal && order && (
         <CreateShippingLogModal
           isOpen={showShippingModal}

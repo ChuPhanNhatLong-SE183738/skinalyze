@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { notificationService } from "@/services/notificationService";
 import { NotificationType, NotificationPriority } from "@/types/notification";
 import { Bell, Send, CheckCircle, AlertCircle } from "lucide-react";
@@ -25,7 +31,7 @@ export function BroadcastNotificationForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim() || !formData.message.trim()) {
       setError("Title and message are required");
       return;
@@ -46,7 +52,7 @@ export function BroadcastNotificationForm() {
       });
 
       setSuccess("Notification broadcast successfully to all users!");
-      
+
       // Reset form
       setFormData({
         type: NotificationType.SYSTEM,
@@ -56,8 +62,10 @@ export function BroadcastNotificationForm() {
         imageUrl: "",
         priority: NotificationPriority.MEDIUM,
       });
-    } catch (err: any) {
-      setError(err.message || "Failed to broadcast notification");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Failed to broadcast notification"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -100,7 +108,10 @@ export function BroadcastNotificationForm() {
               className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-slate-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950"
               value={formData.type}
               onChange={(e) =>
-                setFormData({ ...formData, type: e.target.value as NotificationType })
+                setFormData({
+                  ...formData,
+                  type: e.target.value as NotificationType,
+                })
               }
               required
             >
@@ -121,7 +132,10 @@ export function BroadcastNotificationForm() {
               className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-slate-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950"
               value={formData.priority}
               onChange={(e) =>
-                setFormData({ ...formData, priority: e.target.value as NotificationPriority })
+                setFormData({
+                  ...formData,
+                  priority: e.target.value as NotificationPriority,
+                })
               }
               required
             >
@@ -198,11 +212,7 @@ export function BroadcastNotificationForm() {
 
           {/* Submit Button */}
           <div className="flex gap-3">
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1"
-            >
+            <Button type="submit" disabled={isSubmitting} className="flex-1">
               <Send className="mr-2 h-4 w-4" />
               {isSubmitting ? "Broadcasting..." : "Broadcast Notification"}
             </Button>

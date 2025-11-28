@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { slotId: string } }
+  { params }: { params: Promise<{ slotId: string }> }
 ) {
   try {
-    const { slotId } = params;
+    const { slotId } = await params;
     await api.delete(`/availability-slots/${slotId}`, { req: request });
 
     return new NextResponse(null, { status: 204 });

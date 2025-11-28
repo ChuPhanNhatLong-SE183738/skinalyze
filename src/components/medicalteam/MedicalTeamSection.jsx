@@ -1,86 +1,186 @@
-'use client'
+"use client";
 
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import SpecialistCard from "../SpecialistCard/SpecialistCard";
+import { X, ChevronLeft, ChevronRight, Building2, Play } from "lucide-react";
 
 const MedicalTeamSection = () => {
-  const doctors = [
+  const [selectedSpecialist, setSelectedSpecialist] = React.useState(null);
+
+  const SPECIALISTS = [
     {
+      id: 1,
       name: "Dr. Minh Trí",
-      title: "Bác sĩ Da liễu & AI Specialist",
-      experience: "15+ năm kinh nghiệm",
+      title: "Dermatologist & AI Specialist",
+      specialty: "Dermatologist & AI Specialist",
+      experience: "15+ years experience",
       description:
-        "Chuyên gia hàng đầu trong lĩnh vực chẩn đoán và điều trị các bệnh về da. Tiên phong trong việc ứng dụng AI vào y học da liễu tại Việt Nam.",
-      specialties: ["Chẩn đoán AI", "Da liễu tổng quát", "Nghiên cứu AI"],
-      image: "./DoctorMinhTri.png",
-      color: "blue",
+        "Leading expert in diagnosing and treating skin diseases. Pioneer in applying AI to dermatology medicine in Vietnam.",
+      specialties: ["AI Diagnosis", "General Dermatology", "AI Research"],
+      image: "/DoctorMinhTri.png",
+      hospital: "Hospital Hoan Thien",
+      color: "emerald",
     },
     {
+      id: 2,
       name: "Dr. Tinh",
-      title: "Bác sĩ Da liễu & Machine Learning",
-      experience: "12+ năm kinh nghiệm",
+      title: "Dermatologist & Machine Learning",
+      specialty: "Dermatologist & Machine Learning",
+      experience: "12+ years experience",
       description:
-        "Chuyên gia về da liễu và thẩm mỹ da, có kinh nghiệm sâu trong việc ứng dụng công nghệ AI vào chẩn đoán và tư vấn chăm sóc da.",
-      specialties: ["Thẩm mỹ da", "Chăm sóc da", "Tư vấn AI"],
-      image: "./DoctorTinh.png",
-      color: "green",
+        "Expert in dermatology and cosmetic skin, with deep experience in applying AI technology to diagnosis and skin care consultation.",
+      specialties: ["Cosmetic Derm", "Skin Care", "AI Consulting"],
+      image: "/DoctorTinh.png",
+      hospital: "Medical Center Excellence",
+      color: "teal",
     },
   ];
 
+  const navigateSpecialist = (direction) => {
+    const currentIndex = SPECIALISTS.findIndex(
+      (s) => s.id === selectedSpecialist.id
+    );
+    const newIndex =
+      direction === "next"
+        ? (currentIndex + 1) % SPECIALISTS.length
+        : (currentIndex - 1 + SPECIALISTS.length) % SPECIALISTS.length;
+    setSelectedSpecialist(SPECIALISTS[newIndex]);
+  };
+
   return (
-    <section id="doctors" className="py-20 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Đội ngũ y tế
+    <section
+      id="specialists"
+      className="relative z-10 py-20 md:py-32 overflow-hidden"
+    >
+      <div className="max-w-[1600px] mx-auto px-4 md:px-6 relative z-10">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-12 md:mb-16 px-4">
+          <h2 className="text-5xl md:text-8xl font-heading font-bold uppercase leading-[0.9] drop-shadow-lg break-words w-full md:w-auto">
+            Medical <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#a8fbd3] to-[#4fb7b3]">
+              Board
+            </span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Được phát triển và giám sát bởi các chuyên gia da liễu hàng đầu
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {doctors.map((doctor, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200"
-            >
-              <div className="flex items-start space-x-6">
-                <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0">
-                  <img
-                    src={doctor.image}
-                    alt={doctor.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                    {doctor.name}
-                  </h3>
-                  <p className={`text-${doctor.color}-600 font-semibold mb-2`}>
-                    {doctor.title}
-                  </p>
-                  <p className="text-gray-500 text-sm mb-4">
-                    {doctor.experience}
-                  </p>
-                  <p className="text-gray-600 leading-relaxed mb-6">
-                    {doctor.description}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {doctor.specialties.map((specialty, idx) => (
-                      <span
-                        key={idx}
-                        className={`px-3 py-1 bg-${doctor.color}-100 text-${doctor.color}-800 rounded-full text-sm font-medium`}
-                      >
-                        {specialty}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-t border-l border-white/10 bg-transparent">
+          {SPECIALISTS.map((specialist) => (
+            <SpecialistCard
+              key={specialist.id}
+              specialist={specialist}
+              onClick={() => setSelectedSpecialist(specialist)}
+            />
           ))}
         </div>
       </div>
+
+      {/* Specialist Detail Modal */}
+      <AnimatePresence>
+        {selectedSpecialist && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedSpecialist(null)}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-md cursor-auto"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-5xl bg-[#1a1b3b] border border-white/10 overflow-hidden flex flex-col md:flex-row shadow-2xl shadow-[#4fb7b3]/10"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedSpecialist(null)}
+                className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 text-white hover:bg-white hover:text-black transition-colors"
+                data-hover="true"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              {/* Navigation Buttons */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateSpecialist("prev");
+                }}
+                className="absolute left-4 bottom-4 translate-y-0 md:top-1/2 md:bottom-auto md:-translate-y-1/2 z-20 p-3 rounded-full bg-black/50 text-white hover:bg-white hover:text-black transition-colors border border-white/10 backdrop-blur-sm"
+                data-hover="true"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigateSpecialist("next");
+                }}
+                className="absolute right-4 bottom-4 translate-y-0 md:top-1/2 md:bottom-auto md:-translate-y-1/2 z-20 p-3 rounded-full bg-black/50 text-white hover:bg-white hover:text-black transition-colors border border-white/10 backdrop-blur-sm md:right-8"
+                data-hover="true"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+
+              {/* Image Side */}
+              <div className="w-full md:w-1/2 h-64 md:h-auto relative overflow-hidden">
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={selectedSpecialist.id}
+                    src={selectedSpecialist.image}
+                    alt={selectedSpecialist.name}
+                    initial={{ opacity: 0, scale: 1.1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                </AnimatePresence>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1a1b3b] via-transparent to-transparent md:bg-gradient-to-r" />
+              </div>
+
+              {/* Content Side */}
+              <div className="w-full md:w-1/2 p-8 pb-24 md:p-12 flex flex-col justify-center relative">
+                <motion.div
+                  key={selectedSpecialist.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.1 }}
+                >
+                  <div className="flex items-center gap-3 text-[#4fb7b3] mb-4">
+                    <Building2 className="w-4 h-4" />
+                    <span className="font-mono text-sm tracking-widest uppercase">
+                      {selectedSpecialist.hospital}
+                    </span>
+                  </div>
+
+                  <h3 className="text-3xl md:text-5xl font-heading font-bold uppercase leading-none mb-2 text-white">
+                    {selectedSpecialist.name}
+                  </h3>
+
+                  <p className="text-lg text-[#a8fbd3] font-medium tracking-widest uppercase mb-6">
+                    {selectedSpecialist.specialty}
+                  </p>
+
+                  <div className="h-px w-20 bg-white/20 mb-6" />
+
+                  <p className="text-gray-300 leading-relaxed text-lg font-light mb-8">
+                    {selectedSpecialist.description}
+                  </p>
+
+                  <button
+                    className="flex items-center gap-3 bg-[#4fb7b3] text-black px-6 py-3 font-bold uppercase tracking-widest text-sm hover:bg-white transition-colors w-fit"
+                    data-hover="true"
+                  >
+                    Book Consultation <Play className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };

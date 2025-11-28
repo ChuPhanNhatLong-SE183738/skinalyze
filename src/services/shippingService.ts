@@ -13,13 +13,13 @@ export class ShippingService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to fetch shipping logs");
+        throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch shipping logs");
       }
 
       const result: ShippingLogsResponse = await response.json();
       return result.data || [];
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch shipping logs");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch shipping logs");
     }
   }
 
@@ -35,13 +35,13 @@ export class ShippingService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to fetch shipping logs");
+        throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch shipping logs");
       }
 
       const result: ShippingLogsResponse = await response.json();
       return result.data || [];
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch shipping logs");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch shipping logs");
     }
   }
 
@@ -57,13 +57,13 @@ export class ShippingService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to fetch available logs");
+        throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch available logs");
       }
 
       const result: ShippingLogsResponse = await response.json();
       return result.data || [];
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch available logs");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch available logs");
     }
   }
 
@@ -79,13 +79,13 @@ export class ShippingService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to fetch my deliveries");
+        throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch my deliveries");
       }
 
       const result: ShippingLogsResponse = await response.json();
       return result.data || [];
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to fetch my deliveries");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch my deliveries");
     }
   }
 
@@ -101,13 +101,13 @@ export class ShippingService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to assign delivery");
+        throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to assign delivery");
       }
 
       const result = await response.json();
       return result.data;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to assign delivery");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to assign delivery");
     }
   }
 
@@ -131,13 +131,13 @@ export class ShippingService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to assign staff");
+        throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to assign staff");
       }
 
       const result = await response.json();
       return result.data;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to assign staff");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to assign staff");
     }
   }
 
@@ -166,13 +166,13 @@ export class ShippingService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to create shipping log");
+        throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to create shipping log");
       }
 
       const result = await response.json();
       return result.data;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to create shipping log");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to create shipping log");
     }
   }
 
@@ -201,13 +201,13 @@ export class ShippingService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to update shipping log");
+        throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to update shipping log");
       }
 
       const result = await response.json();
       return result.data;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to update shipping log");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to update shipping log");
     }
   }
 
@@ -235,13 +235,13 @@ export class ShippingService {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Failed to upload pictures");
+        throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to upload pictures");
       }
 
       const result = await response.json();
       return result.data;
-    } catch (error: any) {
-      throw new Error(error.message || "Failed to upload pictures");
+    } catch (error: unknown) {
+      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to upload pictures");
     }
   }
 }

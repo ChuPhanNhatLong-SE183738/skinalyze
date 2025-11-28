@@ -1,13 +1,15 @@
-'use client'
+"use client";
 
 import Navbar from "@/components/navbar/Navbar";
 import React, { useState } from "react";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 const FAQ = () => {
+  const { t } = useTranslation();
   const [openItems, setOpenItems] = useState<Record<number, boolean>>({});
 
   const toggleItem = (index: number) => {
-    setOpenItems((prev: any) => ({
+    setOpenItems((prev: Record<number, boolean>) => ({
       ...prev,
       [index]: !prev[index],
     }));
@@ -15,97 +17,87 @@ const FAQ = () => {
 
   const faqData = [
     {
-      question: "Skinalyze AI hoạt động như thế nào?",
-      answer:
-        "Skinalyze sử dụng công nghệ trí tuệ nhân tạo tiên tiến để phân tích hình ảnh da. Hệ thống được huấn luyện trên hàng triệu hình ảnh da liễu và sử dụng thuật toán deep learning để nhận diện các dấu hiệu bất thường, từ đó đưa ra đánh giá và khuyến nghị tham khảo.",
+      question: t("faq.q1"),
+      answer: t("faq.a1"),
     },
     {
-      question: "Độ chính xác của Skinalyze AI là bao nhiêu?",
-      answer:
-        "Skinalyze AI đạt độ chính xác lên đến 94% trong việc phát hiện các vấn đề da liễu phổ biến. Tuy nhiên, kết quả chỉ mang tính chất tham khảo và không thay thế cho chẩn đoán y tế chuyên nghiệp.",
+      question: t("faq.q2"),
+      answer: t("faq.a2"),
     },
     {
-      question: "Tôi có thể tin tưởng hoàn toàn vào kết quả AI không?",
-      answer:
-        "Không. Kết quả từ Skinalyze AI chỉ là công cụ hỗ trợ tham khảo. Bạn luôn cần tham khảo ý kiến của bác sĩ da liễu để có chẩn đoán chính xác và phương pháp điều trị phù hợp.",
+      question: t("faq.q3"),
+      answer: t("faq.a3"),
     },
     {
-      question: "Skinalyze có thể phát hiện những loại bệnh da nào?",
-      answer:
-        "Skinalyze có thể nhận diện và đánh giá các vấn đề da phổ biến như: mụn trứng cá, viêm da, nám da, tàn nhang, u nang, nốt ruồi bất thường, và nhiều tình trạng da khác. Hệ thống liên tục được cập nhật để mở rộng khả năng nhận diện.",
+      question: t("faq.q4"),
+      answer: t("faq.a4"),
     },
     {
-      question: "Làm thế nào để chụp ảnh da đúng cách?",
-      answer:
-        "Để có kết quả tốt nhất: (1) Chụp trong ánh sáng tự nhiên hoặc đèn LED trắng, (2) Giữ camera cách vùng da khoảng 15-20cm, (3) Đảm bảo hình ảnh rõ nét, không bị mờ, (4) Vùng da cần phân tích chiếm ít nhất 50% khung hình.",
+      question: t("faq.q5"),
+      answer: t("faq.a5"),
     },
     {
-      question: "Dữ liệu và hình ảnh của tôi có được bảo mật không?",
-      answer:
-        "Có. Skinalyze cam kết bảo mật tuyệt đối thông tin cá nhân và hình ảnh của người dùng. Dữ liệu được mã hóa và lưu trữ an toàn, không chia sẻ với bên thứ ba mà không có sự đồng ý của bạn.",
+      question: t("faq.q6"),
+      answer: t("faq.a6"),
     },
     {
-      question: "Skinalyze có miễn phí không?",
-      answer:
-        "Skinalyze cung cấp phiên bản miễn phí với các tính năng cơ bản. Phiên bản Premium với các tính năng nâng cao như phân tích chi tiết, theo dõi lịch sử và tư vấn từ chuyên gia có tính phí.",
+      question: t("faq.q7"),
+      answer: t("faq.a7"),
     },
     {
-      question: "Tôi có thể sử dụng Skinalyze trên điện thoại không?",
-      answer:
-        "Có. Skinalyze có ứng dụng di động cho cả iOS và Android. Bạn cũng có thể sử dụng phiên bản web trên trình duyệt di động.",
+      question: t("faq.q8"),
+      answer: t("faq.a8"),
     },
     {
-      question: "Skinalyze có phù hợp với trẻ em không?",
-      answer:
-        "Skinalyze được thiết kế cho mọi lứa tuổi, tuy nhiên đối với trẻ em dưới 13 tuổi, phụ huynh cần giám sát và tham khảo ý kiến bác sĩ nhi khoa trước khi sử dụng kết quả phân tích.",
+      question: t("faq.q9"),
+      answer: t("faq.a9"),
     },
     {
-      question: "Tôi không hài lòng với kết quả, có thể khiếu nại không?",
-      answer:
-        "Nếu bạn có thắc mắc về kết quả phân tích, hãy liên hệ với đội ngũ hỗ trợ của chúng tôi qua email support@Skinalyze.ai hoặc chat trực tuyến. Chúng tôi sẽ xem xét và hỗ trợ bạn trong vòng 24 giờ.",
+      question: t("faq.q10"),
+      answer: t("faq.a10"),
     },
   ];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#0a0e1a]">
       <Navbar />
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 bg-gradient-to-br from-green-50 to-blue-50">
+      <section className="pt-32 pb-20 bg-gradient-to-br from-emerald-950/50 to-teal-950/50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium mb-6">
-            <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-            Hỗ trợ khách hàng
+          <div className="inline-flex items-center px-4 py-2 glass-card border border-emerald-400/30 rounded-full text-sm font-medium mb-6">
+            <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2"></span>
+            <span className="gradient-text">{t("faq.badge")}</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            Câu hỏi <span className="text-green-600">thường gặp</span>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            {t("faq.title")}{" "}
+            <span className="gradient-text">{t("faq.titleHighlight")}</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Tìm hiểu thêm về Skinalyze AI và cách sử dụng hệ thống phân tích da
-            thông minh
+          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            {t("faq.subtitle")}
           </p>
         </div>
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20">
+      <section className="py-20 bg-[#0a0e1a]">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-4">
             {faqData.map((item, index: number) => (
               <div
                 key={index}
-                className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200"
+                className="glass-card border border-white/10 rounded-2xl hover:border-emerald-400/50 transition-all duration-200"
               >
                 <button
                   onClick={() => toggleItem(index)}
-                  className="w-full px-6 py-5 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 rounded-2xl"
+                  className="w-full px-6 py-5 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-opacity-50 rounded-2xl"
                 >
-                  <h3 className="text-lg font-semibold text-gray-900 pr-4">
+                  <h3 className="text-lg font-semibold text-white pr-4">
                     {item.question}
                   </h3>
                   <div className="flex-shrink-0">
                     <svg
-                      className={`w-5 h-5 text-green-600 transform transition-transform duration-200 ${
+                      className={`w-5 h-5 text-emerald-400 transform transition-transform duration-200 ${
                         openItems[index] ? "rotate-180" : ""
                       }`}
                       fill="none"
@@ -125,7 +117,7 @@ const FAQ = () => {
                 {openItems[index] && (
                   <div className="px-6 pb-5">
                     <div className="border-t border-gray-100 pt-4">
-                      <p className="text-gray-700 leading-relaxed">
+                      <p className="text-gray-400 leading-relaxed">
                         {item.answer}
                       </p>
                     </div>
@@ -138,20 +130,20 @@ const FAQ = () => {
       </section>
 
       {/* Contact Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-gradient-to-br from-emerald-950/30 to-teal-950/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-6">
-            Vẫn có thắc mắc?
+          <h2 className="text-3xl font-bold text-white mb-6">
+            Still have questions?
           </h2>
-          <p className="text-xl text-gray-600 mb-8">
-            Đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng giúp đỡ bạn
+          <p className="text-xl text-gray-400 mb-8">
+            Our support team is always ready to help you
           </p>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-            <div className="bg-white p-6 rounded-2xl shadow-lg">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="glass-card border border-white/10 p-6 rounded-2xl">
+              <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <svg
-                  className="w-6 h-6 text-green-600"
+                  className="w-6 h-6 text-emerald-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -164,22 +156,22 @@ const FAQ = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Email hỗ trợ
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Support Email
               </h3>
-              <p className="text-gray-600 mb-4">Gửi email cho chúng tôi</p>
+              <p className="text-gray-400 mb-4">Send us an email</p>
               <a
                 href="mailto:support@Skinalyze.ai"
-                className="text-green-600 font-medium hover:text-green-700 transition-colors"
+                className="text-emerald-400 font-medium hover:text-emerald-300 transition-colors"
               >
                 support@Skinalyze.ai
               </a>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-lg">
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <div className="glass-card border border-white/10 p-6 rounded-2xl">
+              <div className="w-12 h-12 bg-teal-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <svg
-                  className="w-6 h-6 text-blue-600"
+                  className="w-6 h-6 text-teal-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -192,18 +184,17 @@ const FAQ = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Chat trực tuyến
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Live Chat
               </h3>
-              <p className="text-gray-600 mb-4">Hỗ trợ 24/7</p>
-              <button className="text-blue-600 font-medium hover:text-blue-700 transition-colors">
-                Bắt đầu chat
+              <p className="text-gray-400 mb-4">24/7 Support</p>
+              <button className="text-teal-400 font-medium hover:text-teal-300 transition-colors">
+                Start Chat
               </button>
             </div>
           </div>
         </div>
       </section>
-
     </div>
   );
 };
