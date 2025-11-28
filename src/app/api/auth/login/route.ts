@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       email: fullUser.email,
       fullName: fullUser.fullName,
       role: fullUser.role,
+      isActive: fullUser.isActive,
       // (Remove 'photoUrl', 'addresses', 'balance', 'createdAt', etc.)
     };
 

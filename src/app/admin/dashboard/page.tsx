@@ -14,12 +14,23 @@ import {
   Settings,
 } from "lucide-react";
 import { authService } from "@/services/authService";
+import { orderService } from "@/services/orderService";
+import { productService } from "@/services/productService";
+import { userService } from "@/services/userService";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import type { User as UserType } from "@/types/auth";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserType | null>(null);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalOrders: 0,
+    activeUsers: 0,
+    totalProducts: 0,
+    pendingOrders: 0,
+    isLoading: true,
+  });
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -39,6 +50,7 @@ export default function AdminDashboardPage() {
         }
 
         setUser(userData);
+        await fetchDashboardData();
       } catch (error) {
         // Redirect to login if validation fails
         router.push("/login");
@@ -47,6 +59,49 @@ export default function AdminDashboardPage() {
 
     checkAuthStatus();
   }, [router]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setStats(prev => ({ ...prev, isLoading: true }));
+
+      // Fetch all data in parallel
+      const [ordersData, productsData, usersData] = await Promise.all([
+        orderService.getOrders().catch(() => ({ data: [], total: 0 })),
+        productService.getProducts(1, 1000).catch(() => ({ products: [], total: 0 })),
+        userService.getUsers(1, 1000).catch(() => ({ users: [], total: 0 })),
+      ]);
+
+      // Calculate statistics
+      const orders = ordersData.data || [];
+      const products = productsData.products || [];
+      const users = usersData.users || [];
+
+      const totalRevenue = orders
+        .filter(order => order.status === 'COMPLETED' || order.status === 'DELIVERED')
+        .reduce((sum, order) => {
+          const orderTotal = order.orderItems?.reduce(
+            (itemSum, item) => itemSum + (parseFloat(item.priceAtTime) * item.quantity), 
+            0
+          ) || 0;
+          return sum + orderTotal;
+        }, 0);
+
+      const pendingOrders = orders.filter(order => order.status === 'PENDING').length;
+      const activeUsers = users.filter(user => user.isActive).length;
+
+      setStats({
+        totalRevenue,
+        totalOrders: orders.length,
+        activeUsers,
+        totalProducts: products.length,
+        pendingOrders,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+      setStats(prev => ({ ...prev, isLoading: false }));
+    }
+  };
 
   if (!user) {
     return (
@@ -80,9 +135,11 @@ export default function AdminDashboardPage() {
               <DollarSign className="w-5 h-5 opacity-75" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">₫45,231,890</div>
+              <div className="text-2xl font-bold">
+                {stats.isLoading ? "Loading..." : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(stats.totalRevenue)}
+              </div>
               <p className="text-xs opacity-75 mt-1">
-                +20.1% from last month
+                From completed orders
               </p>
             </CardContent>
           </Card>
@@ -96,9 +153,11 @@ export default function AdminDashboardPage() {
               <ShoppingBag className="w-5 h-5 opacity-75" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2,350</div>
+              <div className="text-2xl font-bold">
+                {stats.isLoading ? "Loading..." : stats.totalOrders.toLocaleString()}
+              </div>
               <p className="text-xs opacity-75 mt-1">
-                +180 orders this week
+                All time orders
               </p>
             </CardContent>
           </Card>
@@ -112,15 +171,17 @@ export default function AdminDashboardPage() {
               <Users className="w-5 h-5 opacity-75" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12,234</div>
+              <div className="text-2xl font-bold">
+                {stats.isLoading ? "Loading..." : stats.activeUsers.toLocaleString()}
+              </div>
               <p className="text-xs opacity-75 mt-1">
-                +573 new users
+                Currently active
               </p>
             </CardContent>
           </Card>
 
           {/* System Health */}
-          <Card className="bg-gradient-to-br from-green-500 to-emerald-600 border-0 text-white">
+          <Card className="bg-gradient-to-br from-orange-500 to-red-600 border-0 text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 System Health
@@ -192,17 +253,17 @@ export default function AdminDashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <button className="w-full text-left px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm transition-colors">
+              <button 
+                onClick={() => router.push('/admin/orders')}
+                className="w-full text-left px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm transition-colors"
+              >
                 View All Orders
               </button>
-              <button className="w-full text-left px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm transition-colors">
+              <button 
+                onClick={() => router.push('/admin/users')}
+                className="w-full text-left px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm transition-colors"
+              >
                 Manage Users
-              </button>
-              <button className="w-full text-left px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm transition-colors">
-                View Reports
-              </button>
-              <button className="w-full text-left px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm transition-colors">
-                System Settings
               </button>
             </CardContent>
           </Card>
@@ -218,95 +279,27 @@ export default function AdminDashboardPage() {
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-600">Pending Orders</span>
-                <span className="font-medium text-yellow-600">23</span>
+                <span className="font-medium text-yellow-600">
+                  {stats.isLoading ? "..." : stats.pendingOrders}
+                </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">Active Staff</span>
-                <span className="font-medium text-green-600">15</span>
+                <span className="text-sm text-slate-600">Active Users</span>
+                <span className="font-medium text-green-600">
+                  {stats.isLoading ? "..." : stats.activeUsers}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-600">Total Products</span>
-                <span className="font-medium text-blue-600">456</span>
+                <span className="font-medium text-blue-600">
+                  {stats.isLoading ? "..." : stats.totalProducts}
+                </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-600">Support Tickets</span>
-                <span className="font-medium text-red-600">8</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Additional Management Section */}
-        <div className="mt-8 grid gap-6 md:grid-cols-2">
-          {/* System Management */}
-          <Card className="bg-white border-slate-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-slate-900">
-                <Settings className="w-5 h-5" />
-                System Management
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-slate-600 mb-4">
-                Manage system-wide settings, configurations, and integrations from the admin panel.
-              </p>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-slate-100 rounded-lg">
-                  <span className="text-sm text-slate-700">Database Status</span>
-                  <span className="text-xs text-green-600 font-medium">Connected</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-100 rounded-lg">
-                  <span className="text-sm text-slate-700">API Status</span>
-                  <span className="text-xs text-green-600 font-medium">Operational</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-100 rounded-lg">
-                  <span className="text-sm text-slate-700">Last Backup</span>
-                  <span className="text-xs text-slate-600 font-medium">2 hours ago</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Analytics Preview */}
-          <Card className="bg-white border-slate-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-slate-900">
-                <TrendingUp className="w-5 h-5" />
-                Analytics Preview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-slate-600 mb-4">
-                Key metrics and performance indicators for your platform.
-              </p>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-slate-600">Order Completion Rate</span>
-                    <span className="text-xs text-slate-700 font-medium">94%</span>
-                  </div>
-                  <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500" style={{ width: "94%" }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-slate-600">Customer Satisfaction</span>
-                    <span className="text-xs text-slate-700 font-medium">87%</span>
-                  </div>
-                  <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500" style={{ width: "87%" }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-slate-600">Staff Performance</span>
-                    <span className="text-xs text-slate-700 font-medium">91%</span>
-                  </div>
-                  <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-purple-500" style={{ width: "91%" }} />
-                  </div>
-                </div>
+                <span className="text-sm text-slate-600">Total Orders</span>
+                <span className="font-medium text-purple-600">
+                  {stats.isLoading ? "..." : stats.totalOrders}
+                </span>
               </div>
             </CardContent>
           </Card>

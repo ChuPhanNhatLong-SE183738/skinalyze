@@ -186,7 +186,7 @@ export default function ShippingLogsPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">
@@ -202,7 +202,7 @@ export default function ShippingLogsPage() {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Delivered</p>
@@ -216,7 +216,7 @@ export default function ShippingLogsPage() {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">In Transit</p>
@@ -230,7 +230,7 @@ export default function ShippingLogsPage() {
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">Pending</p>
@@ -254,14 +254,14 @@ export default function ShippingLogsPage() {
               placeholder="Search by Order ID, staff, carrier..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
             />
           </div>
           <div className="flex gap-3">
             <Button
               onClick={() => fetchShippingLogs()}
               variant="outline"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-green-300 text-green-600 hover:bg-green-50 hover:text-green-700 bg-white"
             >
               <RefreshCw className="h-4 w-4" />
               Refresh
@@ -277,7 +277,7 @@ export default function ShippingLogsPage() {
         </div>
 
         {/* Shipping Logs Table */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden bg-white border-slate-200">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">

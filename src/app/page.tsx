@@ -9,10 +9,12 @@ import MedicalTeamSection from "@/components/medicalteam/MedicalTeamSection";
 import DownloadCTASection from "@/components/download-section/DownloadCTASection";
 import Footer from "@/components/home/Footer";
 import CosmicBackground from "@/components/shared/CosmicBackground";
+import CustomCursor from "@/components/ui/CustomCursor";
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen text-white selection:bg-emerald-400 selection:text-black overflow-x-hidden bg-[#0a0e1a]">
+    <div className="relative min-h-screen text-white selection:bg-emerald-400 selection:text-black overflow-x-hidden bg-[#0a0e1a]" style={{cursor: 'none'}}>
+      <CustomCursor />
       <div className="fixed inset-0 z-0">
         <CosmicBackground />
       </div>

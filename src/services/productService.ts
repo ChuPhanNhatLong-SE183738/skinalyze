@@ -27,7 +27,17 @@ export class ProductService {
 
       const result = await response.json();
 
-      // Handle backend response format: { data: [...], message, statusCode }
+      // Handle new nested response format: { data: { data: [...], total, page, limit, totalPages } }
+      if (result.data && result.data.data && Array.isArray(result.data.data)) {
+        return {
+          products: result.data.data,
+          total: result.data.total || result.data.data.length,
+          page: result.data.page || page,
+          limit: result.data.limit || limit,
+        };
+      }
+
+      // Handle old response format: { data: [...], message, statusCode }
       if (result.data && Array.isArray(result.data)) {
         return {
           products: result.data,
@@ -59,7 +69,15 @@ export class ProductService {
         throw new Error(error.error || "Failed to fetch product");
       }
 
-      return await response.json();
+      const result = await response.json();
+
+      // Handle nested response format: { data: { productData } }
+      if (result.data && typeof result.data === 'object' && !Array.isArray(result.data)) {
+        return result.data;
+      }
+
+      // Fallback to direct result if already in expected format
+      return result;
     } catch (error: unknown) {
       throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch product");
     }

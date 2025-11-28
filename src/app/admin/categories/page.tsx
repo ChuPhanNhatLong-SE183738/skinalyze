@@ -195,7 +195,7 @@ export default function CategoriesPage() {
 
         {/* Stats Card */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="p-6">
+          <Card className="p-6 bg-white border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600">
@@ -253,7 +253,7 @@ export default function CategoriesPage() {
             filteredCategories.map((category) => (
               <Card
                 key={category.categoryId}
-                className="overflow-hidden hover:shadow-lg transition-shadow"
+                className="overflow-hidden hover:shadow-lg transition-shadow bg-white border-slate-200"
               >
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">

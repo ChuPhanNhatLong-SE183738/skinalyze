@@ -274,6 +274,7 @@ export default function WithdrawalsPage() {
               onClick={fetchWithdrawals}
               variant="outline"
               disabled={loading}
+              className="border-green-300 text-green-600 hover:bg-green-50 hover:text-green-700 bg-white"
             >
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
@@ -379,7 +380,7 @@ export default function WithdrawalsPage() {
                   placeholder="Search by name, bank, account number, or request ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-100"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-slate-900 placeholder:text-slate-500"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -387,7 +388,7 @@ export default function WithdrawalsPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-100"
+                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
                 >
                   <option value="all">All Status</option>
                   <option value={WithdrawalStatus.PENDING}>Pending</option>
@@ -491,8 +492,9 @@ export default function WithdrawalsPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <Button
                             onClick={() => handleViewDetails(withdrawal)}
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50 bg-white"
                           >
                             <Eye className="h-4 w-4 mr-1" />
                             View
