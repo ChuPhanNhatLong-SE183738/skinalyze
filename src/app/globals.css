@@ -116,11 +116,12 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body:not(.dermatologist-layout):not(.staff-layout) {
+  body:not(.dermatologist-layout):not(.staff-layout):not(.admin-layout) {
     @apply bg-background text-foreground;
   }
   body.dermatologist-layout,
-  body.staff-layout {
+  body.staff-layout,
+  body.admin-layout {
     @apply bg-slate-50 text-slate-700;
   }
 }
@@ -161,9 +162,10 @@
   }
 }
 
-/* Override styles for dermatologist and staff layouts */
+/* Override styles for dermatologist, staff, and admin layouts */
 .dermatologist-layout,
-.staff-layout {
+.staff-layout,
+.admin-layout {
   /* Override CSS variables for light theme */
   --background: oklch(0.98 0.002 220);
   --foreground: oklch(0.15 0.01 220);
