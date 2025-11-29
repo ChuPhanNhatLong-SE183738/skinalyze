@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { UserFormModal } from "@/components/users/UserFormModal";
 import { userService } from "@/services/userService";
+import { authService } from "@/services/authService";
 import type { User, CreateUserRequest, UpdateUserRequest } from "@/types/user";
 import {
   Search,
@@ -27,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -64,6 +66,18 @@ export default function UsersPage() {
   };
 
   useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const { authenticated, user } = await authService.checkAuth();
+        if (authenticated && user) {
+          setCurrentUser(user);
+        }
+      } catch (error) {
+        console.error('Error getting current user:', error);
+      }
+    };
+    
+    getCurrentUser();
     fetchUsers();
   }, []);
 
@@ -157,20 +171,42 @@ export default function UsersPage() {
     }
   };
 
-  const filteredUsers = (users || []).filter(
-    (user) =>
-      user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = (users || [])
+    .filter((user) => {
+      // Hide the current user
+      if (currentUser && user.userId === currentUser.userId) {
+        return false;
+      }
+      // Hide all admin users
+      if (user.role === 'admin') {
+        return false;
+      }
+      // Apply search filter
+      return (
+        user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
+
+  const visibleUsers = (users || []).filter((user) => {
+    // Hide the current user
+    if (currentUser && user.userId === currentUser.userId) {
+      return false;
+    }
+    // Hide all admin users
+    if (user.role === 'admin') {
+      return false;
+    }
+    return true;
+  });
 
   const stats = {
-    total: (users || []).length,
-    active: (users || []).filter((u) => u.isActive).length,
-    admins: (users || []).filter((u) => u.role === "admin").length,
-    staff: (users || []).filter((u) => u.role === "staff").length,
-    dermatologists: (users || []).filter((u) => u.role === "dermatologist")
-      .length,
-    customers: (users || []).filter((u) => u.role === "customer").length,
+    total: visibleUsers.length,
+    active: visibleUsers.filter((u) => u.isActive).length,
+    admins: 0, // Don't show admin count since we're hiding them
+    staff: visibleUsers.filter((u) => u.role === "staff").length,
+    dermatologists: visibleUsers.filter((u) => u.role === "dermatologist").length,
+    customers: visibleUsers.filter((u) => u.role === "customer").length,
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -208,7 +244,7 @@ export default function UsersPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <Card className="p-4 bg-white border-slate-200">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg">
@@ -232,20 +268,6 @@ export default function UsersPage() {
                 <p className="text-sm text-slate-600">Active</p>
                 <p className="text-2xl font-bold text-slate-900">
                   {stats.active}
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-4 bg-white border-slate-200">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Shield className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-slate-600">Admins</p>
-                <p className="text-2xl font-bold text-slate-900">
-                  {stats.admins}
                 </p>
               </div>
             </div>
