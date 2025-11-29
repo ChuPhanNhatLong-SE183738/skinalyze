@@ -1,12 +1,42 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react"; // Import thêm useEffect
 import { motion, AnimatePresence } from "framer-motion";
 import SpecialistCard from "../SpecialistCard/SpecialistCard";
 import { X, ChevronLeft, ChevronRight, Building2, Play } from "lucide-react";
 
 const MedicalTeamSection = () => {
   const [selectedSpecialist, setSelectedSpecialist] = React.useState(null);
+  const [imageError, setImageError] = React.useState(false);
+
+  useEffect(() => {
+    if (selectedSpecialist) {
+      setImageError(false);
+    }
+  }, [selectedSpecialist]);
+
+  const errorImage = (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 100 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="p-12 bg-[#080C16]"
+    >
+      <circle cx="50" cy="50" r="48" stroke="#76E0C2" strokeWidth="4" />
+      <path
+        d="M50 50C58.2843 50 65 43.2843 65 35C65 26.7157 58.2843 20 50 20C41.7157 20 35 26.7157 35 35C35 43.2843 41.7157 50 50 50Z"
+        stroke="#76E0C2"
+        strokeWidth="4"
+      />
+      <path
+        d="M77 80H23C23 66.7452 33.7452 56 47 56H53C66.2548 56 77 66.7452 77 80Z"
+        stroke="#76E0C2"
+        strokeWidth="4"
+      />
+    </svg>
+  );
 
   const SPECIALISTS = [
     {
@@ -31,7 +61,7 @@ const MedicalTeamSection = () => {
       description:
         "Expert in dermatology and cosmetic skin, with deep experience in applying AI technology to diagnosis and skin care consultation.",
       specialties: ["Cosmetic Derm", "Skin Care", "AI Consulting"],
-      image: "/DoctorTinh.png",
+      image: "/DoctorTinh.png", // Giả sử ảnh này lỗi, nó sẽ hiện SVG
       hospital: "Medical Center Excellence",
       color: "teal",
     },
@@ -124,20 +154,34 @@ const MedicalTeamSection = () => {
               </button>
 
               {/* Image Side */}
-              <div className="w-full md:w-1/2 h-64 md:h-auto relative overflow-hidden">
+              <div className="w-full md:w-1/2 h-64 md:h-auto relative overflow-hidden flex items-center justify-center bg-[#080C16]">
                 <AnimatePresence mode="wait">
-                  <motion.img
-                    key={selectedSpecialist.id}
-                    src={selectedSpecialist.image}
-                    alt={selectedSpecialist.name}
-                    initial={{ opacity: 0, scale: 1.1 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+                  {!imageError ? (
+                    <motion.img
+                      key={selectedSpecialist.id}
+                      src={selectedSpecialist.image}
+                      alt={selectedSpecialist.name}
+                      initial={{ opacity: 0, scale: 1.1 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      // SỬ DỤNG onError ĐỂ SET STATE
+                      onError={() => setImageError(true)}
+                      transition={{ duration: 0.4 }}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    // RENDER SVG TRỰC TIẾP KHI CÓ LỖI
+                    <motion.div
+                      key="error-svg"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="w-full h-full flex items-center justify-center"
+                    >
+                      {errorImage}
+                    </motion.div>
+                  )}
                 </AnimatePresence>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1a1b3b] via-transparent to-transparent md:bg-gradient-to-r" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#1a1b3b] via-transparent to-transparent md:bg-gradient-to-r pointer-events-none" />
               </div>
 
               {/* Content Side */}

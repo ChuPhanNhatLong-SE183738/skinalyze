@@ -116,8 +116,12 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
+  body:not(.dermatologist-layout):not(.staff-layout) {
     @apply bg-background text-foreground;
+  }
+  body.dermatologist-layout,
+  body.staff-layout {
+    @apply bg-slate-50 text-slate-700;
   }
 }
 
@@ -155,4 +159,29 @@
   .glow-teal {
     @apply shadow-[0_0_20px_rgba(45,212,191,0.3)];
   }
+}
+
+/* Override styles for dermatologist and staff layouts */
+.dermatologist-layout,
+.staff-layout {
+  /* Override CSS variables for light theme */
+  --background: oklch(0.98 0.002 220);
+  --foreground: oklch(0.15 0.01 220);
+  --muted: oklch(0.96 0.005 220);
+  --muted-foreground: oklch(0.45 0.01 220);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.01 220);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.01 220);
+  --primary: oklch(0.55 0.18 220);
+  --primary-foreground: oklch(0.98 0.002 220);
+  --secondary: oklch(0.96 0.005 220);
+  --secondary-foreground: oklch(0.15 0.01 220);
+  --accent: oklch(0.96 0.005 220);
+  --accent-foreground: oklch(0.15 0.01 220);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0.002 220);
+  --border: oklch(0.88 0.005 220);
+  --input: oklch(0.88 0.005 220);
+  --ring: oklch(0.55 0.18 220);
 }
