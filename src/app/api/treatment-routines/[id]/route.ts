@@ -1,11 +1,12 @@
 import { api, handleApiError } from "@/lib/api";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
+export async function GET(
+  req: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const pathname = req.nextUrl.pathname;
-    const parts = pathname.split("/");
-    const id = parts[parts.length - 1];
+    const { id } = context.params;
     const data = await api.get(`/treatment-routines/${id}`, { req });
     return NextResponse.json(data);
   } catch (error) {

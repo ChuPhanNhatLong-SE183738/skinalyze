@@ -3,10 +3,22 @@ import type {
   TreatmentRoutine,
   CreateTreatmentRoutineDto,
   UpdateTreatmentRoutineDto,
+  TimelineEvent,
 } from "@/types/treatment-routine";
 import type { ApiResponse } from "@/types/api";
 
 class TreatmentRoutineService {
+  async findByDermatologist(
+    dermatologistId: string,
+    customerId?: string
+  ): Promise<TreatmentRoutine[]> {
+    const endpoint = `/api/treatment-routines/dermatologist/${dermatologistId}`;
+    const res = await http.get<ApiResponse<TreatmentRoutine[]>>(endpoint, {
+      params: { customerId },
+    });
+    return res.data;
+  }
+
   async getById(id: string): Promise<TreatmentRoutine> {
     const res = await http.get<ApiResponse<TreatmentRoutine>>(
       `/api/treatment-routines/${id}`
@@ -30,6 +42,15 @@ class TreatmentRoutineService {
       `/api/treatment-routines/${id}`,
       dto
     );
+    return res.data;
+  }
+
+  async getTreatmentTimeline(routineId: string): Promise<TimelineEvent[]> {
+    const res = await http.get<ApiResponse<TimelineEvent[]>>(
+      `/api/treatment-routines/${routineId}/timeline`
+    );
+    console.log("Time line", res);
+
     return res.data;
   }
 }

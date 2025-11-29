@@ -6,9 +6,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const pathname = req.nextUrl.pathname;
-    const parts = pathname.split("/");
-    const id = parts[parts.length - 1];
+    const id = context.params.id;
 
     const body = await req.json();
     const data = await api.patch(`/routine-details/${id}`, body, { req });
@@ -23,12 +21,9 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const pathname = req.nextUrl.pathname;
-    const parts = pathname.split("/");
-    const id = parts[parts.length - 1];
-
-    await api.delete(`/routine-details/${id}`, { req });
-    return new NextResponse(null, { status: 204 });
+    const id = context.params.id;
+    const data = await api.delete(`/routine-details/${id}`, { req });
+    return NextResponse.json(data);
   } catch (error) {
     return handleApiError(error);
   }

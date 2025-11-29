@@ -17,6 +17,7 @@ import {
   Truck,
   FolderTree,
   Wallet,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -34,6 +35,11 @@ const menuItems = [
     title: "Orders",
     href: "/admin/orders",
     icon: ShoppingBag,
+  },
+  {
+    title: "Reports",
+    href: "/admin/reports",
+    icon: AlertTriangle,
   },
   {
     title: "Withdrawals",

@@ -1,7 +1,12 @@
 import { http } from "@/lib/http";
 import type {
   Appointment,
+  AppointmentDetailDto,
   CompleteAppointmentDto,
+  FindAppointmentsDto,
+  InterruptAppointmentDto,
+  ReportNoShowDto,
+  ResolveDisputeDto,
   UpdateMedicalNoteDto,
 } from "@/types/appointment";
 import type { ApiResponse } from "@/types/api";
@@ -11,27 +16,28 @@ class AppointmentService {
     filters: FindAppointmentsDto = {}
   ): Promise<Appointment[]> {
     try {
-      const definedFilters = Object.fromEntries(
-        Object.entries(filters).filter(
-          ([, value]) => value !== undefined && value !== null
-        )
+      const { customerId, dermatologistId, status } = filters;
+      const response = await http.get<ApiResponse<Appointment[]>>(
+        "/api/appointments",
+        {
+          params: {
+            customerId,
+            dermatologistId,
+            status,
+          },
+        }
       );
-      const queryParams = new URLSearchParams(
-        definedFilters as Record<string, string>
-      ).toString();
-
-      const endpoint = `/api/appointments?${queryParams}`;
-
-      const response = await http.get<ApiResponse<Appointment[]>>(endpoint);
       return response.data;
     } catch (error) {
       console.error("Lỗi khi lấy danh sách cuộc hẹn (service):", error);
       throw error;
     }
   }
-  async getAppointmentById(appointmentId: string): Promise<Appointment> {
+  async getAppointmentById(
+    appointmentId: string
+  ): Promise<AppointmentDetailDto> {
     try {
-      const response = await http.get<ApiResponse<Appointment>>(
+      const response = await http.get<ApiResponse<AppointmentDetailDto>>(
         `/api/appointments/${appointmentId}`
       );
 
@@ -56,7 +62,6 @@ class AppointmentService {
     note: string
   ): Promise<Appointment> {
     const dto: UpdateMedicalNoteDto = { medicalNote: note };
-    // Gọi BFF Route
     const response = await http.patch<ApiResponse<Appointment>>(
       `/api/appointments/dermatologist/medical-note/${appointmentId}`,
       dto
@@ -91,6 +96,40 @@ class AppointmentService {
       {}
     );
     return response.data;
+  }
+
+  async reportDoctorNoShow(
+    appointmentId: string,
+    dto: ReportNoShowDto
+  ): Promise<Appointment> {
+    const response = await http.patch<ApiResponse<Appointment>>(
+      `/api/appointments/dermatologist/report/no-show/${appointmentId}`,
+      dto
+    );
+    return response.data;
+  }
+
+  async reportInterrupt(
+    appointmentId: string,
+    dto: InterruptAppointmentDto
+  ): Promise<Appointment> {
+    // Endpoint: PATCH my/:id/report-interrupt
+    const response = await http.patch<ApiResponse<Appointment>>(
+      `/api/appointments/dermatologist/report/interrupt/${appointmentId}`,
+      dto
+    );
+    return response.data;
+  }
+
+  async resolveDispute(
+    appointmentId: string,
+    dto: ResolveDisputeDto
+  ): Promise<any> {
+    const response = await http.post(
+      `/api/admin/appointments/${appointmentId}/resolve`,
+      dto
+    );
+    return response;
   }
 }
 

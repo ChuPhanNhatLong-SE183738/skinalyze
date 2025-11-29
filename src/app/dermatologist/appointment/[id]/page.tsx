@@ -5,8 +5,13 @@ import type { ComponentType, ReactNode } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { appointmentService } from "@/services/appointmentService";
-import type { Appointment, CompleteAppointmentDto } from "@/types/appointment";
-import { AppointmentStatus } from "@/types/appointment";
+import type {
+  AppointmentDetailDto,
+  CompleteAppointmentDto,
+  InterruptAppointmentDto,
+  ReportNoShowDto,
+} from "@/types/appointment";
+import { AppointmentStatus, TerminationReason } from "@/types/appointment";
 import { format } from "date-fns";
 import { enUS } from "date-fns/locale";
 
@@ -26,6 +31,7 @@ import {
   FileText,
   Save,
   AlertCircle,
+  AlertTriangle,
   ClipboardCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -47,9 +53,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { SkinAnalysisCard } from "@/components/skin-analysis/SkinAnalysisCard";
 
 import { AppointmentActionsCard } from "@/components/appointments/AppointmentActionsCard";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AppointmentDetailPage() {
-  const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [appointment, setAppointment] = useState<AppointmentDetailDto | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   const [isJoining, setIsJoining] = useState(false);
@@ -59,6 +74,16 @@ export default function AppointmentDetailPage() {
 
   const [dialogOpen, setDialogOpen] = useState<"complete" | "cancel" | null>(
     null
+  );
+
+  const [reportDialogOpen, setReportDialogOpen] = useState<
+    "noshow" | "interrupt" | null
+  >(null);
+  const [isReporting, setIsReporting] = useState(false);
+
+  const [reportNote, setReportNote] = useState("");
+  const [interruptReason, setInterruptReason] = useState<TerminationReason>(
+    TerminationReason.PLATFORM_ISSUE
   );
 
   const [medicalNote, setMedicalNote] = useState("");
@@ -125,6 +150,68 @@ export default function AppointmentDetailPage() {
       });
     } finally {
       setIsSavingNote(false);
+    }
+  };
+
+  const handleReportNoShow = async () => {
+    if (!appointment) return;
+    setIsReporting(true);
+    try {
+      const dto: ReportNoShowDto = {
+        note: reportNote || undefined,
+      };
+      // Gọi API
+      await appointmentService.reportDoctorNoShow(
+        appointment.appointmentId,
+        dto
+      );
+
+      toast({
+        title: "Report Submitted",
+        description: "No-show report has been sent.",
+        variant: "success",
+      });
+      setReportDialogOpen(null);
+      setReportNote("");
+      await fetchAppointment();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit report.",
+        variant: "error",
+      });
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
+  // Handle Report Interrupt ---
+  const handleReportInterrupt = async () => {
+    if (!appointment) return;
+    setIsReporting(true);
+    try {
+      const dto: InterruptAppointmentDto = {
+        reason: interruptReason,
+        terminationNote: reportNote || undefined,
+      };
+      await appointmentService.reportInterrupt(appointment.appointmentId, dto);
+
+      toast({
+        title: "Report Submitted",
+        description: "Interruption report has been sent.",
+        variant: "success",
+      });
+      setReportDialogOpen(null);
+      setReportNote("");
+      await fetchAppointment();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit report.",
+        variant: "error",
+      });
+    } finally {
+      setIsReporting(false);
     }
   };
 
@@ -309,14 +396,14 @@ export default function AppointmentDetailPage() {
   const routineButton = (
     <Button asChild size="lg" className="w-full" variant="outline">
       {targetRoutineId ? (
-        <Link href={`/dermatologist/routines/${targetRoutineId}`}>
+        <Link href={`/dermatologist/routine/${targetRoutineId}`}>
           <ClipboardCheck className="mr-2 h-5 w-5" />
           View / Update Treatment Routine
         </Link>
       ) : (
         <Link
           href={{
-            pathname: "/dermatologist/routines/create",
+            pathname: "/dermatologist/routine/create",
             query: {
               appointmentId: appointment.appointmentId,
               customerId: appointment.customer.customerId,
@@ -413,7 +500,7 @@ export default function AppointmentDetailPage() {
             <SkinAnalysisCard analysis={appointment.skinAnalysis} />
           )}
 
-          {/* 3. (MỚI) Card Medical Note (Ghi chú Y khoa) */}
+          {/* 3.  Card Medical Note  */}
           {showMedicalNoteCard && (
             <Card className="shadow-lg border-blue-200 border-2">
               <CardHeader className="flex flex-row items-center justify-between pb-2 bg-blue-50/50">
@@ -484,10 +571,125 @@ export default function AppointmentDetailPage() {
             onJoinMeet={handleJoinMeet}
             onCompleteClick={() => setDialogOpen("complete")}
             onCancelClick={() => setDialogOpen("cancel")}
+            onReportNoShowClick={() => {
+              setReportNote("");
+              setReportDialogOpen("noshow");
+            }}
+            onReportInterruptClick={() => {
+              setReportNote("");
+              setInterruptReason(TerminationReason.PLATFORM_ISSUE); // Reset reason
+              setReportDialogOpen("interrupt");
+            }}
           />
         </div>
       </div>
+      {/*  Dialog Report No-Show  */}
+      <AlertDialog
+        open={reportDialogOpen === "noshow"}
+        onOpenChange={(open) => !open && setReportDialogOpen(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report No-Show</AlertDialogTitle>
+            <AlertDialogDescription>
+              Report that the other party did not show up for the appointment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label>Additional Note (Optional)</Label>
+            <Textarea
+              placeholder="E.g., Waited for 15 minutes but no one joined..."
+              value={reportNote}
+              onChange={(e) => setReportNote(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReportNoShow}
+              disabled={isReporting}
+            >
+              {isReporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Submit Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
+      {/*  Dialog Report Interrupt  */}
+      <AlertDialog
+        open={reportDialogOpen === "interrupt"}
+        onOpenChange={(open) => !open && setReportDialogOpen(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Report Interruption</AlertDialogTitle>
+            <AlertDialogDescription>
+              Report an issue that interrupted the appointment session.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label>Reason for Interruption</Label>
+              <Select
+                value={interruptReason}
+                onValueChange={(val) =>
+                  setInterruptReason(val as TerminationReason)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TerminationReason.CUSTOMER_ISSUE}>
+                    Customer Issue (Connection/Device)
+                  </SelectItem>
+                  <SelectItem value={TerminationReason.DOCTOR_ISSUE}>
+                    Doctor Issue
+                  </SelectItem>
+                  <SelectItem value={TerminationReason.PLATFORM_ISSUE}>
+                    Platform/System Issue
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {interruptReason === TerminationReason.DOCTOR_ISSUE && (
+                <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold">
+                      Confirm the issue is on your side?
+                    </p>
+                    <p>
+                      You are reporting that the interruption was caused by your
+                      actions. The appointment will be cancelled and 100% of the
+                      payment will be refunded to the customer immediately.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Detailed Description (Optional)</Label>
+              <Textarea
+                placeholder="Describe what happened..."
+                value={reportNote}
+                onChange={(e) => setReportNote(e.target.value)}
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleReportInterrupt}
+              disabled={isReporting}
+            >
+              {isReporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Submit Report
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {/* Dialog Cancel */}
       <AlertDialog
         open={dialogOpen === "cancel"}

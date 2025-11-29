@@ -1,85 +1,104 @@
+import { http } from "@/lib/http";
+import type { ApiResponse } from "@/types/api";
 import type {
   Product,
   ProductsResponse,
   CreateProductRequest,
+  ProductQueryParams,
 } from "@/types/product";
+
+export const getErrorMessage = (error: unknown, fallback: string): string =>
+  error instanceof Error ? error.message : fallback;
 
 export class ProductService {
   /**
-   * Get all products
-   * @param page - Page number for pagination
-   * @param limit - Number of items per page
+   * Get products with optional pagination, search, and filter parameters.
    */
-  async getProducts(page = 1, limit = 10): Promise<ProductsResponse> {
+  async getProducts(
+    params: ProductQueryParams = {},
+    options: { signal?: AbortSignal } = {}
+  ): Promise<ProductsResponse> {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      categoryId,
+      brand,
+      minPrice,
+      maxPrice,
+      inStock,
+    } = params;
+
     try {
-      const response = await fetch(
-        `/api/products?page=${page}&limit=${limit}`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      const response = await http.get<
+        ApiResponse<{
+          data: Product[];
+          total: number;
+          page: number;
+          limit: number;
+          totalPages?: number;
+        }>
+      >("/api/products", {
+        params: {
+          page,
+          limit,
+          search,
+          categoryId,
+          brand,
+          minPrice,
+          maxPrice,
+          inStock,
+        },
+        signal: options.signal,
+      });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to fetch products");
-      }
+      const payload = response.data;
+      if (payload && Array.isArray(payload.data)) {
+        const total = payload.total ?? payload.data.length;
+        const currentPage = payload.page ?? page;
+        const currentLimit = payload.limit ?? limit;
+        const totalPages =
+          payload.totalPages ??
+          Math.max(1, Math.ceil(total / Math.max(currentLimit, 1)));
 
-      const result = await response.json();
-
-      // Handle new nested response format: { data: { data: [...], total, page, limit, totalPages } }
-      if (result.data && result.data.data && Array.isArray(result.data.data)) {
         return {
-          products: result.data.data,
-          total: result.data.total || result.data.data.length,
-          page: result.data.page || page,
-          limit: result.data.limit || limit,
+          products: payload.data,
+          total,
+          page: currentPage,
+          limit: currentLimit,
+          totalPages,
         };
       }
 
-      // Handle old response format: { data: [...], message, statusCode }
-      if (result.data && Array.isArray(result.data)) {
-        return {
-          products: result.data,
-          total: result.data.length,
-          page: page,
-          limit: limit,
-        };
+      throw new Error("Unexpected response format when fetching products");
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw error;
       }
-
-      // Fallback to direct products array if already in expected format
-      return result;
-    } catch (error: unknown) {
-      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch products");
+      throw new Error(getErrorMessage(error, "Failed to fetch products"));
     }
   }
 
   /**
    * Get a single product by ID
    */
-  async getProduct(productId: string): Promise<Product> {
+  async getProduct(
+    productId: string,
+    options: { signal?: AbortSignal } = {}
+  ): Promise<Product> {
     try {
-      const response = await fetch(`/api/products/${productId}`, {
-        method: "GET",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to fetch product");
+      const response = await http.get<ApiResponse<Product>>(
+        `/api/products/${productId}`,
+        {
+          signal: options.signal,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw error;
       }
-
-      const result = await response.json();
-
-      // Handle nested response format: { data: { productData } }
-      if (result.data && typeof result.data === 'object' && !Array.isArray(result.data)) {
-        return result.data;
-      }
-
-      // Fallback to direct result if already in expected format
-      return result;
-    } catch (error: unknown) {
-      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to fetch product");
+      throw new Error(getErrorMessage(error, "Failed to fetch product"));
     }
   }
 
@@ -104,7 +123,7 @@ export class ProductService {
 
       return await response.json();
     } catch (error: unknown) {
-      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to create product");
+      throw new Error(getErrorMessage(error, "Failed to create product"));
     }
   }
 

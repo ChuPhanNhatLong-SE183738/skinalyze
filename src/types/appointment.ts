@@ -4,9 +4,14 @@ import { SkinAnalysis } from "./skin-analysis";
 import { TreatmentRoutine } from "./treatment-routine";
 
 export interface Payment {
-  paymentId: string;
-  amount: number;
-  paymentStatus: string;
+  paymentId: string | number;
+  amount: string | number;
+  status?: string;
+  paymentStatus?: string;
+  paymentMethod?: string | null;
+  paymentType?: string | null;
+  paymentCode?: string | null;
+  paidAmount?: string | number | null;
 }
 
 export enum AppointmentStatus {
@@ -17,6 +22,8 @@ export enum AppointmentStatus {
   CANCELLED = "CANCELLED",
   NO_SHOW = "NO_SHOW",
   INTERRUPTED = "INTERRUPTED",
+  DISPUTED = "DISPUTED",
+  SETTLED = "SETTLED",
 }
 
 export enum AppointmentType {
@@ -40,11 +47,23 @@ export enum TerminationReason {
   PLATFORM_ISSUE = "PLATFORM_ISSUE",
 }
 
+export const ALLOWED_DISPUTE_REASONS = [
+  TerminationReason.DOCTOR_NO_SHOW,
+  TerminationReason.CUSTOMER_NO_SHOW,
+  TerminationReason.DOCTOR_ISSUE,
+  TerminationReason.CUSTOMER_ISSUE,
+  TerminationReason.PLATFORM_ISSUE,
+  TerminationReason.SYSTEM_CANCELLED,
+] as const satisfies readonly TerminationReason[];
+
+export type AllowedDisputeReason = (typeof ALLOWED_DISPUTE_REASONS)[number];
+
 export interface Appointment {
   appointmentId: string;
   startTime: string;
   endTime: string;
-  price: number;
+  actualEndTime: string | null;
+  price: number | string;
   note: string | null;
   medicalNote: string | null;
   meetingUrl: string | null;
@@ -52,7 +71,18 @@ export interface Appointment {
   appointmentStatus: AppointmentStatus;
   terminatedReason: TerminationReason | null;
   terminationNote?: string | null;
+
+  customerReportReason: string | null;
+  customerReportNote: string | null;
+
+  dermatologistReportReason: string | null;
+  dermatologistReportNote: string | null;
+
   createdAt: string;
+  updatedAt: string;
+  adminNote?: string | null;
+  resolvedAt?: string | null;
+  resolvedBy?: string | null;
 
   customerJoinedAt: string | null;
   dermatologistJoinedAt: string | null;
@@ -77,5 +107,31 @@ export interface UpdateMedicalNoteDto {
 export interface FindAppointmentsDto {
   customerId?: string;
   dermatologistId?: string;
-  status?: AppointmentStatus;
+  status?: AppointmentStatus[];
+}
+
+export interface ReportNoShowDto {
+  note?: string;
+}
+
+export interface InterruptAppointmentDto {
+  reason: TerminationReason;
+  terminationNote?: string;
+}
+
+export type AppointmentDetailDto = Omit<Appointment, never> & {
+  statusMessage: string | null;
+};
+
+export enum DisputeDecision {
+  REFUND_CUSTOMER = "REFUND_CUSTOMER",
+  PAYOUT_DOCTOR = "PAYOUT_DOCTOR",
+  PARTIAL_REFUND = "PARTIAL_REFUND",
+}
+
+export interface ResolveDisputeDto {
+  decision: DisputeDecision;
+  adminNote: string;
+  refundAmount?: number; // Required if PARTIAL_REFUND
+  finalReason?: AllowedDisputeReason;
 }

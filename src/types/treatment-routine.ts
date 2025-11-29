@@ -1,4 +1,5 @@
-import { RoutineDetail } from "./routine-detail";
+import type { AppointmentType } from "./appointment";
+import type { RoutineDetail } from "./routine-detail";
 
 export enum RoutineStatus {
   ACTIVE = "ACTIVE",
@@ -27,4 +28,18 @@ export interface TreatmentRoutine {
   createdFromAppointmentId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RoutineSnapshot {
+  routineName: string;
+  details: RoutineDetail[];
+}
+
+export interface TimelineEvent {
+  id: string;
+  date: string;
+  type: AppointmentType;
+  doctorNote: string | null;
+  skinAnalysisImages: string[];
+  routine: RoutineSnapshot | null;
 }

@@ -3,7 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useFieldArray, useForm } from "react-hook-form";
+import {
+  SubmitHandler,
+  useFieldArray,
+  useForm,
+  type Resolver,
+} from "react-hook-form";
 import { addWeeks } from "date-fns";
 import { enUS } from "date-fns/locale";
 
@@ -41,20 +46,77 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { PlusCircle, Trash2 } from "lucide-react";
 
-const workShiftSchema = z.object({
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid format (HH:mm)"),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid format (HH:mm)"),
-});
+const toMinutes = (time: string) => {
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
+};
 
-const batchFormSchema = z.object({
-  selectedDays: z.array(z.date()).min(1, "Select at least one day."),
-  shifts: z.array(workShiftSchema).min(1, "Add at least one shift."),
-  slotDurationInMinutes: z.coerce
-    .number()
-    .min(5, "Duration must be 5 minutes or more."),
-  price: z.coerce.number().optional(),
-  repeatWeeks: z.coerce.number().min(0).default(0),
-});
+const workShiftSchema = z
+  .object({
+    startTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid format (HH:mm)"),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/, "Invalid format (HH:mm)"),
+  })
+  .refine((shift) => toMinutes(shift.endTime) > toMinutes(shift.startTime), {
+    message: "End time must be after start time.",
+    path: ["endTime"],
+  });
+
+const batchFormSchema = z
+  .object({
+    selectedDays: z.array(z.date()).min(1, "Select at least one day."),
+    shifts: z
+      .array(workShiftSchema)
+      .min(1, "Add at least one shift.")
+      .superRefine((shifts, ctx) => {
+        const sorted = shifts
+          .map((shift, index) => ({
+            ...shift,
+            index,
+            start: toMinutes(shift.startTime),
+            end: toMinutes(shift.endTime),
+          }))
+          .sort((a, b) => a.start - b.start);
+
+        for (let i = 1; i < sorted.length; i++) {
+          const prev = sorted[i - 1];
+          const current = sorted[i];
+
+          if (current.start < prev.end) {
+            ctx.addIssue({
+              code: "custom",
+              message: "Shift overlaps with another entry.",
+              path: [current.index, "startTime"],
+            });
+            ctx.addIssue({
+              code: "custom",
+              message: "Shift overlaps with another entry.",
+              path: [prev.index, "endTime"],
+            });
+            break;
+          }
+        }
+      }),
+    slotDurationInMinutes: z.coerce
+      .number()
+      .min(5, "Duration must be 5 minutes or more."),
+    price: z.coerce.number().optional(),
+    repeatWeeks: z.coerce.number().min(0).default(0),
+  })
+  .superRefine((data, ctx) => {
+    const duration = data.slotDurationInMinutes;
+    data.shifts.forEach((shift, index) => {
+      const shiftDuration =
+        toMinutes(shift.endTime) - toMinutes(shift.startTime);
+      const fullSlots = Math.floor(shiftDuration / duration);
+      if (fullSlots < 1) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Shift is shorter than the slot duration.",
+          path: ["shifts", index, "endTime"],
+        });
+      }
+    });
+  });
 
 type BatchFormValues = z.infer<typeof batchFormSchema>;
 
@@ -77,8 +139,8 @@ export function CreateSlotModal({
   );
   const { toast } = useToast();
 
-  const form = useForm({
-    resolver: zodResolver(batchFormSchema),
+  const form = useForm<BatchFormValues>({
+    resolver: zodResolver(batchFormSchema) as Resolver<BatchFormValues>,
     defaultValues: {
       selectedDays: selectedDates.length > 0 ? selectedDates : [],
       shifts: [{ startTime: "08:00", endTime: "11:00" }],
@@ -137,7 +199,7 @@ export function CreateSlotModal({
     }
   }, [allowRepeat, form]);
 
-  const onSubmit = async (values: BatchFormValues) => {
+  const onSubmit: SubmitHandler<BatchFormValues> = async (values) => {
     setIsSubmitting(true);
     try {
       const allBlocks: CreateAvailabilityDto["blocks"] = [];
@@ -168,10 +230,12 @@ export function CreateSlotModal({
         }
       }
 
-      await availabilityService.createBatchSlots({ blocks: allBlocks });
+      const result = await availabilityService.createBatchSlots({
+        blocks: allBlocks,
+      });
       toast({
         title: "Success",
-        description: `Created availability for ${allBlocks.length} block(s).`,
+        description: `${result.message}`,
         variant: "success",
       });
       onSlotsCreated();

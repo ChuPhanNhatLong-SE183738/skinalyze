@@ -20,7 +20,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="flex h-screen bg-slate-50">
       <AdminSidebar onLogout={handleLogout} />
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-y-auto" data-admin-scroll-container>
+        {children}
+      </main>
     </div>
   );
 }
