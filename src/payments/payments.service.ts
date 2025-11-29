@@ -635,10 +635,42 @@ export class PaymentsService {
 
     if (!orderId && payment.cartData && payment.customerId) {
       try {
-        const parsedCart = JSON.parse(payment.cartData) as unknown;
-        const items = (parsedCart as { items?: unknown }).items;
+        let parsedCart: unknown;
+
+        try {
+          parsedCart = JSON.parse(payment.cartData);
+        } catch (jsonErr) {
+          this.logger.error(
+            `❌ Invalid JSON in payment.cartData for Payment ${payment.paymentId} (code: ${payment.paymentCode}). Raw cartData: ${payment.cartData}`,
+          );
+          throw new BadRequestException('Invalid cart data on payment');
+        }
+
+        // 🔄 BACKWARD COMPATIBILITY: Handle both array and object formats
+        let items: unknown;
+
+        if (Array.isArray(parsedCart)) {
+          // Legacy format: cartData is directly an array
+          this.logger.warn(
+            `⚠️ Payment ${payment.paymentId} uses legacy array format for cartData. Converting to object format.`,
+          );
+          items = parsedCart;
+        } else if (parsedCart && typeof parsedCart === 'object') {
+          // New format: cartData is {items: [...]}
+          items = (parsedCart as { items?: unknown }).items;
+        } else {
+          this.logger.error(
+            `❌ Unexpected cartData type for Payment ${payment.paymentId} (code: ${payment.paymentCode}). Type: ${typeof parsedCart}`,
+          );
+          throw new BadRequestException('Invalid cart data on payment');
+        }
 
         if (!Array.isArray(items)) {
+          this.logger.error(
+            `❌ Unexpected cartData shape for Payment ${payment.paymentId} (code: ${payment.paymentCode}). Parsed cartData: ${JSON.stringify(
+              parsedCart,
+            )}`,
+          );
           throw new BadRequestException('Invalid cart data on payment');
         }
 

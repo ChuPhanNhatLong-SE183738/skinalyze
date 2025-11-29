@@ -14,7 +14,10 @@ import { Payment } from '../payments/entities/payment.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { CheckoutCartDto, PaymentMethod } from './dto/checkout-cart.dto';
-import { PaymentStatus, PaymentMethod as PaymentEntityMethod } from '../payments/entities/payment.entity';
+import {
+  PaymentStatus,
+  PaymentMethod as PaymentEntityMethod,
+} from '../payments/entities/payment.entity';
 import { CartService } from '../cart/cart.service';
 import { InventoryService } from '../inventory/inventory.service';
 import { CustomersService } from '../customers/customers.service';
@@ -190,20 +193,20 @@ export class OrdersService {
 
     const savedOrder = await this.orderRepository.save(order);
 
-    // 🔔 Gửi notification cho customer  
+    // 🔔 Gửi notification cho customer
     // Check if customer has valid user before sending notification
     const userId = order.customer?.user?.userId;
     if (userId) {
       try {
         // Verify user exists before creating notification
         const userExists = await this.usersService.findOne(userId);
-        
+
         if (userExists) {
           await this.notificationsService.create({
             userId: userId,
             type: NotificationType.ORDER,
             title: '❌ Đơn hàng bị từ chối',
-            message: reason 
+            message: reason
               ? `Đơn hàng #${order.orderId.slice(0, 8)} đã bị từ chối. Lý do: ${reason}`
               : `Đơn hàng #${order.orderId.slice(0, 8)} đã bị từ chối.`,
             data: {
@@ -213,14 +216,18 @@ export class OrdersService {
             },
           });
         } else {
-          console.warn(`User ${userId} not found for order ${order.orderId}, skipping notification`);
+          console.warn(
+            `User ${userId} not found for order ${order.orderId}, skipping notification`,
+          );
         }
       } catch (error) {
         // Log error but don't fail the order rejection
         console.error('Failed to send rejection notification:', error.message);
       }
     } else {
-      console.warn(`No valid user found for order ${order.orderId}, skipping notification`);
+      console.warn(
+        `No valid user found for order ${order.orderId}, skipping notification`,
+      );
     }
 
     return savedOrder;
@@ -230,21 +237,29 @@ export class OrdersService {
    * ✅ Customer đánh dấu đơn hàng là hoàn thành (COMPLETED)
    * Chỉ có thể complete khi order đã DELIVERED
    */
-  async completeOrder(id: string, customerId: string, feedback?: string): Promise<Order> {
+  async completeOrder(
+    id: string,
+    customerId: string,
+    feedback?: string,
+  ): Promise<Order> {
     const order = await this.findOne(id);
 
     // Kiểm tra đơn hàng có thuộc về customer này không
     if (order.customerId !== customerId) {
-      throw new BadRequestException('Bạn không có quyền thao tác với đơn hàng này');
+      throw new BadRequestException(
+        'Bạn không có quyền thao tác với đơn hàng này',
+      );
     }
 
     // Chỉ có thể complete khi status là DELIVERED
     if (order.status !== OrderStatus.DELIVERED) {
-      throw new BadRequestException('Chỉ có thể đánh dấu hoàn thành khi đơn hàng đã được giao');
+      throw new BadRequestException(
+        'Chỉ có thể đánh dấu hoàn thành khi đơn hàng đã được giao',
+      );
     }
 
     order.status = OrderStatus.COMPLETED;
-    
+
     // Lưu feedback nếu có (có thể thêm field feedback vào Order entity nếu cần)
     if (feedback) {
       order.rejectionReason = feedback; // Tạm dùng field này, hoặc tạo field mới
@@ -278,7 +293,10 @@ export class OrdersService {
       });
       this.logger.log(`✅ Created shipping log for order ${order.orderId}`);
     } catch (error) {
-      this.logger.error(`Failed to create shipping log for order ${order.orderId}:`, error.message);
+      this.logger.error(
+        `Failed to create shipping log for order ${order.orderId}:`,
+        error.message,
+      );
     }
 
     // 🔔 Gửi notification cho customer
@@ -286,7 +304,7 @@ export class OrdersService {
     if (userId) {
       try {
         const userExists = await this.usersService.findOne(userId);
-        
+
         if (userExists) {
           await this.notificationsService.create({
             userId: userId,
@@ -300,13 +318,20 @@ export class OrdersService {
             },
           });
         } else {
-          console.warn(`User ${userId} not found for order ${order.orderId}, skipping notification`);
+          console.warn(
+            `User ${userId} not found for order ${order.orderId}, skipping notification`,
+          );
         }
       } catch (error) {
-        console.error('Failed to send confirmation notification:', error.message);
+        console.error(
+          'Failed to send confirmation notification:',
+          error.message,
+        );
       }
     } else {
-      console.warn(`No valid user found for order ${order.orderId}, skipping notification`);
+      console.warn(
+        `No valid user found for order ${order.orderId}, skipping notification`,
+      );
     }
 
     return savedOrder;
@@ -337,18 +362,23 @@ export class OrdersService {
 
     // 2.1. ✅ LỌC ITEMS DỰA TRÊN selectedProductIds HOẶC FIELD selected
     let selectedItems;
-    
-    if (checkoutDto.selectedProductIds && checkoutDto.selectedProductIds.length > 0) {
-      selectedItems = cart.items.filter(item => 
-        checkoutDto.selectedProductIds!.includes(item.productId)
+
+    if (
+      checkoutDto.selectedProductIds &&
+      checkoutDto.selectedProductIds.length > 0
+    ) {
+      selectedItems = cart.items.filter((item) =>
+        checkoutDto.selectedProductIds!.includes(item.productId),
       );
-      this.logger.log(`📦 Checkout from selectedProductIds: ${checkoutDto.selectedProductIds.join(', ')}`);
+      this.logger.log(
+        `📦 Checkout from selectedProductIds: ${checkoutDto.selectedProductIds.join(', ')}`,
+      );
     } else {
       // Nếu không → dùng field selected=true trong cart
       selectedItems = this.cartService.getSelectedItems(cart);
       this.logger.log(`📦 Checkout from cart selection (selected=true)`);
     }
-    
+
     if (selectedItems.length === 0) {
       throw new BadRequestException(
         'Vui lòng chọn ít nhất một sản phẩm để thanh toán',
@@ -368,7 +398,7 @@ export class OrdersService {
           cartItem.productId,
           cartItem.quantity,
         );
-        
+
         if (!canConfirm) {
           throw new BadRequestException(
             `Sản phẩm "${cartItem.productName}" không đủ hàng đã reserve. Vui lòng kiểm tra lại giỏ hàng.`,
@@ -405,7 +435,7 @@ export class OrdersService {
         paymentType: PaymentType.ORDER,
         customerId: customer.customerId,
         userId: userId,
-        cartData: selectedItems, // ✅ Chỉ lưu selected items
+        cartData: { items: selectedItems }, // ✅ Wrap in object with items property
         shippingAddress: checkoutDto.shippingAddress,
         orderNotes: checkoutDto.notes,
         amount: totalAmount,
@@ -443,7 +473,8 @@ export class OrdersService {
             '5. Thời gian xử lý: Real-time (vài giây)',
           ],
         },
-        message: 'Vui lòng thanh toán để hoàn tất đơn hàng. Đơn hàng sẽ được tạo sau khi chúng tôi nhận được thanh toán.',
+        message:
+          'Vui lòng thanh toán để hoàn tất đơn hàng. Đơn hàng sẽ được tạo sau khi chúng tôi nhận được thanh toán.',
       };
     }
 
@@ -486,13 +517,15 @@ export class OrdersService {
       paymentMethod: this.mapPaymentMethod(paymentMethod), // ✅ Map COD -> CASH
       status: paymentStatus,
     };
-    
+
     // Only set paidAt if payment is completed
     if (useWallet) {
       paymentData.paidAt = new Date();
     }
-    
-    const payment = this.paymentRepository.create(paymentData) as unknown as Payment;
+
+    const payment = this.paymentRepository.create(
+      paymentData,
+    ) as unknown as Payment;
     const savedPayment = await this.paymentRepository.save(payment);
 
     // 6. Tạo order
@@ -528,20 +561,22 @@ export class OrdersService {
       }
     } catch (error) {
       this.logger.error(`❌ Failed to confirm sales: ${error.message}`);
-      
+
       // ⚠️ ROLLBACK: Xóa order và payment vừa tạo
       this.logger.warn(`🔄 Rolling back order ${savedOrder.orderId}...`);
       await this.orderItemRepository.delete({ orderId: savedOrder.orderId });
       await this.orderRepository.delete({ orderId: savedOrder.orderId });
-      await this.paymentRepository.delete({ paymentId: savedPayment.paymentId });
-      
+      await this.paymentRepository.delete({
+        paymentId: savedPayment.paymentId,
+      });
+
       throw new BadRequestException(
         `Không thể hoàn tất đơn hàng: ${error.message}. Vui lòng thử lại.`,
       );
     }
-    
+
     // 10. Xóa items đã checkout khỏi cart
-    const productIdsToRemove = selectedItems.map(item => item.productId);
+    const productIdsToRemove = selectedItems.map((item) => item.productId);
     await this.cartService.removeItemsByProductIds(userId, productIdsToRemove);
 
     // 11. Trả về order (CHỈ COD & WALLET)
@@ -549,7 +584,7 @@ export class OrdersService {
 
     return {
       order: fullOrder,
-      message: useWallet 
+      message: useWallet
         ? 'Đơn hàng đã được tạo và thanh toán qua ví thành công.'
         : 'Đơn hàng đã được tạo thành công. Vui lòng thanh toán khi nhận hàng (COD).',
     };
@@ -574,13 +609,20 @@ export class OrdersService {
     totalAmount: number;
     paymentId: number;
   }): Promise<Order> {
-    const { customerId, cartItems, shippingAddress, notes, totalAmount, paymentId } = data;
+    const {
+      customerId,
+      cartItems,
+      shippingAddress,
+      notes,
+      totalAmount,
+      paymentId,
+    } = data;
 
     // 1. Update payment status to completed (should already be done in webhook)
-    const payment = await this.paymentRepository.findOne({ 
-      where: { paymentId } 
+    const payment = await this.paymentRepository.findOne({
+      where: { paymentId },
     });
-    
+
     if (payment && payment.status !== PaymentStatus.COMPLETED) {
       payment.status = PaymentStatus.COMPLETED;
       payment.paidAmount = totalAmount;
