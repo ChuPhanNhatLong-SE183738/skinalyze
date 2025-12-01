@@ -18,6 +18,11 @@ export enum PaymentMethod {
   VNPAY = 'vnpay',
 }
 
+export enum ShippingMethod {
+  INTERNAL = 'INTERNAL', // Shipper nội bộ
+  GHN = 'GHN', // Giao hàng nhanh
+}
+
 export class CheckoutCartDto {
   @ApiProperty({ example: '123 Nguyen Hue, District 1, HCMC' })
   @IsString()
@@ -71,4 +76,15 @@ export class CheckoutCartDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty({
+    example: 'INTERNAL',
+    enum: ShippingMethod,
+    description: 'Shipping method: INTERNAL (nội bộ) or GHN (giao hàng nhanh)',
+    default: ShippingMethod.INTERNAL,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(ShippingMethod)
+  shippingMethod?: ShippingMethod;
 }

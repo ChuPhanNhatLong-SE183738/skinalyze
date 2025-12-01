@@ -70,6 +70,15 @@ export class Order {
   @Column({ type: 'uuid', nullable: true })
   processedBy: string;
 
+  @Column({
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+    default: 'INTERNAL',
+    comment: 'Preferred shipping method from checkout',
+  })
+  preferredShippingMethod: string;
+
   // One-to-Many with OrderItems
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   orderItems: OrderItem[];

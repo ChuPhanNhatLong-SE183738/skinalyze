@@ -275,13 +275,21 @@ export class OrdersService {
   async confirmOrder(
     id: string,
     processedBy: string,
-    shippingMethod: ShippingMethod = ShippingMethod.INTERNAL,
+    shippingMethod?: ShippingMethod,
   ): Promise<Order> {
     const order = await this.findOne(id);
     order.status = 'CONFIRMED' as any;
     order.processedBy = processedBy;
 
-    // Update payment status to completed
+    // Sử dụng shippingMethod từ staff hoặc từ order.preferredShippingMethod
+    const finalShippingMethod =
+      shippingMethod ||
+      (order.preferredShippingMethod as ShippingMethod) ||
+      ShippingMethod.INTERNAL;
+
+    this.logger.log(
+      `📦 Confirming order with shipping method: ${finalShippingMethod}`,
+    ); // Update payment status to completed
     if (order.payment) {
       order.payment.status = PaymentStatus.COMPLETED;
       order.payment.paidAmount = order.payment.amount;
@@ -297,7 +305,7 @@ export class OrdersService {
 
     try {
       // 🚚 Nếu chọn GHN → Tạo đơn vận chuyển GHN
-      if (shippingMethod === ShippingMethod.GHN) {
+      if (finalShippingMethod === ShippingMethod.GHN) {
         this.logger.log(`📦 Creating GHN shipping order for ${order.orderId}`);
 
         // Calculate total weight from order items (giả sử mỗi sản phẩm 200g)
@@ -349,16 +357,16 @@ export class OrdersService {
         status: ShippingStatus.PENDING,
         totalAmount: order.payment?.amount || 0,
         note:
-          shippingMethod === ShippingMethod.GHN
+          finalShippingMethod === ShippingMethod.GHN
             ? `Đơn hàng giao qua GHN${ghnOrderCode ? ` - Mã vận đơn: ${ghnOrderCode}` : ''}`
             : 'Đơn hàng đã được xác nhận, đang chờ xử lý',
-        shippingMethod: shippingMethod,
+        shippingMethod: finalShippingMethod,
         ghnOrderCode: ghnOrderCode,
         ghnShippingFee: ghnShippingFee,
       });
 
       this.logger.log(
-        `✅ Created shipping log for order ${order.orderId} (Method: ${shippingMethod})`,
+        `✅ Created shipping log for order ${order.orderId} (Method: ${finalShippingMethod})`,
       );
     } catch (error) {
       this.logger.error(
@@ -613,6 +621,7 @@ export class OrdersService {
       shippingAddress: checkoutDto.shippingAddress,
       notes: checkoutDto.notes,
       status: orderStatus,
+      preferredShippingMethod: checkoutDto.shippingMethod || 'INTERNAL',
     });
     const savedOrder = await this.orderRepository.save(order);
 
