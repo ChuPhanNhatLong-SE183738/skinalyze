@@ -312,6 +312,11 @@ export class OrdersService {
         const totalWeight = (order.orderItems?.length || 1) * 200;
 
         try {
+          // Convert payment amount to integer (GHN requires int, not string/decimal)
+          const codAmount = order.payment?.amount
+            ? Math.floor(Number(order.payment.amount))
+            : 0;
+
           const ghnResult = await this.ghnService.createShippingOrder({
             paymentTypeId: 1, // Shop trả phí ship
             note: order.notes || 'Đơn hàng Skinalyze',
@@ -323,7 +328,7 @@ export class OrdersService {
             toAddress: order.shippingAddress,
             toWardCode: '20308', // Mã phường (cần cập nhật từ order)
             toDistrictId: 1444, // Mã quận (cần cập nhật từ order)
-            codAmount: order.payment?.amount || 0, // Số tiền thu hộ COD
+            codAmount: codAmount, // Số tiền thu hộ COD (integer)
             content: 'Đơn hàng mỹ phẩm Skinalyze',
             weight: totalWeight,
             length: Math.floor(Math.random() * 20) + 10, // 10-30 cm
