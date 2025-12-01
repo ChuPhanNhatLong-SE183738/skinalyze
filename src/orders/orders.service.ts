@@ -671,6 +671,79 @@ export class OrdersService {
     const productIdsToRemove = selectedItems.map((item) => item.productId);
     await this.cartService.removeItemsByProductIds(userId, productIdsToRemove);
 
+    // 🚚 NẾU THANH TOÁN WALLET → TẠO SHIPPING LOG + GHN ORDER NGAY
+    if (useWallet && checkoutDto.shippingMethod) {
+      this.logger.log(
+        `🚀 Auto-creating shipping for wallet payment order ${savedOrder.orderId}`,
+      );
+
+      try {
+        let ghnOrderCode: string | undefined;
+        let ghnShippingFee: number | undefined;
+
+        // Nếu chọn GHN → Tạo đơn GHN ngay
+        if (checkoutDto.shippingMethod === 'GHN') {
+          this.logger.log(`📦 Creating GHN order for wallet payment`);
+
+          const totalWeight = (orderItems.length || 1) * 200;
+          const codAmount = Math.floor(Number(totalAmount));
+
+          try {
+            const ghnResult = await this.ghnService.createShippingOrder({
+              paymentTypeId: 1,
+              note: checkoutDto.notes || 'Đơn hàng Skinalyze',
+              requiredNote: GhnRequiredNote.NO_OPEN,
+              returnPhone: '0332190444',
+              returnAddress: 'Đại Học FPT TP.HCM',
+              toName: customer.user?.fullName || 'Khách hàng',
+              toPhone: customer.user?.phone || '0000000000',
+              toAddress: checkoutDto.shippingAddress,
+              toWardCode: '20308',
+              toDistrictId: 1444,
+              codAmount: codAmount,
+              content: 'Đơn hàng mỹ phẩm Skinalyze',
+              weight: totalWeight,
+              length: Math.floor(Math.random() * 20) + 10,
+              width: Math.floor(Math.random() * 15) + 10,
+              height: Math.floor(Math.random() * 10) + 5,
+              items: orderItems.map((item) => ({
+                name: item.product?.productName || 'Sản phẩm',
+                quantity: item.quantity,
+                price: item.priceAtTime,
+              })),
+            });
+
+            ghnOrderCode = ghnResult.data.order_code;
+            ghnShippingFee = ghnResult.data.total_fee;
+
+            this.logger.log(`✅ GHN order created: ${ghnOrderCode}`);
+          } catch (ghnError) {
+            this.logger.error(
+              `❌ Failed to create GHN order: ${ghnError.message}`,
+            );
+          }
+        }
+
+        // Tạo shipping log
+        await this.shippingLogsService.create({
+          orderId: savedOrder.orderId,
+          status: ShippingStatus.PENDING,
+          totalAmount: totalAmount,
+          note:
+            checkoutDto.shippingMethod === 'GHN'
+              ? `Đơn hàng giao qua GHN${ghnOrderCode ? ` - Mã vận đơn: ${ghnOrderCode}` : ''}`
+              : 'Đơn hàng đã thanh toán, đang chờ xử lý',
+          shippingMethod: checkoutDto.shippingMethod,
+          ghnOrderCode: ghnOrderCode,
+          ghnShippingFee: ghnShippingFee,
+        });
+
+        this.logger.log(`✅ Shipping log created for wallet payment order`);
+      } catch (error) {
+        this.logger.error(`Failed to create shipping log: ${error.message}`);
+      }
+    }
+
     // 11. Trả về order (CHỈ COD & WALLET)
     const fullOrder = await this.findOne(savedOrder.orderId);
 
