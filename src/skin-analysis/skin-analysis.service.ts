@@ -224,6 +224,8 @@ export class SkinAnalysisService {
       aiDetectedCondition: null,
       aiRecommendedProducts: null,
       mask: null,
+      confidence: null,
+      allPredictions: null,
     };
 
     const entity = this.skinAnalysisRepository.create(analysisData);
@@ -263,7 +265,7 @@ export class SkinAnalysisService {
       this.segmentDisease(file),
     ]);
 
-    // 3. Process Mask (Fix for ER_DATA_TOO_LONG)
+    // 3. Process Mask
     let maskUrls: string[] | null = null;
     if (segmentationResult?.mask) {
       this.logger.debug('Uploading segmentation mask to Cloudinary...');
@@ -276,14 +278,16 @@ export class SkinAnalysisService {
       }
     }
 
-    // 4. Save to DB
+    // 4. Save to DB with all predictions
     const skinAnalysisData: DeepPartial<SkinAnalysis> = {
       customerId,
       source: 'AI_SCAN',
       imageUrls: [imageUrl],
       notes: notes ?? null,
       aiDetectedDisease: classificationResult.predicted_class,
-      mask: maskUrls, // Now storing URL(s), not Base64
+      confidence: classificationResult.confidence,
+      allPredictions: classificationResult.all_predictions,
+      mask: maskUrls,
     };
 
     const entity = this.skinAnalysisRepository.create(skinAnalysisData);
@@ -320,6 +324,9 @@ export class SkinAnalysisService {
       source: 'AI_SCAN',
       imageUrls: [imageUrl],
       aiDetectedCondition: classificationResult.predicted_condition,
+      // Add confidence and all_predictions if available in condition classification
+      confidence: classificationResult.confidence ?? null,
+      allPredictions: classificationResult.all_predictions ?? null,
     };
 
     const entity = this.skinAnalysisRepository.create(skinAnalysisData);
