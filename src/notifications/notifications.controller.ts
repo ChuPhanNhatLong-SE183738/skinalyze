@@ -8,12 +8,19 @@ import {
   Query,
   UseGuards,
   Req,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
   ApiQuery,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
@@ -179,12 +186,26 @@ export class NotificationsController {
 
   @Post('send-to-user')
   @Roles(UserRole.ADMIN)
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Send notification to a specific user (Admin only)',
     description:
-      'Admin can send custom notification to any user with any content',
+      'Admin can send custom notification to any user with any content. Optionally upload an image.',
   })
-  async sendToUser(@Body() dto: SendNotificationToUserDto) {
+  async sendToUser(
+    @Body() dto: SendNotificationToUserDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+        ],
+        fileIsRequired: false,
+      }),
+    )
+    image?: Express.Multer.File,
+  ) {
     const notification = await this.notificationsService.sendToUser(
       dto.userId,
       dto.type,
@@ -194,6 +215,7 @@ export class NotificationsController {
       dto.actionUrl,
       dto.imageUrl,
       dto.priority,
+      image,
     );
     return ResponseHelper.created(
       'Notification sent to user successfully',
@@ -203,12 +225,26 @@ export class NotificationsController {
 
   @Post('broadcast')
   @Roles(UserRole.ADMIN)
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Broadcast notification to all users (Admin only)',
     description:
-      'Admin can send notification to all active users at once. Useful for system announcements, maintenance notices, or promotions.',
+      'Admin can send notification to all active users at once. Useful for system announcements, maintenance notices, or promotions. Optionally upload an image.',
   })
-  async broadcast(@Body() dto: BroadcastNotificationDto) {
+  async broadcast(
+    @Body() dto: BroadcastNotificationDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+        ],
+        fileIsRequired: false,
+      }),
+    )
+    image?: Express.Multer.File,
+  ) {
     const result = await this.notificationsService.broadcastToAllUsers(
       dto.type,
       dto.title,
@@ -217,6 +253,7 @@ export class NotificationsController {
       dto.actionUrl,
       dto.imageUrl,
       dto.priority,
+      image,
     );
     return ResponseHelper.created(
       `Notification broadcast to ${result.sent} users successfully`,
