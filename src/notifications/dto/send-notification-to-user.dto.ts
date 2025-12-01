@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsObject,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   NotificationType,
@@ -28,6 +29,7 @@ export class SendNotificationToUserDto {
   })
   @IsEnum(NotificationType)
   @IsNotEmpty()
+  @Transform(({ value }) => value?.toLowerCase())
   type: NotificationType;
 
   @ApiProperty({
@@ -81,5 +83,6 @@ export class SendNotificationToUserDto {
   })
   @IsEnum(NotificationPriority)
   @IsOptional()
+  @Transform(({ value }) => value?.toLowerCase())
   priority?: NotificationPriority;
 }

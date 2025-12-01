@@ -63,6 +63,8 @@ export class NotificationsGateway
       client.userId = payload.sub || payload.userId;
       client.user = payload;
 
+      this.logger.debug(`Token verified for user ${client.userId}`);
+
       if (!client.userId) {
         this.logger.warn(`Client ${client.id} has no userId in token`);
         client.disconnect();
@@ -81,6 +83,13 @@ export class NotificationsGateway
       // Remove dependency on NotificationsService to avoid circular dependency
     } catch (error) {
       this.logger.error(`Connection error for client ${client.id}:`, error);
+
+      // Send error message to client before disconnecting
+      client.emit('error', {
+        message: 'Authentication failed. Please login again.',
+        code: 'INVALID_TOKEN',
+      });
+
       client.disconnect();
     }
   }

@@ -2,10 +2,10 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
 
@@ -14,11 +14,15 @@ export class SkinAnalysis {
   @PrimaryGeneratedColumn('uuid')
   analysisId: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'uuid' })
   customerId: string;
 
-  @Column({ type: 'enum', enum: ['AI_SCAN', 'MANUAL'] })
-  source: string;
+  @Column({
+    type: 'enum',
+    enum: ['MANUAL', 'AI_SCAN'],
+    default: 'AI_SCAN',
+  })
+  source: 'MANUAL' | 'AI_SCAN';
 
   @Column({ type: 'text', nullable: true })
   chiefComplaint: string | null;
@@ -26,31 +30,39 @@ export class SkinAnalysis {
   @Column({ type: 'text', nullable: true })
   patientSymptoms: string | null;
 
-  @Column({ type: 'simple-array' })
-  imageUrls: string[];
-
   @Column({ type: 'text', nullable: true })
   notes: string | null;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ type: 'json', nullable: true })
+  imageUrls: string[] | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
   aiDetectedDisease: string | null;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   aiDetectedCondition: string | null;
 
   @Column({ type: 'json', nullable: true })
-  aiRecommendedProducts: any[] | null;
+  aiRecommendedProducts: any | null;
 
-  @Column({ type: 'simple-array', nullable: true })
+  @Column({ type: 'json', nullable: true })
   mask: string[] | null;
+
+  @Column({ type: 'decimal', precision: 5, scale: 4, nullable: true })
+  confidence: number | null;
+
+  @Column({ type: 'json', nullable: true })
+  allPredictions: Record<string, number> | null;
+
+  @ManyToOne(() => Customer, (customer) => customer.skinAnalyses, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'customerId' })
+  customer: Customer;
 
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @ManyToOne(() => Customer, (customer) => customer.skinAnalyses)
-  @JoinColumn({ name: 'customerId' })
-  customer: Customer;
 }

@@ -17,6 +17,7 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { DeviceTokensService } from '../users/device-tokens.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { Customer } from '../customers/entities/customer.entity';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class NotificationsService {
@@ -29,35 +30,42 @@ export class NotificationsService {
     private customerRepository: Repository<Customer>,
     private firebaseService: FirebaseService,
     private deviceTokensService: DeviceTokensService,
+    private cloudinaryService: CloudinaryService,
     @Inject(forwardRef(() => NotificationsGateway))
     private notificationsGateway: NotificationsGateway,
   ) {}
+
+  async getAllNotifications(): Promise<Notification[]> {
+    return await this.notificationRepository.find({});
+  }
 
   async create(
     createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
     // Check if userId is actually a customerId and convert it
     let actualUserId = createNotificationDto.userId;
-    
+
     if (actualUserId) {
-      // Try to find customer with this ID  
+      // Try to find customer with this ID
       const customer = await this.customerRepository.findOne({
         where: { customerId: actualUserId },
         relations: ['user'],
       });
-      
+
       // If found as customer, use the customer's user.userId
       if (customer?.user?.userId) {
-        this.logger.log(`Converting customerId ${actualUserId} to userId ${customer.user.userId}`);
+        this.logger.log(
+          `Converting customerId ${actualUserId} to userId ${customer.user.userId}`,
+        );
         actualUserId = customer.user.userId;
       }
     }
-    
+
     const notification = this.notificationRepository.create({
       ...createNotificationDto,
       userId: actualUserId,
     });
-    
+
     const savedNotification =
       await this.notificationRepository.save(notification);
 
@@ -333,7 +341,25 @@ export class NotificationsService {
     actionUrl?: string,
     imageUrl?: string,
     priority?: NotificationPriority,
+    image?: Express.Multer.File,
   ): Promise<Notification> {
+    // If image file is provided, upload to Cloudinary
+    if (image) {
+      try {
+        const uploadResult = await this.cloudinaryService.uploadImage(
+          image,
+          'notifications',
+        );
+        imageUrl = uploadResult.secure_url;
+        this.logger.log(
+          `Notification image uploaded: ${uploadResult.secure_url}`,
+        );
+      } catch (error) {
+        this.logger.error('Failed to upload notification image:', error);
+        // Continue without image if upload fails
+      }
+    }
+
     return await this.create({
       userId,
       type,
@@ -357,7 +383,25 @@ export class NotificationsService {
     actionUrl?: string,
     imageUrl?: string,
     priority?: NotificationPriority,
+    image?: Express.Multer.File,
   ): Promise<{ sent: number; notifications: Notification[] }> {
+    // If image file is provided, upload to Cloudinary
+    if (image) {
+      try {
+        const uploadResult = await this.cloudinaryService.uploadImage(
+          image,
+          'notifications',
+        );
+        imageUrl = uploadResult.secure_url;
+        this.logger.log(
+          `Broadcast notification image uploaded: ${uploadResult.secure_url}`,
+        );
+      } catch (error) {
+        this.logger.error('Failed to upload broadcast notification image:', error);
+        // Continue without image if upload fails
+      }
+    }
+
     // Get all active users
     const users = await this.notificationRepository.manager
       .getRepository('User')

@@ -18,7 +18,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -29,7 +29,7 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: ${{ job.status }}
-          title: "🚀 Deployment Started"
+          title: '🚀 Deployment Started'
           description: |
             **Branch:** `${{ github.ref_name }}`
             **Commit:** `${{ github.event.head_commit.message }}`
@@ -60,33 +60,44 @@ jobs:
           script: |
             echo "📁 Navigating to project directory..."
             cd /root/skinalyze
-            
-            echo "📥 Pulling latest code..."
+
+            echo "🔍 Checking current state..."
+            git status
+
+            echo "📥 Force pulling latest code..."
             git fetch origin
+            git clean -fd
             git reset --hard origin/${{ github.ref_name }}
-            
+            git pull origin ${{ github.ref_name }}
+
+            echo "✅ Code updated to commit:"
+            git log -1 --oneline
+
             echo "🔍 Checking Docker..."
             docker --version
             docker-compose --version
-            
-            echo "⏹️  Stopping existing containers..."
-            docker-compose down
-            
-            echo "🔨 Building new app image..."
-            docker-compose build --no-cache app
-            
+
+            echo "⏹️  Stopping and removing existing containers..."
+            docker-compose down --remove-orphans
+
+            echo "🧹 Removing old app image..."
+            docker rmi skinalyze-app || true
+
+            echo "🔨 Building new app image (no cache)..."
+            docker-compose build --no-cache --pull app
+
             echo "🚀 Starting services..."
             docker-compose up -d
-            
+
             echo "⏳ Waiting for services to start..."
             sleep 20
-            
+
             echo "🏥 Checking service health..."
             docker-compose ps
-            
+
             echo "📋 Showing recent logs..."
             docker-compose logs --tail=50 app
-            
+
             echo "✅ Deployment complete!"
 
       - name: 🏥 Health Check
@@ -94,7 +105,7 @@ jobs:
         run: |
           echo "⏳ Waiting for application to be ready..."
           sleep 30
-          
+
           # Health check với retry
           for i in {1..10}; do
             if ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "curl -f -k https://api.nhatlonh.id.vn/api/v1 || curl -f http://localhost:3000/api/v1"; then
@@ -105,7 +116,7 @@ jobs:
             echo "⏳ Attempt $i/10 failed, retrying in 10s..."
             sleep 10
           done
-          
+
           echo "⚠️ Health check timeout - checking logs..."
           ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "cd /root/skinalyze && docker-compose -f docker-compose.prod.yml logs --tail=100 app"
           echo "health_status=failed" >> $GITHUB_OUTPUT
@@ -117,7 +128,7 @@ jobs:
         run: |
           DEPLOY_TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
           echo "deploy_time=$DEPLOY_TIME" >> $GITHUB_OUTPUT
-          
+
           # Get container status
           CONTAINER_STATUS=$(ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} "cd /root/skinalyze && docker-compose -f docker-compose.prod.yml ps" || echo "Failed to get status")
           echo "Container Status:"
@@ -128,19 +139,19 @@ jobs:
         if: success()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          status: "Success"
-          title: "✅ Deployment Successful"
+          status: 'Success'
+          title: '✅ Deployment Successful'
           description: |
             **Branch:** `${{ github.ref_name }}`
             **Commit:** `${{ github.event.head_commit.message }}`
             **Author:** ${{ github.actor }}
             **Deploy Time:** ${{ steps.deployment_info.outputs.deploy_time }}
             **Health Check:** ✅ Passed
-            
+
             🔗 [View Commit](${{ github.event.head_commit.url }})
             🌐 [API Swagger](https://api.nhatlonh.id.vn/api/docs)
             🏥 [Health Check](https://api.nhatlonh.id.vn/health)
-            
+
             <@&1385529547281403966>
           color: 0x00FF00
           username: Con vk skinalyze
@@ -151,17 +162,17 @@ jobs:
         if: failure()
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          status: "Failure"
-          title: "❌ Deployment Failed"
+          status: 'Failure'
+          title: '❌ Deployment Failed'
           description: |
             **Branch:** `${{ github.ref_name }}`
             **Commit:** `${{ github.event.head_commit.message }}`
             **Author:** ${{ github.actor }}
             **Error:** Deployment or health check failed
-            
+
             🔗 [View Workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
             📋 [View Logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            
+
             <@&1385529547281403966>
           color: 0xFF0000
           username: Con vk skinalyze
