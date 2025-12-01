@@ -41,3 +41,24 @@ export interface NotificationResponse {
   message: string;
   data?: unknown;
 }
+
+export interface Notification {
+  id: string;
+  userId?: string;
+  type: NotificationType | string;
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+  actionUrl?: string;
+  imageUrl?: string;
+  priority?: NotificationPriority | string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface GetAllNotificationsResponse {
+  success: boolean;
+  data: Notification[];
+  message: string;
+}

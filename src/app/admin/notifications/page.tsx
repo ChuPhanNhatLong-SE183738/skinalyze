@@ -12,12 +12,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bell, Megaphone, Users, Info, User } from "lucide-react";
+import { Bell, Megaphone, Users, Info, User, List } from "lucide-react";
 import { authService } from "@/services/authService";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import type { User as UserType } from "@/types/auth";
+import AllNotification from "@/components/allnotifications/AllNotification";
 
-type TabType = "send-to-user" | "broadcast";
+type TabType = "send-to-user" | "broadcast" | "all-notifications";
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -138,7 +139,11 @@ export default function NotificationsPage() {
           <Button
             variant={activeTab === "send-to-user" ? "default" : "ghost"}
             onClick={() => setActiveTab("send-to-user")}
-            className={activeTab === "send-to-user" ? "bg-blue-600 hover:bg-blue-700" : ""}
+            className={
+              activeTab === "send-to-user"
+                ? "bg-blue-600 hover:bg-blue-700"
+                : ""
+            }
           >
             <User className="h-4 w-4 mr-2" />
             Send to User
@@ -146,20 +151,32 @@ export default function NotificationsPage() {
           <Button
             variant={activeTab === "broadcast" ? "default" : "ghost"}
             onClick={() => setActiveTab("broadcast")}
-            className={activeTab === "broadcast" ? "bg-blue-600 hover:bg-blue-700" : ""}
+            className={
+              activeTab === "broadcast" ? "bg-blue-600 hover:bg-blue-700" : ""
+            }
           >
             <Megaphone className="h-4 w-4 mr-2" />
             Broadcast to All
           </Button>
+          <Button
+            variant={activeTab === "all-notifications" ? "default" : "ghost"}
+            onClick={() => setActiveTab("all-notifications")}
+            className={
+              activeTab === "all-notifications"
+                ? "bg-blue-600 hover:bg-blue-700"
+                : ""
+            }
+          >
+            <List className="h-4 w-4 mr-2" />
+            All Notifications
+          </Button>
         </div>
 
-        {/* Forms */}
+        {/* Content */}
         <div className="mb-8">
-          {activeTab === "send-to-user" ? (
-            <SendToUserNotificationForm />
-          ) : (
-            <BroadcastNotificationForm />
-          )}
+          {activeTab === "send-to-user" && <SendToUserNotificationForm />}
+          {activeTab === "broadcast" && <BroadcastNotificationForm />}
+          {activeTab === "all-notifications" && <AllNotification />}
         </div>
 
         {/* Usage Examples */}
@@ -178,10 +195,12 @@ export default function NotificationsPage() {
                   📦 Order Status Update (Send to User)
                 </h3>
                 <p className="text-sm text-slate-600 mb-2">
-                  <strong>Type:</strong> Order | <strong>Priority:</strong> Medium
+                  <strong>Type:</strong> Order | <strong>Priority:</strong>{" "}
+                  Medium
                 </p>
                 <p className="text-sm text-slate-600">
-                  &quot;Your order #12345 has been shipped and will arrive in 2-3 business days.&quot;
+                  &quot;Your order #12345 has been shipped and will arrive in
+                  2-3 business days.&quot;
                 </p>
               </div>
 
@@ -191,10 +210,12 @@ export default function NotificationsPage() {
                   📅 Appointment Reminder (Send to User)
                 </h3>
                 <p className="text-sm text-slate-600 mb-2">
-                  <strong>Type:</strong> Appointment | <strong>Priority:</strong> High
+                  <strong>Type:</strong> Appointment |{" "}
+                  <strong>Priority:</strong> High
                 </p>
                 <p className="text-sm text-slate-600">
-                  &quot;Reminder: You have an appointment with Dr. Smith tomorrow at 2:00 PM.&quot;
+                  &quot;Reminder: You have an appointment with Dr. Smith
+                  tomorrow at 2:00 PM.&quot;
                 </p>
               </div>
 
@@ -204,10 +225,12 @@ export default function NotificationsPage() {
                   🔧 System Maintenance (Broadcast)
                 </h3>
                 <p className="text-sm text-slate-600 mb-2">
-                  <strong>Type:</strong> System | <strong>Priority:</strong> High
+                  <strong>Type:</strong> System | <strong>Priority:</strong>{" "}
+                  High
                 </p>
                 <p className="text-sm text-slate-600">
-                  &quot;System will be under maintenance from 2 AM to 4 AM. Please save your work.&quot;
+                  &quot;System will be under maintenance from 2 AM to 4 AM.
+                  Please save your work.&quot;
                 </p>
               </div>
 
@@ -217,10 +240,12 @@ export default function NotificationsPage() {
                   🎉 Special Promotion (Broadcast)
                 </h3>
                 <p className="text-sm text-slate-600 mb-2">
-                  <strong>Type:</strong> Promotion | <strong>Priority:</strong> Medium
+                  <strong>Type:</strong> Promotion | <strong>Priority:</strong>{" "}
+                  Medium
                 </p>
                 <p className="text-sm text-slate-600">
-                  &quot;Get 20% off on all products this weekend! Use code WEEKEND20&quot;
+                  &quot;Get 20% off on all products this weekend! Use code
+                  WEEKEND20&quot;
                 </p>
               </div>
             </div>

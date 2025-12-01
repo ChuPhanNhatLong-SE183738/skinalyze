@@ -2,9 +2,32 @@ import type {
   SendToUserNotificationRequest,
   BroadcastNotificationRequest,
   NotificationResponse,
+  GetAllNotificationsResponse,
 } from "@/types/notification";
 
 export class NotificationService {
+  async getAllNotifications(): Promise<GetAllNotificationsResponse> {
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to fetch notifications");
+      }
+      console.log("fetch ok! - notification");
+
+      return await response.json();
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to fetch notifications"
+      );
+    }
+  }
+
   /**
    * Send notification to a specific user
    */
@@ -28,7 +51,10 @@ export class NotificationService {
 
       return await response.json();
     } catch (error: unknown) {
-      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to send notification");
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to send notification"
+      );
     }
   }
 
@@ -55,7 +81,10 @@ export class NotificationService {
 
       return await response.json();
     } catch (error: unknown) {
-      throw new Error((error instanceof Error ? error.message : String(error)) || "Failed to broadcast notification");
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to broadcast notification"
+      );
     }
   }
 }

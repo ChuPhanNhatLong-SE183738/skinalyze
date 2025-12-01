@@ -14,7 +14,15 @@ import {
 } from "@/components/ui/card";
 import { notificationService } from "@/services/notificationService";
 import { NotificationType, NotificationPriority } from "@/types/notification";
-import { User, Send, CheckCircle, AlertCircle, Upload, X, Search } from "lucide-react";
+import {
+  User,
+  Send,
+  CheckCircle,
+  AlertCircle,
+  Upload,
+  X,
+  Search,
+} from "lucide-react";
 import { userService } from "@/services/userService";
 import type { User as UserType } from "@/types/user";
 
@@ -34,7 +42,7 @@ export function SendToUserNotificationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
-  
+
   // User search state
   const [users, setUsers] = useState<UserType[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,8 +73,8 @@ export function SendToUserNotificationForm() {
     return (
       user.role !== "admin" &&
       (user.fullName.toLowerCase().includes(query) ||
-      user.email.toLowerCase().includes(query) ||
-      user.userId.toLowerCase().includes(query))
+        user.email.toLowerCase().includes(query) ||
+        user.userId.toLowerCase().includes(query))
     );
   });
 
@@ -209,7 +217,7 @@ export function SendToUserNotificationForm() {
                   className="bg-white border-slate-300 pl-10"
                 />
               </div>
-              
+
               {/* Dropdown */}
               {showDropdown && filteredUsers.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-auto">
@@ -227,7 +235,15 @@ export function SendToUserNotificationForm() {
                       >
                         <div className="flex items-center gap-2">
                           <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm">
-                            {user.fullName.charAt(0).toUpperCase()}
+                            <img
+                              src={user.photoUrl || ""}
+                              alt={user.fullName}
+                              className="h-8 w-8 rounded-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display =
+                                  "none";
+                              }}
+                            />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm text-slate-900 truncate">
@@ -247,12 +263,19 @@ export function SendToUserNotificationForm() {
                 </div>
               )}
             </div>
-            
+
             {/* Selected User Display */}
             {selectedUser && (
               <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
                 <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
-                  {selectedUser.fullName.charAt(0).toUpperCase()}
+                  <img
+                    src={selectedUser.photoUrl || ""}
+                    alt={selectedUser.fullName}
+                    className="h-8 w-8 rounded-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />{" "}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm text-slate-900">
@@ -275,7 +298,7 @@ export function SendToUserNotificationForm() {
                 </button>
               </div>
             )}
-            
+
             <p className="text-xs text-slate-500">
               Search and select a user to send the notification to
             </p>
