@@ -74,6 +74,15 @@ export class CreatePaymentDto {
   orderNotes?: string;
 
   @ApiProperty({
+    description: 'Preferred shipping method (INTERNAL or GHN)',
+    example: 'GHN',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  shippingMethod?: string;
+
+  @ApiProperty({
     description: 'Payment type',
     enum: PaymentType,
     example: PaymentType.ORDER,

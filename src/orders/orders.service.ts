@@ -529,6 +529,7 @@ export class OrdersService {
         cartData: { items: selectedItems }, // ✅ Wrap in object with items property
         shippingAddress: checkoutDto.shippingAddress,
         orderNotes: checkoutDto.notes,
+        shippingMethod: checkoutDto.shippingMethod || 'INTERNAL',
         amount: totalAmount,
         paymentMethod: PaymentEntityMethod.BANKING,
       });
@@ -773,6 +774,7 @@ export class OrdersService {
     notes?: string;
     totalAmount: number;
     paymentId: number;
+    shippingMethod?: string;
   }): Promise<Order> {
     const {
       customerId,
@@ -781,6 +783,7 @@ export class OrdersService {
       notes,
       totalAmount,
       paymentId,
+      shippingMethod,
     } = data;
 
     // 1. Update payment status to completed (should already be done in webhook)
@@ -802,6 +805,7 @@ export class OrdersService {
       shippingAddress,
       notes,
       status: 'CONFIRMED' as any,
+      preferredShippingMethod: shippingMethod || 'INTERNAL',
     });
     const savedOrder = await this.orderRepository.save(order);
 
@@ -824,6 +828,77 @@ export class OrdersService {
     this.logger.log(
       `✅ Order created from payment: #${savedOrder.orderId} - Amount: ${totalAmount}`,
     );
+
+    // 5. Tạo shipping log + GHN order (nếu có)
+    if (shippingMethod) {
+      this.logger.log(
+        `🚚 Creating shipping for payment order with method: ${shippingMethod}`,
+      );
+
+      let ghnOrderCode: string | undefined;
+      let ghnShippingFee: number | undefined;
+
+      // Nếu chọn GHN → Tạo đơn GHN
+      if (shippingMethod === 'GHN') {
+        try {
+          const totalWeight = (cartItems.length || 1) * 200;
+          const codAmount = Math.floor(Number(totalAmount));
+
+          const ghnResult = await this.ghnService.createShippingOrder({
+            paymentTypeId: 1,
+            note: notes || 'Đơn hàng Skinalyze',
+            requiredNote: GhnRequiredNote.NO_OPEN,
+            returnPhone: '0332190444',
+            returnAddress: 'Đại Học FPT TP.HCM',
+            toName: 'Khách hàng',
+            toPhone: '0000000000',
+            toAddress: shippingAddress,
+            toWardCode: '20308',
+            toDistrictId: 1444,
+            codAmount: codAmount,
+            content: 'Đơn hàng mỹ phẩm Skinalyze',
+            weight: totalWeight,
+            length: Math.floor(Math.random() * 20) + 10,
+            width: Math.floor(Math.random() * 15) + 10,
+            height: Math.floor(Math.random() * 10) + 5,
+            items: cartItems.map((item: any) => ({
+              name: item.productName || 'Sản phẩm',
+              quantity: item.quantity,
+              price: item.price || 0,
+            })),
+          });
+
+          ghnOrderCode = ghnResult.data.order_code;
+          ghnShippingFee = ghnResult.data.total_fee;
+
+          this.logger.log(`✅ GHN order created: ${ghnOrderCode}`);
+        } catch (ghnError) {
+          this.logger.error(
+            `❌ Failed to create GHN order: ${ghnError.message}`,
+          );
+        }
+      }
+
+      // Tạo shipping log
+      try {
+        await this.shippingLogsService.create({
+          orderId: savedOrder.orderId,
+          status: ShippingStatus.PENDING,
+          totalAmount: totalAmount,
+          note:
+            shippingMethod === 'GHN'
+              ? `Đơn hàng giao qua GHN${ghnOrderCode ? ` - Mã vận đơn: ${ghnOrderCode}` : ''}`
+              : 'Đơn hàng đã thanh toán, đang chờ xử lý',
+          shippingMethod: shippingMethod,
+          ghnOrderCode: ghnOrderCode,
+          ghnShippingFee: ghnShippingFee,
+        });
+
+        this.logger.log(`✅ Shipping log created for payment order`);
+      } catch (error) {
+        this.logger.error(`Failed to create shipping log: ${error.message}`);
+      }
+    }
 
     return savedOrder;
   }

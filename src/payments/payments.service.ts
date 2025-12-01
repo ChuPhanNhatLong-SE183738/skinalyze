@@ -679,6 +679,7 @@ export class PaymentsService {
           notes: payment.orderNotes,
           totalAmount: amountReceived,
           paymentId: payment.paymentId,
+          shippingMethod: payment.shippingMethod,
         });
 
         payment.orderId = newOrder.orderId;

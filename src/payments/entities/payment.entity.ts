@@ -113,6 +113,9 @@ export class Payment {
   @Column({ type: 'text', nullable: true })
   orderNotes: string; // Ghi chú đơn hàng
 
+  @Column({ type: 'varchar', length: 20, nullable: true, default: 'INTERNAL' })
+  shippingMethod: string; // Phương thức vận chuyển (INTERNAL hoặc GHN)
+
   @Column({ type: 'varchar', length: 36, nullable: true })
   customerId: string; // Customer ID để tạo order sau
 
