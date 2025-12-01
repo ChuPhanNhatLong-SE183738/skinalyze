@@ -86,6 +86,8 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GOONG_API_KEY: ${GOONG_API_KEY}
       GOOGLE_CREDENTIALS_BASE64: ${GOOGLE_CREDENTIALS_BASE64}
+      GHN_TOKEN: ${GHN_TOKEN}
+      GHN_SHOP_ID: ${GHN_SHOP_ID}
     depends_on:
       mysql:
         condition: service_healthy

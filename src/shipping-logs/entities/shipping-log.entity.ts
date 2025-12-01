@@ -20,6 +20,12 @@ export enum ShippingStatus {
   RETURNED = 'RETURNED',
 }
 
+export enum ShippingMethod {
+  INTERNAL = 'INTERNAL', // Shipper nội bộ giao
+  GHN = 'GHN', // Giao qua GHN
+  BATCH = 'BATCH', // Gom nhiều đơn giao cùng lúc (internal)
+}
+
 @Entity('shipping_logs')
 export class ShippingLog {
   @PrimaryGeneratedColumn('uuid')
@@ -59,6 +65,33 @@ export class ShippingLog {
     default: ShippingStatus.PENDING,
   })
   status: ShippingStatus;
+
+  @Column({
+    type: 'enum',
+    enum: ShippingMethod,
+    default: ShippingMethod.INTERNAL,
+  })
+  shippingMethod: ShippingMethod;
+
+  // GHN tracking information
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  ghnOrderCode: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  ghnSortCode: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  ghnShippingFee: number;
+
+  @Column({ type: 'json', nullable: true })
+  ghnTrackingData: any;
+
+  // Batch delivery information (gom nhiều đơn cùng customer)
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  batchCode: string; // Mã lô giao hàng (ví dụ: BATCH-20251201-001)
+
+  @Column({ type: 'json', nullable: true })
+  batchOrderIds: string[]; // Array of order IDs in the same batch
 
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   totalAmount: number;

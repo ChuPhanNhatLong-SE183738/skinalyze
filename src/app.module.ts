@@ -62,6 +62,7 @@ import { CartModule } from './cart/cart.module';
 import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 import { WithdrawalRequest } from './withdrawals/entities/withdrawal-request.entity';
 import { WithdrawalOtpSession } from './withdrawals/entities/withdrawal-otp-session.entity';
+import { GhnModule } from './ghn/ghn.module';
 
 @Module({
   imports: [
@@ -140,6 +141,7 @@ import { WithdrawalOtpSession } from './withdrawals/entities/withdrawal-otp-sess
     TrackingModule,
     ReviewsModule,
     WithdrawalsModule,
+    GhnModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

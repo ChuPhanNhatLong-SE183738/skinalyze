@@ -415,11 +415,21 @@ export class OrdersService {
     }
     this.logger.log('✅ All inventory validated successfully');
 
-    // 3. Tính total amount CHỈ TỪ SELECTED ITEMS
-    const totalAmount = selectedItems.reduce(
-      (sum, item) => sum + (item.price || 0) * item.quantity,
-      0,
-    );
+    // 3. Tính total amount CHỈ TỪ SELECTED ITEMS (hoặc dùng từ DTO nếu có)
+    let totalAmount: number;
+
+    if (checkoutDto.totalAmount && checkoutDto.totalAmount > 0) {
+      totalAmount = checkoutDto.totalAmount;
+      this.logger.log(`💰 Using totalAmount from checkout: ${totalAmount} VND`);
+    } else {
+      totalAmount = selectedItems.reduce(
+        (sum, item) => sum + (item.price || 0) * item.quantity,
+        0,
+      );
+      this.logger.log(
+        `💰 Calculated totalAmount from cart: ${totalAmount} VND`,
+      );
+    }
 
     // 4. 💰 XỬ LÝ PHƯƠNG THỨC THANH TOÁN
     const paymentMethod = checkoutDto.paymentMethod || PaymentMethod.COD;

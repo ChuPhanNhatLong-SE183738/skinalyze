@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEnum, IsBoolean, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  IsArray,
+  IsNumber,
+} from 'class-validator';
 
 export enum PaymentMethod {
   WALLET = 'wallet', // Thanh toán bằng balance
@@ -17,8 +24,21 @@ export class CheckoutCartDto {
   shippingAddress: string;
 
   @ApiProperty({
-    example: ['550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440002'],
-    description: 'Optional: Specific product IDs to checkout. If not provided, checkout all items with selected=true in cart',
+    example: 500000,
+    description: 'Total amount for the order (including shipping fee)',
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  totalAmount?: number;
+
+  @ApiProperty({
+    example: [
+      '550e8400-e29b-41d4-a716-446655440001',
+      '550e8400-e29b-41d4-a716-446655440002',
+    ],
+    description:
+      'Optional: Specific product IDs to checkout. If not provided, checkout all items with selected=true in cart',
     required: false,
   })
   @IsOptional()
@@ -39,7 +59,8 @@ export class CheckoutCartDto {
 
   @ApiProperty({
     example: false,
-    description: 'If true, use wallet balance to pay for this order (same as paymentMethod=wallet)',
+    description:
+      'If true, use wallet balance to pay for this order (same as paymentMethod=wallet)',
     default: false,
   })
   @IsOptional()

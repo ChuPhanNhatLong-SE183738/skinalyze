@@ -1,12 +1,21 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
-import { ShippingLog } from './entities/shipping-log.entity';
+import { Repository, IsNull, In } from 'typeorm';
+import { ShippingLog, ShippingMethod } from './entities/shipping-log.entity';
 import { CreateShippingLogDto } from './dto/create-shipping-log.dto';
 import { UpdateShippingLogDto } from './dto/update-shipping-log.dto';
 import { ShippingStatus } from './entities/shipping-log.entity';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { Order, OrderStatus } from '../orders/entities/order.entity';
+import {
+  CreateBatchDeliveryDto,
+  AssignGhnOrderDto,
+} from './dto/batch-delivery.dto';
 
 @Injectable()
 export class ShippingLogsService {
@@ -20,7 +29,9 @@ export class ShippingLogsService {
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  private mapShippingStatusToOrderStatus(shippingStatus: ShippingStatus): OrderStatus {
+  private mapShippingStatusToOrderStatus(
+    shippingStatus: ShippingStatus,
+  ): OrderStatus {
     const statusMap: Record<ShippingStatus, OrderStatus> = {
       [ShippingStatus.PENDING]: OrderStatus.CONFIRMED,
       [ShippingStatus.PICKED_UP]: OrderStatus.SHIPPING,
@@ -33,12 +44,12 @@ export class ShippingLogsService {
     return statusMap[shippingStatus];
   }
 
-  private async syncOrderStatus(orderId: string, shippingStatus: ShippingStatus): Promise<void> {
+  private async syncOrderStatus(
+    orderId: string,
+    shippingStatus: ShippingStatus,
+  ): Promise<void> {
     const newOrderStatus = this.mapShippingStatusToOrderStatus(shippingStatus);
-    await this.orderRepository.update(
-      { orderId },
-      { status: newOrderStatus }
-    );
+    await this.orderRepository.update({ orderId }, { status: newOrderStatus });
     this.logger.log(`✅ Order ${orderId} status synced: ${newOrderStatus}`);
   }
 
@@ -137,14 +148,15 @@ export class ShippingLogsService {
   /**
    * 🤝 Staff tự nhận đơn hàng (self-assign)
    */
-  async assignToMe(shippingLogId: string, staffId: string): Promise<ShippingLog> {
+  async assignToMe(
+    shippingLogId: string,
+    staffId: string,
+  ): Promise<ShippingLog> {
     const log = await this.findOne(shippingLogId);
 
     // Kiểm tra đơn hàng đã có staff chưa
     if (log.shippingStaffId) {
-      throw new BadRequestException(
-        `Đơn hàng này đã được nhận bởi staff khác`,
-      );
+      throw new BadRequestException(`Đơn hàng này đã được nhận bởi staff khác`);
     }
 
     // Kiểm tra status phải là PENDING
@@ -159,10 +171,10 @@ export class ShippingLogsService {
     log.note = `Đơn hàng đã được nhận bởi staff vào ${new Date().toLocaleString('vi-VN')}`;
 
     const savedLog = await this.shippingLogRepository.save(log);
-    
+
     // 🔄 Đồng bộ Order status sang SHIPPING
     await this.syncOrderStatus(log.orderId, ShippingStatus.PICKED_UP);
-    
+
     return savedLog;
   }
 
@@ -184,19 +196,19 @@ export class ShippingLogsService {
     }
 
     log.shippingStaffId = staffId;
-    
+
     // Nếu đơn hàng đang pending, chuyển sang picked_up
     if (log.status === ShippingStatus.PENDING) {
       log.status = ShippingStatus.PICKED_UP;
     }
 
     const savedLog = await this.shippingLogRepository.save(log);
-    
+
     // 🔄 Đồng bộ Order status nếu status đã thay đổi
     if (log.status === ShippingStatus.PICKED_UP) {
       await this.syncOrderStatus(log.orderId, ShippingStatus.PICKED_UP);
     }
-    
+
     return savedLog;
   }
 
@@ -208,12 +220,12 @@ export class ShippingLogsService {
     const oldStatus = log.status;
     Object.assign(log, updateDto);
     const savedLog = await this.shippingLogRepository.save(log);
-    
+
     // 🔄 Nếu status thay đổi, đồng bộ với Order
     if (updateDto.status && updateDto.status !== oldStatus) {
       await this.syncOrderStatus(log.orderId, updateDto.status);
     }
-    
+
     return savedLog;
   }
 
@@ -244,7 +256,9 @@ export class ShippingLogsService {
       );
     }
 
-    this.logger.log(`Uploading ${files.length} pictures for shipping log ${shippingLogId}`);
+    this.logger.log(
+      `Uploading ${files.length} pictures for shipping log ${shippingLogId}`,
+    );
 
     // Upload ảnh lên Cloudinary
     const uploadResults = await this.cloudinaryService.uploadMultipleImages(
@@ -261,7 +275,7 @@ export class ShippingLogsService {
     log.deliveredDate = new Date();
 
     const updatedLog = await this.shippingLogRepository.save(log);
-    
+
     // 🔄 Đồng bộ Order status sang DELIVERED
     await this.syncOrderStatus(log.orderId, ShippingStatus.DELIVERED);
 
@@ -273,5 +287,171 @@ export class ShippingLogsService {
   async remove(id: string): Promise<void> {
     const log = await this.findOne(id);
     await this.shippingLogRepository.remove(log);
+  }
+
+  /**
+   * 📦 Tạo batch delivery - gom nhiều đơn hàng cùng customer giao 1 lần
+   */
+  async createBatchDelivery(
+    dto: CreateBatchDeliveryDto,
+  ): Promise<ShippingLog[]> {
+    // Validate tất cả orders tồn tại và cùng customer
+    const orders = await this.orderRepository.find({
+      where: { orderId: In(dto.orderIds) },
+      relations: ['customer', 'shippingLogs'],
+    });
+
+    if (orders.length !== dto.orderIds.length) {
+      throw new NotFoundException('Some orders not found');
+    }
+
+    // Kiểm tra cùng customer
+    const customerIds = [...new Set(orders.map((o) => o.customerId))];
+    if (customerIds.length > 1) {
+      throw new BadRequestException(
+        'Cannot batch orders from different customers',
+      );
+    }
+
+    // Kiểm tra orders chưa có shipping log hoặc đang PENDING
+    for (const order of orders) {
+      const existingLog = order.shippingLogs?.find(
+        (log) =>
+          log.status !== ShippingStatus.DELIVERED &&
+          log.status !== ShippingStatus.RETURNED,
+      );
+      if (
+        existingLog &&
+        existingLog.shippingStaffId &&
+        existingLog.shippingStaffId !== dto.shippingStaffId
+      ) {
+        throw new BadRequestException(
+          `Order ${order.orderId} is already assigned to another staff`,
+        );
+      }
+    }
+
+    // Tạo batch code
+    const batchCode = `BATCH-${new Date().toISOString().split('T')[0]}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+    this.logger.log(
+      `📦 Creating batch delivery ${batchCode} for ${dto.orderIds.length} orders`,
+    );
+
+    const batchLogs: ShippingLog[] = [];
+
+    for (const order of orders) {
+      // Tìm hoặc tạo shipping log
+      let log = order.shippingLogs?.find(
+        (l) => l.status === ShippingStatus.PENDING || !l.shippingStaffId,
+      );
+
+      if (!log) {
+        // Tạo mới shipping log
+        log = this.shippingLogRepository.create({
+          orderId: order.orderId,
+          status: ShippingStatus.PENDING,
+        });
+      }
+
+      // Cập nhật batch info
+      log.shippingStaffId = dto.shippingStaffId;
+      log.shippingMethod = ShippingMethod.BATCH;
+      log.batchCode = batchCode;
+      log.batchOrderIds = dto.orderIds;
+      log.status = ShippingStatus.PICKED_UP;
+      if (dto.note) {
+        log.note = dto.note;
+      }
+
+      const savedLog = await this.shippingLogRepository.save(log);
+      batchLogs.push(savedLog);
+
+      // Cập nhật order status
+      await this.syncOrderStatus(order.orderId, ShippingStatus.PICKED_UP);
+    }
+
+    this.logger.log(
+      `✅ Created batch delivery with ${batchLogs.length} orders`,
+    );
+    return batchLogs;
+  }
+
+  /**
+   * 🚚 Gán thông tin GHN tracking cho order
+   */
+  async assignGhnOrder(dto: AssignGhnOrderDto): Promise<ShippingLog> {
+    // Tìm shipping log của order
+    const log = await this.shippingLogRepository.findOne({
+      where: { orderId: dto.orderId },
+      relations: ['order'],
+    });
+
+    if (!log) {
+      throw new NotFoundException(
+        `Shipping log for order ${dto.orderId} not found`,
+      );
+    }
+
+    // Cập nhật GHN info
+    log.shippingMethod = ShippingMethod.GHN;
+    log.ghnOrderCode = dto.ghnOrderCode;
+    if (dto.ghnSortCode) log.ghnSortCode = dto.ghnSortCode;
+    if (dto.ghnShippingFee) log.ghnShippingFee = dto.ghnShippingFee;
+    if (dto.ghnTrackingData) log.ghnTrackingData = dto.ghnTrackingData;
+    log.status = ShippingStatus.PICKED_UP; // GHN đã nhận hàng
+    log.carrierName = 'Giao Hàng Nhanh (GHN)';
+
+    const savedLog = await this.shippingLogRepository.save(log);
+
+    // Sync order status
+    await this.syncOrderStatus(dto.orderId, ShippingStatus.PICKED_UP);
+
+    this.logger.log(
+      `✅ Assigned GHN order ${dto.ghnOrderCode} to order ${dto.orderId}`,
+    );
+    return savedLog;
+  }
+
+  /**
+   * 📋 Lấy danh sách orders trong cùng 1 batch
+   */
+  async getOrdersByBatchCode(batchCode: string): Promise<ShippingLog[]> {
+    return await this.shippingLogRepository.find({
+      where: { batchCode },
+      relations: [
+        'order',
+        'order.customer',
+        'order.customer.user',
+        'order.orderItems',
+        'order.orderItems.product',
+        'shippingStaff',
+      ],
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  /**
+   * 🔍 Lấy orders cùng customer để suggest batch delivery
+   */
+  async suggestBatchDelivery(customerId: string): Promise<Order[]> {
+    const orders = await this.orderRepository.find({
+      where: {
+        customerId,
+        status: In([OrderStatus.CONFIRMED, OrderStatus.PROCESSING]),
+      },
+      relations: ['shippingLogs', 'orderItems'],
+    });
+
+    // Lọc những orders chưa được assign hoặc đang pending
+    return orders.filter((order) => {
+      const hasActiveShipping = order.shippingLogs?.some(
+        (log) =>
+          log.status !== ShippingStatus.DELIVERED &&
+          log.status !== ShippingStatus.RETURNED &&
+          log.shippingStaffId != null,
+      );
+      return !hasActiveShipping;
+    });
   }
 }
