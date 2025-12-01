@@ -8,11 +8,13 @@ import { NotificationsGateway } from './notifications.gateway';
 import { Notification } from './entities/notification.entity';
 import { UsersModule } from '../users/users.module';
 import { Customer } from '../customers/entities/customer.entity';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Notification, Customer]),
     UsersModule, // Import để có DeviceTokensService
+    CloudinaryModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

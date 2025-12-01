@@ -17,6 +17,7 @@ import { FirebaseService } from '../firebase/firebase.service';
 import { DeviceTokensService } from '../users/device-tokens.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { Customer } from '../customers/entities/customer.entity';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class NotificationsService {
@@ -29,6 +30,7 @@ export class NotificationsService {
     private customerRepository: Repository<Customer>,
     private firebaseService: FirebaseService,
     private deviceTokensService: DeviceTokensService,
+    private cloudinaryService: CloudinaryService,
     @Inject(forwardRef(() => NotificationsGateway))
     private notificationsGateway: NotificationsGateway,
   ) {}
@@ -333,7 +335,25 @@ export class NotificationsService {
     actionUrl?: string,
     imageUrl?: string,
     priority?: NotificationPriority,
+    image?: Express.Multer.File,
   ): Promise<Notification> {
+    // If image file is provided, upload to Cloudinary
+    if (image) {
+      try {
+        const uploadResult = await this.cloudinaryService.uploadImage(
+          image,
+          'notifications',
+        );
+        imageUrl = uploadResult.secure_url;
+        this.logger.log(
+          `Notification image uploaded: ${uploadResult.secure_url}`,
+        );
+      } catch (error) {
+        this.logger.error('Failed to upload notification image:', error);
+        // Continue without image if upload fails
+      }
+    }
+
     return await this.create({
       userId,
       type,
@@ -357,7 +377,25 @@ export class NotificationsService {
     actionUrl?: string,
     imageUrl?: string,
     priority?: NotificationPriority,
+    image?: Express.Multer.File,
   ): Promise<{ sent: number; notifications: Notification[] }> {
+    // If image file is provided, upload to Cloudinary
+    if (image) {
+      try {
+        const uploadResult = await this.cloudinaryService.uploadImage(
+          image,
+          'notifications',
+        );
+        imageUrl = uploadResult.secure_url;
+        this.logger.log(
+          `Broadcast notification image uploaded: ${uploadResult.secure_url}`,
+        );
+      } catch (error) {
+        this.logger.error('Failed to upload broadcast notification image:', error);
+        // Continue without image if upload fails
+      }
+    }
+
     // Get all active users
     const users = await this.notificationRepository.manager
       .getRepository('User')
