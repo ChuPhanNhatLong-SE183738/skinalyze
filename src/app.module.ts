@@ -107,7 +107,7 @@ import { WithdrawalOtpSession } from './withdrawals/entities/withdrawal-otp-sess
         WithdrawalRequest,
         WithdrawalOtpSession,
       ],
-      synchronize: true,
+      synchronize: process.env.NODE_ENV === 'development',
       logging: process.env.NODE_ENV === 'development',
     }),
     UsersModule,
