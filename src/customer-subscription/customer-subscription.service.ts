@@ -18,7 +18,7 @@ import { SubscriptionPlan } from 'src/subscription-plans/entities/subscription-p
 
 @Injectable()
 export class CustomerSubscriptionService {
-  private readonly logger = new Logger(CustomerSubscriptionService.name);
+  readonly logger = new Logger(CustomerSubscriptionService.name);
 
   constructor(
     @InjectRepository(CustomerSubscription)
@@ -36,7 +36,9 @@ export class CustomerSubscriptionService {
     if (!plan) {
       throw new NotFoundException('Plan not found');
     }
-
+    this.logger.log(
+      `Creating payment for customer ${customerId} for plan ${plan.planId} with amount ${plan.basePrice}`,
+    );
     const payment = await this.paymentsService.createPayment({
       paymentType: PaymentType.SUBSCRIPTION,
       amount: plan.basePrice,

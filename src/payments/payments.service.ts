@@ -172,6 +172,9 @@ export class PaymentsService {
     if (orderNotes) {
       paymentData.orderNotes = orderNotes;
     }
+    if (planId) {
+      paymentData.planId = planId;
+    }
 
     const payment = repository.create(paymentData);
     const savedPayment = await repository.save(payment);

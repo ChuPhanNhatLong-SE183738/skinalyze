@@ -43,9 +43,9 @@ export class AvailabilitySlot {
   appointmentId: string | null;
 
   @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
+    // type: 'decimal',
+    // precision: 10,
+    // scale: 2,
     default: 0,
   })
   price: number;

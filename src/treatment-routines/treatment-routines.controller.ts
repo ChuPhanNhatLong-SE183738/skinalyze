@@ -102,7 +102,7 @@ export class TreatmentRoutinesController {
   @Roles(UserRole.DERMATOLOGIST, UserRole.CUSTOMER, UserRole.ADMIN)
   @ApiOperation({ summary: 'Get visual timeline of a treatment routine' })
   async getTimeline(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id') id: string,
   ): Promise<SuccessResponse<TimelineEventDto[]>> {
     const timeline =
       await this.treatmentRoutinesService.getTreatmentTimeline(id);

@@ -27,7 +27,6 @@ export class CreateRoutineProductItemDto {
     example: 'Sữa rửa mặt CeraVe',
   })
   @IsString()
-  @IsNotEmpty()
   productName: string;
 
   @ApiPropertyOptional({
@@ -92,8 +91,8 @@ export class CreateRoutineDetailDto {
     example: 'Buổi Sáng',
   })
   @IsString()
-  @IsNotEmpty()
-  description: string;
+  @IsOptional()
+  description?: string;
 
   @ApiProperty({
     description: 'Hướng dẫn chung cho bước này',
