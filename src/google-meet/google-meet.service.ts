@@ -1,15 +1,12 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { google } from 'googleapis';
-import * as path from 'path';
+// import * as path from 'path'; // <-- Đã xóa import path vì không dùng file vật lý nữa
 import { CreateMeetDto } from './dto/create-meet.dto';
 
 @Injectable()
 export class GoogleMeetService {
   private readonly logger = new Logger(GoogleMeetService.name);
-  private readonly KEYFILEPATH = path.join(
-    process.cwd(),
-    'skinalyze-475715-0f499dd5cd61.json',
-  );
+
   private readonly SCOPES = ['https://www.googleapis.com/auth/calendar'];
   private readonly USER_TO_IMPERSONATE = 'lonh@nhatlonh.id.vn';
 
@@ -19,7 +16,6 @@ export class GoogleMeetService {
   async createMeetLink(createMeetDto: CreateMeetDto): Promise<string> {
     const { summary, startTimeISO, endTimeISO } = createMeetDto;
 
-    // Validate datetime
     const startDate = new Date(startTimeISO);
     const endDate = new Date(endTimeISO);
 
@@ -31,10 +27,30 @@ export class GoogleMeetService {
       throw new BadRequestException('End time must be after start time');
     }
 
+    const credentialsJson = process.env.GOOGLE_CREDENTIALS_JSON;
+
+    if (!credentialsJson) {
+      this.logger.error(
+        'Missing GOOGLE_CREDENTIALS_JSON in environment variables',
+      );
+      throw new BadRequestException(
+        'Server configuration error: Missing Google Credentials',
+      );
+    }
+
+    let credentials;
     try {
-      // 1. Authenticate with impersonation
+      credentials = JSON.parse(credentialsJson);
+    } catch (error) {
+      this.logger.error('Failed to parse GOOGLE_CREDENTIALS_JSON');
+      throw new BadRequestException(
+        'Server configuration error: Invalid Credentials format',
+      );
+    }
+
+    try {
       const auth = new google.auth.GoogleAuth({
-        keyFile: this.KEYFILEPATH,
+        credentials,
         scopes: this.SCOPES,
         clientOptions: {
           subject: this.USER_TO_IMPERSONATE,
@@ -43,9 +59,10 @@ export class GoogleMeetService {
 
       const calendar = google.calendar({ version: 'v3', auth });
 
-      // 2. Create calendar event with Meet link
+      // 4. Create calendar event with Meet link
       const event = {
         summary,
+        description: 'Cuộc hẹn tư vấn da liễu qua Skinalyze',
         start: {
           dateTime: startTimeISO,
           timeZone: 'Asia/Ho_Chi_Minh',
@@ -54,6 +71,7 @@ export class GoogleMeetService {
           dateTime: endTimeISO,
           timeZone: 'Asia/Ho_Chi_Minh',
         },
+        // Không thêm attendees theo yêu cầu của bạn
         conferenceData: {
           createRequest: {
             requestId: `meet-${Date.now()}`,
