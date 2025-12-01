@@ -324,7 +324,7 @@ export class OrdersService {
             returnPhone: '0332190444',
             returnAddress: 'Đại Học FPT TP.HCM',
             toName: order.customer?.user?.fullName || 'Khách hàng',
-            toPhone: order.customer?.user?.phone || '0000000000',
+            toPhone: order.customer?.user?.phone || '',
             toAddress: order.shippingAddress,
             toWardCode: '20308', // Mã phường (cần cập nhật từ order)
             toDistrictId: 1444, // Mã quận (cần cập nhật từ order)
@@ -697,7 +697,7 @@ export class OrdersService {
               returnPhone: '0332190444',
               returnAddress: 'Đại Học FPT TP.HCM',
               toName: customer.user?.fullName || 'Khách hàng',
-              toPhone: customer.user?.phone || '0000000000',
+              toPhone: customer.user?.phone || '',
               toAddress: checkoutDto.shippingAddress,
               toWardCode: '20308',
               toDistrictId: 1444,
@@ -786,6 +786,22 @@ export class OrdersService {
       shippingMethod,
     } = data;
 
+    // Load customer with user for phone validation
+    const customer = await this.customersService.findOne(customerId);
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    // Validate phone if shipping method is GHN
+    if (shippingMethod === 'GHN') {
+      const phone = customer.user?.phone;
+      if (!phone || phone === '0000000000' || phone.length < 10) {
+        throw new BadRequestException(
+          'Số điện thoại không hợp lệ. Vui lòng cập nhật số điện thoại trước khi đặt hàng với GHN.',
+        );
+      }
+    }
+
     // 1. Update payment status to completed (should already be done in webhook)
     const payment = await this.paymentRepository.findOne({
       where: { paymentId },
@@ -850,8 +866,8 @@ export class OrdersService {
             requiredNote: GhnRequiredNote.NO_OPEN,
             returnPhone: '0332190444',
             returnAddress: 'Đại Học FPT TP.HCM',
-            toName: 'Khách hàng',
-            toPhone: '0000000000',
+            toName: customer.user?.fullName || 'Khách hàng',
+            toPhone: customer.user?.phone || '0000000000',
             toAddress: shippingAddress,
             toWardCode: '20308',
             toDistrictId: 1444,
