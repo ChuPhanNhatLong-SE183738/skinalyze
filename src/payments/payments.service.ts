@@ -154,23 +154,21 @@ export class PaymentsService {
       expiredAt,
     };
 
-    if (orderId) {
-      paymentData.orderId = orderId;
-    }
-    if (userId) {
-      paymentData.userId = userId;
-    }
-    if (customerId) {
-      paymentData.customerId = customerId;
-    }
-    if (cartData) {
-      paymentData.cartData = JSON.stringify(cartData);
-    }
-    if (shippingAddress) {
-      paymentData.shippingAddress = shippingAddress;
-    }
-    if (orderNotes) {
-      paymentData.orderNotes = orderNotes;
+    if (paymentType === PaymentType.ORDER) {
+      if (orderId) paymentData.orderId = orderId;
+      if (customerId) paymentData.customerId = customerId;
+      if (userId) paymentData.userId = userId;
+      if (cartData) paymentData.cartData = JSON.stringify(cartData);
+      if (shippingAddress) paymentData.shippingAddress = shippingAddress;
+      if (orderNotes) paymentData.orderNotes = orderNotes;
+    } else if (paymentType === PaymentType.TOPUP) {
+      if (userId) paymentData.userId = userId;
+    } else if (paymentType === PaymentType.BOOKING) {
+      if (userId) paymentData.userId = userId;
+      if (customerId) paymentData.customerId = customerId;
+    } else if (paymentType === PaymentType.SUBSCRIPTION) {
+      if (customerId) paymentData.customerId = customerId;
+      if (planId) paymentData.planId = planId;
     }
 
     const payment = repository.create(paymentData);
