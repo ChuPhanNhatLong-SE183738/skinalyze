@@ -889,7 +889,7 @@ export class OrdersService {
             shippingMethod === 'GHN'
               ? `Đơn hàng giao qua GHN${ghnOrderCode ? ` - Mã vận đơn: ${ghnOrderCode}` : ''}`
               : 'Đơn hàng đã thanh toán, đang chờ xử lý',
-          shippingMethod: shippingMethod,
+          shippingMethod: shippingMethod as any,
           ghnOrderCode: ghnOrderCode,
           ghnShippingFee: ghnShippingFee,
         });
