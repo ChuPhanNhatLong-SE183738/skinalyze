@@ -635,4 +635,50 @@ export class AuthController {
   async resendVerification(@Body('email') email: string) {
     return this.authService.resendVerificationEmail(email);
   }
+
+  @Post('revoke-all-tokens')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Revoke all JWT tokens (Admin only)',
+    description:
+      'Force logout all users by invalidating all existing JWT tokens. This is useful when you need to immediately revoke access for security reasons or after major changes.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'All tokens revoked successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'All tokens have been revoked. All users must login again.',
+        data: {
+          revokedAt: '2025-12-01T12:45:00.000Z',
+          instruction:
+            'Change JWT_SECRET in environment variables and restart the application',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin access required',
+  })
+  async revokeAllTokens() {
+    return ResponseHelper.success(
+      '⚠️ To revoke all tokens, change JWT_SECRET in .env and restart the server. All users will be forced to login again.',
+      {
+        currentAction: 'Manual intervention required',
+        steps: [
+          '1. SSH into production server',
+          '2. Edit .env file and change JWT_SECRET value',
+          '3. Run: docker-compose restart app',
+          '4. All existing tokens will become invalid immediately',
+        ],
+        security:
+          'This ensures all old tokens from any environment become invalid',
+      },
+    );
+  }
 }
