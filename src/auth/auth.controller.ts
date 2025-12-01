@@ -595,6 +595,17 @@ export class AuthController {
 
   @Post('resend-verification')
   @HttpCode(HttpStatus.OK)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          example: 'user@example.com',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Resend verification email',
     description: 'Request a new email verification link to be sent.',
