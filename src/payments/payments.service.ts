@@ -161,6 +161,8 @@ export class PaymentsService {
       if (cartData) paymentData.cartData = JSON.stringify(cartData);
       if (shippingAddress) paymentData.shippingAddress = shippingAddress;
       if (orderNotes) paymentData.orderNotes = orderNotes;
+      if (createPaymentDto.shippingMethod)
+        paymentData.shippingMethod = createPaymentDto.shippingMethod;
     } else if (paymentType === PaymentType.TOPUP) {
       if (userId) paymentData.userId = userId;
     } else if (paymentType === PaymentType.BOOKING) {
