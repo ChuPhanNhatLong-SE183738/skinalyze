@@ -12,6 +12,7 @@ import { TopupBalanceDto } from './dto/topup-balance.dto';
 import { User } from './entities/user.entity';
 import { ResponseHelper } from '../utils/responses';
 import { EmailService } from '../email/email.service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -21,6 +22,7 @@ export class UsersService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly emailService: EmailService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
   private getRepository(manager?: EntityManager): Repository<User> {
     return manager ? manager.getRepository(User) : this.userRepository;
@@ -82,6 +84,52 @@ export class UsersService {
 
     Object.assign(user, updateUserDto);
     return await this.userRepository.save(user);
+  }
+
+  /**
+   * Update user profile with optional photo upload to Cloudinary
+   */
+  async updateProfile(
+    userId: string,
+    updateUserDto: UpdateUserDto,
+    photo?: Express.Multer.File,
+  ): Promise<any> {
+    const user = await this.findOne(userId);
+
+    // If photo is provided, upload to Cloudinary
+    if (photo) {
+      try {
+        const uploadResult = await this.cloudinaryService.uploadImage(
+          photo,
+          'user-profiles',
+        );
+        updateUserDto.photoUrl = uploadResult.secure_url;
+        this.logger.log(
+          `Profile photo uploaded for user ${userId}: ${uploadResult.secure_url}`,
+        );
+      } catch (error) {
+        this.logger.error('Failed to upload profile photo:', error);
+        throw new BadRequestException('Failed to upload profile photo');
+      }
+    }
+
+    // If password is being updated, hash it
+    if (updateUserDto.password) {
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
+    }
+
+    Object.assign(user, updateUserDto);
+    const updatedUser = await this.userRepository.save(user);
+
+    return ResponseHelper.success('Profile updated successfully', {
+      userId: updatedUser.userId,
+      email: updatedUser.email,
+      fullName: updatedUser.fullName,
+      photoUrl: updatedUser.photoUrl,
+      phone: updatedUser.phone,
+      dob: updatedUser.dob,
+      gender: updatedUser.gender,
+    });
   }
 
   async remove(id: string): Promise<void> {

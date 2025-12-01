@@ -9,7 +9,13 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -17,6 +23,7 @@ import {
   ApiParam,
   ApiBody,
   ApiBearerAuth,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { DeviceTokensService } from './device-tokens.service';
@@ -129,12 +136,45 @@ export class UsersController {
   }
 
   @Patch('profile')
-  @ApiOperation({ summary: 'Update current user profile' })
-  @ApiBody({ type: UpdateUserDto })
+  @UseInterceptors(FileInterceptor('photo'))
+  @ApiOperation({ 
+    summary: 'Update current user profile',
+    description: 'Update user profile. Optionally upload a new profile photo (max 5MB, jpg/jpeg/png/webp)'
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        photo: {
+          type: 'string',
+          format: 'binary',
+          description: 'Profile photo (optional, max 5MB)',
+        },
+        fullName: { type: 'string' },
+        phone: { type: 'string' },
+        dob: { type: 'string', format: 'date' },
+        gender: { type: 'string' },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Profile updated successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  updateProfile(@GetUser() user: User, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(user.userId, updateUserDto);
+  async updateProfile(
+    @GetUser() user: User,
+    @Body() updateUserDto: UpdateUserDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|webp)$/ }),
+        ],
+        fileIsRequired: false,
+      }),
+    )
+    photo?: Express.Multer.File,
+  ) {
+    return this.usersService.updateProfile(user.userId, updateUserDto, photo);
   }
 
   @Patch(':id')

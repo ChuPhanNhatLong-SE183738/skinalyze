@@ -9,6 +9,7 @@ import {
   IsUrl,
   IsEnum,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { UserRole } from '../entities/user.entity';
 
 export class CreateUserDto {
@@ -36,6 +37,17 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    if (value === 'male' || value === 'MALE') return true;
+    if (value === 'female' || value === 'FEMALE') return false;
+    return value;
+  })
+  gender?: boolean;
 
   @IsOptional()
   @IsArray()

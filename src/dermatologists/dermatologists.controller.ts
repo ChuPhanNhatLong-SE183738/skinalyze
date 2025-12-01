@@ -20,6 +20,7 @@ import {
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { User, UserRole } from 'src/users/entities/user.entity';
 import {
+  ApiBearerAuth,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
@@ -45,7 +46,8 @@ export class DermatologistsController {
 
   // CRUD Operations for Dermatologist
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a dermatologist profile' })
   @ApiCreatedResponse({ description: 'Dermatologist created successfully' })
   async create(
@@ -74,6 +76,8 @@ export class DermatologistsController {
   }
 
   @Get(':dermatologistId/availability-summary')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary:
       'Get available dates summary for a dermatologist (for calendar view)',
@@ -128,6 +132,7 @@ export class DermatologistsController {
   @Get('my-profile')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.DERMATOLOGIST)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get my dermatologist profile' })
   @ApiOkResponse({
     description: 'Dermatologist profile retrieved successfully',
@@ -146,6 +151,7 @@ export class DermatologistsController {
   @Patch('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.DERMATOLOGIST)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Update my dermatologist profile (Dermatologist only)',
   })
@@ -167,6 +173,7 @@ export class DermatologistsController {
   @Get('my-patients')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.DERMATOLOGIST)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get list of my patients (with status and upcoming appointments)',
   })
@@ -185,6 +192,7 @@ export class DermatologistsController {
   @Patch('admin/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update any dermatologist profile (Admin only)' })
   @ApiOkResponse({ description: 'Dermatologist updated successfully by admin' })
   async adminUpdateProfile(
@@ -213,7 +221,9 @@ export class DermatologistsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete dermatologist profile' })
   @ApiOkResponse({ description: 'Dermatologist deleted successfully' })
