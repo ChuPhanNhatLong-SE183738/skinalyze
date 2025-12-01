@@ -9,7 +9,7 @@ import {
 } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
 
-@Entity('skin_analyses')
+@Entity('skin_analysis')
 export class SkinAnalysis {
   @PrimaryGeneratedColumn('uuid')
   analysisId: string;
