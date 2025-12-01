@@ -33,6 +33,17 @@ import { ResponseHelper } from '../utils/responses';
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
+  @Get()
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all notifications (Admin only)' })
+  async getAllNotifications() {
+    const notifications = await this.notificationsService.getAllNotifications();
+    return ResponseHelper.success(
+      'Notifications retrieved successfully',
+      notifications,
+    );
+  }
+
   @Post()
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a notification (Admin only)' })

@@ -33,31 +33,37 @@ export class NotificationsService {
     private notificationsGateway: NotificationsGateway,
   ) {}
 
+  async getAllNotifications(): Promise<Notification[]> {
+    return await this.notificationRepository.find({});
+  }
+
   async create(
     createNotificationDto: CreateNotificationDto,
   ): Promise<Notification> {
     // Check if userId is actually a customerId and convert it
     let actualUserId = createNotificationDto.userId;
-    
+
     if (actualUserId) {
-      // Try to find customer with this ID  
+      // Try to find customer with this ID
       const customer = await this.customerRepository.findOne({
         where: { customerId: actualUserId },
         relations: ['user'],
       });
-      
+
       // If found as customer, use the customer's user.userId
       if (customer?.user?.userId) {
-        this.logger.log(`Converting customerId ${actualUserId} to userId ${customer.user.userId}`);
+        this.logger.log(
+          `Converting customerId ${actualUserId} to userId ${customer.user.userId}`,
+        );
         actualUserId = customer.user.userId;
       }
     }
-    
+
     const notification = this.notificationRepository.create({
       ...createNotificationDto,
       userId: actualUserId,
     });
-    
+
     const savedNotification =
       await this.notificationRepository.save(notification);
 
