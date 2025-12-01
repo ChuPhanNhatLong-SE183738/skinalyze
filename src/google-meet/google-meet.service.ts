@@ -1,6 +1,5 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { google } from 'googleapis';
-// import * as path from 'path'; // <-- Đã xóa import path vì không dùng file vật lý nữa
 import { CreateMeetDto } from './dto/create-meet.dto';
 
 @Injectable()
@@ -28,10 +27,11 @@ export class GoogleMeetService {
     }
 
     const credentialsJson = process.env.GOOGLE_CREDENTIALS_JSON;
+    const credentialsBase64 = process.env.GOOGLE_CREDENTIALS_BASE64;
 
-    if (!credentialsJson) {
+    if (!credentialsJson && !credentialsBase64) {
       this.logger.error(
-        'Missing GOOGLE_CREDENTIALS_JSON in environment variables',
+        'Missing GOOGLE_CREDENTIALS_JSON or GOOGLE_CREDENTIALS_BASE64 in environment variables',
       );
       throw new BadRequestException(
         'Server configuration error: Missing Google Credentials',
@@ -40,9 +40,15 @@ export class GoogleMeetService {
 
     let credentials;
     try {
-      credentials = JSON.parse(credentialsJson);
+      if (credentialsBase64) {
+        const decoded = Buffer.from(credentialsBase64, 'base64').toString(
+          'utf-8',
+        );
+        credentials = JSON.parse(decoded);
+        this.logger.log('✅ Using GOOGLE_CREDENTIALS_BASE64');
+      }
     } catch (error) {
-      this.logger.error('Failed to parse GOOGLE_CREDENTIALS_JSON');
+      this.logger.error(`Failed to parse Google credentials: ${error.message}`);
       throw new BadRequestException(
         'Server configuration error: Invalid Credentials format',
       );
