@@ -10,6 +10,56 @@ export interface Dermatologist {
   user?: User;
 }
 
+export interface DermatologistProfile {
+  dermatologistId: string;
+  purchaseHistory: any;
+  yearsOfExp: number;
+  defaultSlotPrice: string;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    userId: string;
+    email: string;
+    fullName: string;
+    dob: string | null;
+    photoUrl: string | null;
+    phone: string | null;
+    gender: boolean | null; // true: Male, false: Female, null: Not specified
+    role: "dermatologist";
+    createdAt: string;
+    updatedAt: string;
+    isActive: boolean;
+    isVerified: boolean;
+  };
+}
+
+export interface UpdateDermatologistProfileRequest {
+  fullName?: string;
+  phone?: string;
+  dob?: string;
+  photoUrl?: string;
+}
+
+export interface UpdatePersonalInfoRequest {
+  fullName?: string;
+  phone?: string;
+  dob?: string;
+  gender?: boolean | null;
+  photo?: File;
+}
+
+export interface UpdateProfessionalInfoRequest {
+  yearsOfExp: number;
+  defaultSlotPrice: number;
+}
+
+export interface DermatologistProfileResponse {
+  statusCode: number;
+  message: string;
+  data: DermatologistProfile;
+  timestamp: string;
+}
+
 export interface GetMyPatientsDto {
   search?: string;
   page?: number;

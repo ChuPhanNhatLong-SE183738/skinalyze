@@ -1,20 +1,120 @@
 import { http } from "@/lib/http";
 import type {
   Dermatologist,
+  DermatologistProfile,
+  DermatologistProfileResponse,
+  UpdateDermatologistProfileRequest,
+  UpdateProfessionalInfoRequest,
   GetMyPatientsDto,
   PatientsResponse,
 } from "@/types/dermatologist";
 import type { ApiResponse } from "@/types/api";
 
 class DermatologistService {
-  async getMyProfile(): Promise<Dermatologist> {
+  async getMyProfile(): Promise<DermatologistProfile> {
     try {
-      const response = await http.get<ApiResponse<Dermatologist>>(
-        "/api/dermatologists/my-profile"
-      );
-      return response.data;
+      const response = await fetch("/api/dermatologists/my-profile", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to fetch profile");
+      }
+
+      const result: DermatologistProfileResponse = await response.json();
+      return result.data;
     } catch (error) {
-      console.error("Lỗi khi lấy thông tin bác sĩ (service):", error);
+      console.error("Error fetching dermatologist profile:", error);
+      throw error;
+    }
+  }
+
+  async updateProfile(data: UpdatePersonalInfoRequest): Promise<DermatologistProfile> {
+    try {
+      // If there's a photo, use FormData. Otherwise, use JSON.
+      if (data.photo) {
+        // Use FormData for file upload
+        const formData = new FormData();
+        
+        if (data.fullName) formData.append('fullName', data.fullName);
+        if (data.phone) formData.append('phone', data.phone);
+        if (data.dob) formData.append('dob', data.dob);
+        
+        // For gender, send the string representation that backend can parse
+        if (data.gender === true) {
+          formData.append('gender', 'true');
+        } else if (data.gender === false) {
+          formData.append('gender', 'false');
+        }
+        // If gender is null/undefined, don't include it
+        
+        formData.append('photo', data.photo);
+
+        const personalInfoResponse = await fetch("/api/users/profile", {
+          method: "PATCH",
+          body: formData,
+          credentials: "include",
+        });
+
+        if (!personalInfoResponse.ok) {
+          const error = await personalInfoResponse.json();
+          throw new Error(error.message || "Failed to update personal info");
+        }
+      } else {
+        // Use JSON for non-file updates
+        const updateData: any = {};
+        
+        if (data.fullName !== undefined) updateData.fullName = data.fullName;
+        if (data.phone !== undefined) updateData.phone = data.phone;
+        if (data.dob !== undefined) updateData.dob = data.dob;
+        if (data.gender !== undefined) updateData.gender = data.gender;
+
+        const personalInfoResponse = await fetch("/api/users/profile", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updateData),
+          credentials: "include",
+        });
+
+        if (!personalInfoResponse.ok) {
+          const error = await personalInfoResponse.json();
+          throw new Error(error.message || "Failed to update personal info");
+        }
+      }
+
+      // Fetch updated profile after personal info update
+      const updatedProfile = await this.getMyProfile();
+      return updatedProfile;
+    } catch (error) {
+      console.error("Error updating dermatologist profile:", error);
+      throw error;
+    }
+  }
+
+  async updateProfessionalInfo(data: UpdateProfessionalInfoRequest): Promise<DermatologistProfile> {
+    try {
+      const response = await fetch("/api/dermatologists/my-profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update professional info");
+      }
+
+      const result: DermatologistProfileResponse = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error("Error updating professional info:", error);
       throw error;
     }
   }
