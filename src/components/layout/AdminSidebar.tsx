@@ -71,6 +71,11 @@ const menuItems = [
     href: "/admin/users",
     icon: Users,
   },
+  {
+    title: "Notifications",
+    href: "/admin/notifications",
+    icon: Bell,
+  },
 ];
 
 export function AdminSidebar({ onLogout }: AdminSidebarProps) {

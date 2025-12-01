@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +14,14 @@ import {
 } from "@/components/ui/card";
 import { notificationService } from "@/services/notificationService";
 import { NotificationType, NotificationPriority } from "@/types/notification";
-import { Bell, Send, CheckCircle, AlertCircle, Upload, X } from "lucide-react";
+import { User, Send, CheckCircle, AlertCircle, Upload, X, Search } from "lucide-react";
+import { userService } from "@/services/userService";
+import type { User as UserType } from "@/types/user";
 
-export function BroadcastNotificationForm() {
+export function SendToUserNotificationForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
+    userId: "",
     type: NotificationType.SYSTEM,
     title: "",
     message: "",
@@ -31,12 +34,58 @@ export function BroadcastNotificationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  
+  // User search state
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
+
+  // Load users on component mount
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      setIsLoadingUsers(true);
+      const response = await userService.getUsers(1, 100); // Get first 100 users
+      setUsers(response.users);
+    } catch (err) {
+      console.error("Failed to load users:", err);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  // Filter users based on search query
+  const filteredUsers = users.filter((user) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      user.role !== "admin" &&
+      (user.fullName.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      user.userId.toLowerCase().includes(query))
+    );
+  });
+
+  const handleUserSelect = (user: UserType) => {
+    setSelectedUser(user);
+    setFormData({ ...formData, userId: user.userId });
+    setSearchQuery(user.fullName);
+    setShowDropdown(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title.trim() || !formData.message.trim()) {
-      setError("Title and message are required");
+    if (
+      !formData.userId.trim() ||
+      !formData.title.trim() ||
+      !formData.message.trim()
+    ) {
+      setError("User ID, title, and message are required");
       return;
     }
 
@@ -45,7 +94,8 @@ export function BroadcastNotificationForm() {
       setError("");
       setSuccess("");
 
-      await notificationService.broadcast({
+      await notificationService.sendToUser({
+        userId: formData.userId,
         type: formData.type,
         title: formData.title,
         message: formData.message,
@@ -54,10 +104,11 @@ export function BroadcastNotificationForm() {
         priority: formData.priority,
       });
 
-      setSuccess("Notification broadcast successfully to all users!");
+      setSuccess("Notification sent successfully to the user!");
 
       // Reset form
       setFormData({
+        userId: "",
         type: NotificationType.SYSTEM,
         title: "",
         message: "",
@@ -67,9 +118,11 @@ export function BroadcastNotificationForm() {
       });
       setSelectedFile(null);
       setPreviewUrl(null);
+      setSelectedUser(null);
+      setSearchQuery("");
     } catch (err: unknown) {
       setError(
-        err instanceof Error ? err.message : "Failed to broadcast notification"
+        err instanceof Error ? err.message : "Failed to send notification"
       );
     } finally {
       setIsSubmitting(false);
@@ -112,11 +165,11 @@ export function BroadcastNotificationForm() {
     <Card className="bg-white border-slate-200">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-blue-600" />
-          <CardTitle>Broadcast Notification</CardTitle>
+          <User className="h-5 w-5 text-blue-600" />
+          <CardTitle>Send to Specific User</CardTitle>
         </div>
         <CardDescription>
-          Send a notification to all users in the system
+          Send a notification to a specific user by their user ID
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -137,6 +190,97 @@ export function BroadcastNotificationForm() {
             </div>
           )}
 
+          {/* User ID */}
+          <div className="space-y-2">
+            <Label htmlFor="userId">Select User *</Label>
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  id="userId"
+                  placeholder="Search by name, email, or ID..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  disabled={isSubmitting}
+                  className="bg-white border-slate-300 pl-10"
+                />
+              </div>
+              
+              {/* Dropdown */}
+              {showDropdown && filteredUsers.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {isLoadingUsers ? (
+                    <div className="p-3 text-sm text-slate-500 text-center">
+                      Loading users...
+                    </div>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <button
+                        key={user.userId}
+                        type="button"
+                        onClick={() => handleUserSelect(user)}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm">
+                            {user.fullName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm text-slate-900 truncate">
+                              {user.fullName}
+                            </div>
+                            <div className="text-xs text-slate-500 truncate">
+                              {user.email}
+                            </div>
+                          </div>
+                          <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">
+                            {user.role}
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Selected User Display */}
+            {selectedUser && (
+              <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
+                  {selectedUser.fullName.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm text-slate-900">
+                    {selectedUser.fullName}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {selectedUser.email}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedUser(null);
+                    setFormData({ ...formData, userId: "" });
+                    setSearchQuery("");
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+            
+            <p className="text-xs text-slate-500">
+              Search and select a user to send the notification to
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Type */}
             <div className="space-y-2">
@@ -153,9 +297,6 @@ export function BroadcastNotificationForm() {
                 }
                 required
               >
-                <option value={NotificationType.SYSTEM}>System</option>
-                <option value={NotificationType.PROMOTION}>Promotion</option>
-                <option value={NotificationType.PRODUCT}>Product</option>
                 <option value={NotificationType.ORDER}>Order</option>
                 <option value={NotificationType.APPOINTMENT}>
                   Appointment
@@ -163,6 +304,9 @@ export function BroadcastNotificationForm() {
                 <option value={NotificationType.TREATMENT_ROUTINE}>
                   Treatment Routine
                 </option>
+                <option value={NotificationType.PRODUCT}>Product</option>
+                <option value={NotificationType.SYSTEM}>System</option>
+                <option value={NotificationType.PROMOTION}>Promotion</option>
                 <option value={NotificationType.ANYTHING}>Anything</option>
               </select>
             </div>
@@ -195,7 +339,7 @@ export function BroadcastNotificationForm() {
             <Label htmlFor="title">Title *</Label>
             <Input
               id="title"
-              placeholder="e.g., System Maintenance Notice"
+              placeholder="e.g., Your Order Has Been Shipped"
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -228,7 +372,7 @@ export function BroadcastNotificationForm() {
             <Label htmlFor="actionUrl">Action URL (Optional)</Label>
             <Input
               id="actionUrl"
-              placeholder="e.g., /promotions/sale"
+              placeholder="e.g., /orders/12345"
               value={formData.actionUrl}
               onChange={(e) =>
                 setFormData({ ...formData, actionUrl: e.target.value })
@@ -237,7 +381,7 @@ export function BroadcastNotificationForm() {
               className="bg-white border-slate-300"
             />
             <p className="text-xs text-slate-500">
-              Where users will be redirected when they tap the notification
+              Where the user will be redirected when they tap the notification
             </p>
           </div>
 
@@ -316,10 +460,10 @@ export function BroadcastNotificationForm() {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-green-600 hover:bg-green-700"
+            className="w-full bg-blue-600 hover:bg-blue-700"
           >
             <Send className="mr-2 h-4 w-4" />
-            {isSubmitting ? "Broadcasting..." : "Broadcast Notification"}
+            {isSubmitting ? "Sending..." : "Send Notification"}
           </Button>
         </form>
       </CardContent>

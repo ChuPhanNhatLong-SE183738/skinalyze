@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BroadcastNotificationForm } from "@/components/notifications/BroadcastNotificationForm";
+import { SendToUserNotificationForm } from "@/components/notifications/SendToUserNotificationForm";
 import {
   Card,
   CardContent,
@@ -10,15 +11,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Bell, Megaphone, Users, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bell, Megaphone, Users, Info, User } from "lucide-react";
 import { authService } from "@/services/authService";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import type { User as UserType } from "@/types/auth";
+
+type TabType = "send-to-user" | "broadcast";
 
 export default function NotificationsPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabType>("send-to-user");
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -51,27 +56,27 @@ export default function NotificationsPage() {
 
   if (isLoading || !user) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-green-600" />
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
       </div>
     );
   }
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="min-h-screen bg-slate-50 p-8">
         {/* Page Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-              <Megaphone className="h-6 w-6 text-white" />
+              <Bell className="h-6 w-6 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                Broadcast Notifications
+                Notification Management
               </h1>
               <p className="text-slate-600 mt-1">
-                Send notifications to all users in the system
+                Send notifications to specific users or broadcast to everyone
               </p>
             </div>
           </div>
@@ -79,10 +84,26 @@ export default function NotificationsPage() {
 
         {/* Info Cards */}
         <div className="grid gap-6 md:grid-cols-3 mb-8">
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="bg-white border-slate-200 shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-blue-600" />
+                <User className="h-5 w-5 text-blue-600" />
+                <CardTitle className="text-sm font-medium text-slate-900">
+                  Send to User
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-slate-600">
+                Send targeted notifications to specific users by their user ID
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Megaphone className="h-5 w-5 text-green-600" />
                 <CardTitle className="text-sm font-medium text-slate-900">
                   Broadcast
                 </CardTitle>
@@ -95,105 +116,111 @@ export default function NotificationsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-green-600" />
-                <CardTitle className="text-sm font-medium text-slate-900">
-                  Real-time
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-slate-600">
-                Notifications are delivered instantly to all active users
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 shadow-sm">
+          <Card className="bg-white border-slate-200 shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Info className="h-5 w-5 text-purple-600" />
                 <CardTitle className="text-sm font-medium text-slate-900">
-                  Flexible
+                  Customizable
                 </CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-600">
-                Customize type, priority, action URLs, and images
+                Set type, priority, action URLs, images, and custom data
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Broadcast Form */}
-        <BroadcastNotificationForm />
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2 border-b border-slate-200 bg-white rounded-t-lg p-2">
+          <Button
+            variant={activeTab === "send-to-user" ? "default" : "ghost"}
+            onClick={() => setActiveTab("send-to-user")}
+            className={activeTab === "send-to-user" ? "bg-blue-600 hover:bg-blue-700" : ""}
+          >
+            <User className="h-4 w-4 mr-2" />
+            Send to User
+          </Button>
+          <Button
+            variant={activeTab === "broadcast" ? "default" : "ghost"}
+            onClick={() => setActiveTab("broadcast")}
+            className={activeTab === "broadcast" ? "bg-blue-600 hover:bg-blue-700" : ""}
+          >
+            <Megaphone className="h-4 w-4 mr-2" />
+            Broadcast to All
+          </Button>
+        </div>
+
+        {/* Forms */}
+        <div className="mb-8">
+          {activeTab === "send-to-user" ? (
+            <SendToUserNotificationForm />
+          ) : (
+            <BroadcastNotificationForm />
+          )}
+        </div>
 
         {/* Usage Examples */}
-        <Card className="mt-8 border-slate-200 shadow-sm">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle>Usage Examples</CardTitle>
             <CardDescription>
-              Common scenarios for broadcasting notifications
+              Common scenarios for sending notifications
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">
-                  🔧 System Maintenance
+              <div className="rounded-lg border border-slate-200 p-4 bg-blue-50">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                  <User className="h-4 w-4 text-blue-600" />
+                  📦 Order Status Update (Send to User)
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                  <strong>Type:</strong> System | <strong>Priority:</strong>{" "}
-                  High
+                <p className="text-sm text-slate-600 mb-2">
+                  <strong>Type:</strong> Order | <strong>Priority:</strong> Medium
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  &quot;System will be under maintenance from 2 AM to 4 AM.
-                  Please save your work.&quot;
+                <p className="text-sm text-slate-600">
+                  &quot;Your order #12345 has been shipped and will arrive in 2-3 business days.&quot;
                 </p>
               </div>
 
-              <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">
-                  🎉 Special Promotion
+              <div className="rounded-lg border border-slate-200 p-4 bg-green-50">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                  <User className="h-4 w-4 text-green-600" />
+                  📅 Appointment Reminder (Send to User)
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                  <strong>Type:</strong> Promotion | <strong>Priority:</strong>{" "}
-                  Medium
+                <p className="text-sm text-slate-600 mb-2">
+                  <strong>Type:</strong> Appointment | <strong>Priority:</strong> High
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  &quot;Get 20% off on all products this weekend! Use code
-                  WEEKEND20&quot;
+                <p className="text-sm text-slate-600">
+                  &quot;Reminder: You have an appointment with Dr. Smith tomorrow at 2:00 PM.&quot;
                 </p>
               </div>
 
-              <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">
-                  ✨ New Product Launch
+              <div className="rounded-lg border border-slate-200 p-4 bg-purple-50">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                  <Megaphone className="h-4 w-4 text-purple-600" />
+                  🔧 System Maintenance (Broadcast)
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                  <strong>Type:</strong> Product | <strong>Priority:</strong>{" "}
-                  Medium
+                <p className="text-sm text-slate-600 mb-2">
+                  <strong>Type:</strong> System | <strong>Priority:</strong> High
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  &quot;New skincare line just launched! Check out our latest
-                  products.&quot;
+                <p className="text-sm text-slate-600">
+                  &quot;System will be under maintenance from 2 AM to 4 AM. Please save your work.&quot;
                 </p>
               </div>
 
-              <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">
-                  📢 Important Announcement
+              <div className="rounded-lg border border-slate-200 p-4 bg-orange-50">
+                <h3 className="font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                  <Megaphone className="h-4 w-4 text-orange-600" />
+                  🎉 Special Promotion (Broadcast)
                 </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                  <strong>Type:</strong> Anything | <strong>Priority:</strong>{" "}
-                  High
+                <p className="text-sm text-slate-600 mb-2">
+                  <strong>Type:</strong> Promotion | <strong>Priority:</strong> Medium
                 </p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  &quot;New terms of service effective next month. Please review
-                  the changes.&quot;
+                <p className="text-sm text-slate-600">
+                  &quot;Get 20% off on all products this weekend! Use code WEEKEND20&quot;
                 </p>
               </div>
             </div>

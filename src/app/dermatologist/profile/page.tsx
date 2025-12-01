@@ -26,7 +26,11 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import type { DermatologistProfile, UpdatePersonalInfoRequest, UpdateProfessionalInfoRequest } from "@/types/dermatologist";
+import type {
+  DermatologistProfile,
+  UpdatePersonalInfoRequest,
+  UpdateProfessionalInfoRequest,
+} from "@/types/dermatologist";
 
 export default function DermatologistProfilePage() {
   const router = useRouter();
@@ -42,10 +46,11 @@ export default function DermatologistProfilePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState<UpdatePersonalInfoRequest>({});
-  const [professionalData, setProfessionalData] = useState<UpdateProfessionalInfoRequest>({
-    yearsOfExp: 0,
-    defaultSlotPrice: 0,
-  });
+  const [professionalData, setProfessionalData] =
+    useState<UpdateProfessionalInfoRequest>({
+      yearsOfExp: 0,
+      defaultSlotPrice: 0,
+    });
 
   useEffect(() => {
     const checkAuthAndLoadProfile = async () => {
@@ -122,13 +127,15 @@ export default function DermatologistProfilePage() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      
+
       const updateData: UpdatePersonalInfoRequest = {
         ...formData,
         photo: selectedFile || undefined,
       };
-      
-      const updatedProfile = await dermatologistService.updateProfile(updateData);
+
+      const updatedProfile = await dermatologistService.updateProfile(
+        updateData
+      );
       setProfile(updatedProfile);
       setSelectedFile(null);
       setPreviewUrl(null);
@@ -154,34 +161,44 @@ export default function DermatologistProfilePage() {
   const handleSaveProfessional = async () => {
     try {
       setSavingProfessional(true);
-      
-      const updatedProfile = await dermatologistService.updateProfessionalInfo(professionalData);
+
+      const updatedProfile = await dermatologistService.updateProfessionalInfo(
+        professionalData
+      );
       setProfile(updatedProfile);
       setEditingProfessional(false);
 
       toast({
         variant: "success",
-        title: "Professional Info Updated", 
-        description: "Your professional information has been updated successfully.",
+        title: "Professional Info Updated",
+        description:
+          "Your professional information has been updated successfully.",
       });
     } catch (error) {
       console.error("Error updating professional info:", error);
       toast({
         variant: "error",
         title: "Update Failed",
-        description: "Failed to update professional information. Please try again.",
+        description:
+          "Failed to update professional information. Please try again.",
       });
     } finally {
       setSavingProfessional(false);
     }
   };
 
-  const handleInputChange = (field: keyof UpdatePersonalInfoRequest, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (
+    field: keyof UpdatePersonalInfoRequest,
+    value: any
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleProfessionalInputChange = (field: keyof UpdateProfessionalInfoRequest, value: any) => {
-    setProfessionalData(prev => ({ ...prev, [field]: value }));
+  const handleProfessionalInputChange = (
+    field: keyof UpdateProfessionalInfoRequest,
+    value: any
+  ) => {
+    setProfessionalData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleImageClick = () => {
@@ -190,12 +207,14 @@ export default function DermatologistProfilePage() {
     }
   };
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       toast({
         variant: "error",
         title: "Invalid File",
@@ -216,21 +235,22 @@ export default function DermatologistProfilePage() {
 
     try {
       setUploadingImage(true);
-      
+
       // Store the file object
       setSelectedFile(file);
-      
+
       // Create preview URL
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
-      
+
       toast({
         variant: "success",
         title: "Image Selected",
-        description: "Image has been selected. Click Save to update your profile.",
+        description:
+          "Image has been selected. Click Save to update your profile.",
       });
     } catch (error) {
-      console.error('Error processing image:', error);
+      console.error("Error processing image:", error);
       toast({
         variant: "error",
         title: "Processing Failed",
@@ -259,7 +279,7 @@ export default function DermatologistProfilePage() {
 
   const formatDateForInput = (dateString: string | null) => {
     if (!dateString) return "";
-    return new Date(dateString).toISOString().split('T')[0];
+    return new Date(dateString).toISOString().split("T")[0];
   };
 
   const getGenderDisplay = (gender: boolean | null) => {
@@ -347,7 +367,7 @@ export default function DermatologistProfilePage() {
                   {/* Profile Photo */}
                   <div className="relative mx-auto w-24 h-24 mb-4">
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                      {(previewUrl || profile.user.photoUrl) ? (
+                      {previewUrl || profile.user.photoUrl ? (
                         <img
                           src={previewUrl || profile.user.photoUrl || ""}
                           alt="Profile"
@@ -359,7 +379,7 @@ export default function DermatologistProfilePage() {
                     </div>
                     {editing && (
                       <>
-                        <button 
+                        <button
                           onClick={handleImageClick}
                           disabled={uploadingImage}
                           className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -438,7 +458,9 @@ export default function DermatologistProfilePage() {
                     <Clock className="w-4 h-4 text-slate-600" />
                     <span className="text-sm text-slate-600">Experience</span>
                   </div>
-                  <span className="font-medium">{profile.yearsOfExp} years</span>
+                  <span className="font-medium">
+                    {profile.yearsOfExp} years
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -480,7 +502,9 @@ export default function DermatologistProfilePage() {
                       <Input
                         id="fullName"
                         value={formData.fullName || ""}
-                        onChange={(e) => handleInputChange("fullName", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("fullName", e.target.value)
+                        }
                         className="mt-1 bg-white border-slate-300"
                       />
                     ) : (
@@ -502,7 +526,9 @@ export default function DermatologistProfilePage() {
                       <Input
                         id="phone"
                         value={formData.phone || ""}
-                        onChange={(e) => handleInputChange("phone", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("phone", e.target.value)
+                        }
                         className="mt-1 bg-white border-slate-300"
                       />
                     ) : (
@@ -519,13 +545,17 @@ export default function DermatologistProfilePage() {
                         id="dob"
                         type="date"
                         value={formatDateForInput(formData.dob || null)}
-                        onChange={(e) => handleInputChange("dob", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("dob", e.target.value)
+                        }
                         className="mt-1 bg-white border-slate-300"
                       />
                     ) : (
                       <div className="mt-1 p-2 bg-slate-50 rounded-md text-slate-900 flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-slate-600" />
-                        {profile.user.dob ? formatDate(profile.user.dob) : "Not provided"}
+                        {profile.user.dob
+                          ? formatDate(profile.user.dob)
+                          : "Not provided"}
                       </div>
                     )}
                   </div>
@@ -534,10 +564,21 @@ export default function DermatologistProfilePage() {
                     {editing ? (
                       <select
                         id="gender"
-                        value={formData.gender === true ? "male" : formData.gender === false ? "female" : ""}
+                        value={
+                          formData.gender === true
+                            ? "male"
+                            : formData.gender === false
+                            ? "female"
+                            : ""
+                        }
                         onChange={(e) => {
                           const value = e.target.value;
-                          const genderValue = value === "male" ? true : value === "female" ? false : null;
+                          const genderValue =
+                            value === "male"
+                              ? true
+                              : value === "female"
+                              ? false
+                              : null;
                           handleInputChange("gender", genderValue);
                         }}
                         className="mt-1 w-full p-2 bg-white border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -616,7 +657,12 @@ export default function DermatologistProfilePage() {
                         type="number"
                         min="0"
                         value={professionalData.yearsOfExp || ""}
-                        onChange={(e) => handleProfessionalInputChange("yearsOfExp", parseInt(e.target.value) || 0)}
+                        onChange={(e) =>
+                          handleProfessionalInputChange(
+                            "yearsOfExp",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
                         className="mt-1 bg-white border-slate-300"
                       />
                     ) : (
@@ -626,7 +672,9 @@ export default function DermatologistProfilePage() {
                     )}
                   </div>
                   <div>
-                    <Label htmlFor="defaultSlotPrice">Default Consultation Fee (VND)</Label>
+                    <Label htmlFor="defaultSlotPrice">
+                      Default Consultation Fee (VND)
+                    </Label>
                     {editingProfessional ? (
                       <Input
                         id="defaultSlotPrice"
@@ -634,7 +682,12 @@ export default function DermatologistProfilePage() {
                         min="0"
                         step="1000"
                         value={professionalData.defaultSlotPrice || ""}
-                        onChange={(e) => handleProfessionalInputChange("defaultSlotPrice", parseInt(e.target.value) || 0)}
+                        onChange={(e) =>
+                          handleProfessionalInputChange(
+                            "defaultSlotPrice",
+                            parseInt(e.target.value) || 0
+                          )
+                        }
                         className="mt-1 bg-white border-slate-300"
                       />
                     ) : (
