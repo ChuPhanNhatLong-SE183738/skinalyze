@@ -30,6 +30,7 @@ import { ShippingLogsService } from '../shipping-logs/shipping-logs.service';
 import { ShippingStatus } from '../shipping-logs/entities/shipping-log.entity';
 import { GhnService } from '../ghn/ghn.service';
 import { ShippingMethod } from './dto/confirm-order.dto';
+import { GhnRequiredNote } from '../ghn/dto/create-ghn-order.dto';
 
 @Injectable()
 export class OrdersService {
@@ -306,13 +307,20 @@ export class OrdersService {
           const ghnResult = await this.ghnService.createShippingOrder({
             paymentTypeId: 1, // Shop trả phí ship
             note: order.notes || 'Đơn hàng Skinalyze',
-            requiredNote: 'KHONGCHOXEMHANG',
+            requiredNote: GhnRequiredNote.NO_OPEN,
+            returnPhone: '0332190444',
+            returnAddress: 'Đại Học FPT TP.HCM',
             toName: order.customer?.user?.fullName || 'Khách hàng',
             toPhone: order.customer?.user?.phone || '0000000000',
             toAddress: order.shippingAddress,
-            toWardCode: '', // Cần thêm wardCode vào order nếu muốn tính chính xác
-            toDistrictId: 0, // Cần thêm districtId vào order
+            toWardCode: '20308', // Mã phường (cần cập nhật từ order)
+            toDistrictId: 1444, // Mã quận (cần cập nhật từ order)
+            codAmount: order.payment?.amount || 0, // Số tiền thu hộ COD
+            content: 'Đơn hàng mỹ phẩm Skinalyze',
             weight: totalWeight,
+            length: Math.floor(Math.random() * 20) + 10, // 10-30 cm
+            width: Math.floor(Math.random() * 15) + 10, // 10-25 cm
+            height: Math.floor(Math.random() * 10) + 5, // 5-15 cm
             items:
               order.orderItems?.map((item) => ({
                 name: item.product?.productName || 'Sản phẩm',
@@ -321,8 +329,8 @@ export class OrdersService {
               })) || [],
           });
 
-          ghnOrderCode = ghnResult.order_code;
-          ghnShippingFee = ghnResult.total_fee;
+          ghnOrderCode = ghnResult.data.order_code;
+          ghnShippingFee = ghnResult.data.total_fee;
 
           this.logger.log(
             `✅ GHN order created: ${ghnOrderCode}, Fee: ${ghnShippingFee}`,
