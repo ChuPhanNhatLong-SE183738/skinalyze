@@ -13,8 +13,6 @@ RUN npm ci && npm cache clean --force
 # Copy source code
 COPY . .
 
-COPY skinalyze-475715-0f499dd5cd61.json ./
-
 # Build the application with increased memory
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 RUN npm run build
