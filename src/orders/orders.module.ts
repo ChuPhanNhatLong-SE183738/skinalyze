@@ -12,6 +12,7 @@ import { UsersModule } from '../users/users.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { ShippingLogsModule } from '../shipping-logs/shipping-logs.module';
+import { GhnModule } from '../ghn/ghn.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ShippingLogsModule } from '../shipping-logs/shipping-logs.module';
     forwardRef(() => PaymentsModule),
     NotificationsModule,
     ShippingLogsModule,
+    GhnModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

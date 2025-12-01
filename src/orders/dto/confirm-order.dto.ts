@@ -1,5 +1,11 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+
+export enum ShippingMethod {
+  INTERNAL = 'INTERNAL',
+  GHN = 'GHN',
+  BATCH = 'BATCH',
+}
 
 export class ConfirmOrderDto {
   @ApiProperty({
@@ -17,4 +23,16 @@ export class ConfirmOrderDto {
   @IsString()
   @IsOptional()
   note?: string;
+
+  @ApiProperty({
+    description:
+      'Shipping method: INTERNAL (staff delivery), GHN (third-party), BATCH (combine orders)',
+    example: 'INTERNAL',
+    enum: ShippingMethod,
+    default: ShippingMethod.INTERNAL,
+    required: false,
+  })
+  @IsEnum(ShippingMethod)
+  @IsOptional()
+  shippingMethod?: ShippingMethod;
 }

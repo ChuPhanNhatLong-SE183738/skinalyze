@@ -10,6 +10,12 @@ import {
 } from 'class-validator';
 import { ShippingStatus } from '../entities/shipping-log.entity';
 
+export enum ShippingMethod {
+  INTERNAL = 'INTERNAL',
+  GHN = 'GHN',
+  BATCH = 'BATCH',
+}
+
 export class CreateShippingLogDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })
   @IsUUID()
@@ -86,4 +92,52 @@ export class CreateShippingLogDto {
   @IsOptional()
   @IsUUID()
   shippingStaffId?: string;
+
+  // ===== GHN INTEGRATION FIELDS =====
+
+  @ApiProperty({
+    enum: ShippingMethod,
+    default: ShippingMethod.INTERNAL,
+    example: 'INTERNAL',
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(ShippingMethod)
+  shippingMethod?: ShippingMethod;
+
+  @ApiProperty({
+    example: 'GHN123456789',
+    description: 'GHN order tracking code',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  ghnOrderCode?: string;
+
+  @ApiProperty({
+    example: 'SORT001',
+    description: 'GHN sort code',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  ghnSortCode?: string;
+
+  @ApiProperty({
+    example: 35000,
+    description: 'GHN shipping fee',
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  ghnShippingFee?: number;
+
+  @ApiProperty({
+    example: 'BATCH-20251202-ABC123',
+    description: 'Batch delivery code for grouped orders',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  batchCode?: string;
 }

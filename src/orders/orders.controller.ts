@@ -38,7 +38,7 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CUSTOMER)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '🛒 Checkout cart - Convert selected cart items to order',
     description: `
       Checkout only the items that are marked as selected in the cart.
@@ -47,7 +47,7 @@ export class OrdersController {
       - Removes selected items from cart (unselected items remain)
       - Throws error if no items are selected
       - Automatically rolls back if inventory confirmation fails
-    `
+    `,
   })
   async checkout(@Req() req, @Body() checkoutDto: CheckoutCartDto) {
     const userId = req.user.userId;
@@ -133,11 +133,12 @@ export class OrdersController {
   @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Confirm an order (Staff/Admin only)' })
-  async confirm(
-    @Param('id') id: string,
-    @Body() confirmDto: ConfirmOrderDto,
-  ) {
-    const order = await this.ordersService.confirmOrder(id, confirmDto.processedBy);
+  async confirm(@Param('id') id: string, @Body() confirmDto: ConfirmOrderDto) {
+    const order = await this.ordersService.confirmOrder(
+      id,
+      confirmDto.processedBy,
+      confirmDto.shippingMethod,
+    );
     return ResponseHelper.success('Order confirmed successfully', order);
   }
 
@@ -145,9 +146,10 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.CUSTOMER)
   @ApiBearerAuth()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: '✅ Customer marks order as completed',
-    description: 'Customer can mark an order as COMPLETED only when it has been DELIVERED. Optional feedback can be provided.'
+    description:
+      'Customer can mark an order as COMPLETED only when it has been DELIVERED. Optional feedback can be provided.',
   })
   async complete(
     @Req() req,
@@ -164,7 +166,10 @@ export class OrdersController {
       customer.customerId,
       completeDto.feedback,
     );
-    return ResponseHelper.success('Order marked as completed successfully', order);
+    return ResponseHelper.success(
+      'Order marked as completed successfully',
+      order,
+    );
   }
 
   @Delete(':id')

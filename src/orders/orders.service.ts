@@ -28,6 +28,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
 import { ShippingLogsService } from '../shipping-logs/shipping-logs.service';
 import { ShippingStatus } from '../shipping-logs/entities/shipping-log.entity';
+import { GhnService } from '../ghn/ghn.service';
+import { ShippingMethod } from './dto/confirm-order.dto';
 
 @Injectable()
 export class OrdersService {
@@ -48,6 +50,7 @@ export class OrdersService {
     private readonly paymentsService: PaymentsService,
     private readonly notificationsService: NotificationsService,
     private readonly shippingLogsService: ShippingLogsService,
+    private readonly ghnService: GhnService,
   ) {}
 
   /**
@@ -268,7 +271,11 @@ export class OrdersService {
     return await this.orderRepository.save(order);
   }
 
-  async confirmOrder(id: string, processedBy: string): Promise<Order> {
+  async confirmOrder(
+    id: string,
+    processedBy: string,
+    shippingMethod: ShippingMethod = ShippingMethod.INTERNAL,
+  ): Promise<Order> {
     const order = await this.findOne(id);
     order.status = 'CONFIRMED' as any;
     order.processedBy = processedBy;
@@ -284,14 +291,67 @@ export class OrdersService {
     const savedOrder = await this.orderRepository.save(order);
 
     // 📦 Tạo shipping log khi order được confirm
+    let ghnOrderCode: string | undefined;
+    let ghnShippingFee: number | undefined;
+
     try {
+      // 🚚 Nếu chọn GHN → Tạo đơn vận chuyển GHN
+      if (shippingMethod === ShippingMethod.GHN) {
+        this.logger.log(`📦 Creating GHN shipping order for ${order.orderId}`);
+
+        // Calculate total weight from order items (giả sử mỗi sản phẩm 200g)
+        const totalWeight = (order.orderItems?.length || 1) * 200;
+
+        try {
+          const ghnResult = await this.ghnService.createShippingOrder({
+            paymentTypeId: 1, // Shop trả phí ship
+            note: order.notes || 'Đơn hàng Skinalyze',
+            requiredNote: 'KHONGCHOXEMHANG',
+            toName: order.customer?.user?.fullName || 'Khách hàng',
+            toPhone: order.customer?.user?.phone || '0000000000',
+            toAddress: order.shippingAddress,
+            toWardCode: '', // Cần thêm wardCode vào order nếu muốn tính chính xác
+            toDistrictId: 0, // Cần thêm districtId vào order
+            weight: totalWeight,
+            items:
+              order.orderItems?.map((item) => ({
+                name: item.product?.productName || 'Sản phẩm',
+                quantity: item.quantity,
+                price: item.priceAtTime,
+              })) || [],
+          });
+
+          ghnOrderCode = ghnResult.order_code;
+          ghnShippingFee = ghnResult.total_fee;
+
+          this.logger.log(
+            `✅ GHN order created: ${ghnOrderCode}, Fee: ${ghnShippingFee}`,
+          );
+        } catch (ghnError) {
+          this.logger.error(
+            `❌ Failed to create GHN order: ${ghnError.message}`,
+          );
+          // Vẫn tạo shipping log nhưng không có GHN tracking
+        }
+      }
+
+      // Tạo shipping log với thông tin GHN (nếu có)
       await this.shippingLogsService.create({
         orderId: order.orderId,
         status: ShippingStatus.PENDING,
         totalAmount: order.payment?.amount || 0,
-        note: 'Đơn hàng đã được xác nhận, đang chờ xử lý',
+        note:
+          shippingMethod === ShippingMethod.GHN
+            ? `Đơn hàng giao qua GHN${ghnOrderCode ? ` - Mã vận đơn: ${ghnOrderCode}` : ''}`
+            : 'Đơn hàng đã được xác nhận, đang chờ xử lý',
+        shippingMethod: shippingMethod,
+        ghnOrderCode: ghnOrderCode,
+        ghnShippingFee: ghnShippingFee,
       });
-      this.logger.log(`✅ Created shipping log for order ${order.orderId}`);
+
+      this.logger.log(
+        `✅ Created shipping log for order ${order.orderId} (Method: ${shippingMethod})`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to create shipping log for order ${order.orderId}:`,
