@@ -309,4 +309,40 @@ export class ShippingLogsController {
       status: log.status,
     });
   }
+
+  @Get('track/:orderId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Track order shipping status (Customer)',
+    description: 'Get real-time shipping status from GHN for a specific order',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Shipping tracking info retrieved',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Shipping tracking info',
+        data: {
+          orderId: '550e8400-e29b-41d4-a716-446655440000',
+          ghnOrderCode: 'GHNABC123',
+          status: 'IN_TRANSIT',
+          shippingMethod: 'GHN',
+          ghnTracking: {
+            status: 'transporting',
+            expectedDeliveryTime: '2025-12-05 15:00:00',
+            currentLocation: 'Bưu cục Quận 1',
+          },
+        },
+      },
+    },
+  })
+  async trackOrder(@Param('orderId') orderId: string, @Request() req) {
+    const tracking = await this.shippingLogsService.trackOrder(
+      orderId,
+      req.user.userId,
+    );
+    return ResponseHelper.success('Shipping tracking info', tracking);
+  }
 }

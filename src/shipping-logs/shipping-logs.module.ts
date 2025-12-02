@@ -5,11 +5,13 @@ import { ShippingLogsController } from './shipping-logs.controller';
 import { ShippingLog } from './entities/shipping-log.entity';
 import { Order } from '../orders/entities/order.entity';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { GhnModule } from '../ghn/ghn.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([ShippingLog, Order]),
     CloudinaryModule,
+    GhnModule,
   ],
   controllers: [ShippingLogsController],
   providers: [ShippingLogsService],

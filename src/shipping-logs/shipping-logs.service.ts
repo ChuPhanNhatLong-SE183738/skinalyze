@@ -16,6 +16,7 @@ import {
   CreateBatchDeliveryDto,
   AssignGhnOrderDto,
 } from './dto/batch-delivery.dto';
+import { GhnService } from '../ghn/ghn.service';
 
 @Injectable()
 export class ShippingLogsService {
@@ -27,6 +28,7 @@ export class ShippingLogsService {
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly ghnService: GhnService,
   ) {}
 
   private mapShippingStatusToOrderStatus(
@@ -453,5 +455,68 @@ export class ShippingLogsService {
       );
       return !hasActiveShipping;
     });
+  }
+
+  /**
+   * 📍 Track order shipping status for customer
+   */
+  async trackOrder(orderId: string, userId: string) {
+    // Find shipping log for this order
+    const shippingLog = await this.shippingLogRepository.findOne({
+      where: { orderId },
+      relations: [
+        'order',
+        'order.customer',
+        'order.customer.user',
+        'shippingStaff',
+      ],
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!shippingLog) {
+      throw new NotFoundException('Shipping log not found for this order');
+    }
+
+    // Verify customer owns this order
+    if (shippingLog.order.customer?.user?.userId !== userId) {
+      throw new BadRequestException('You do not have access to this order');
+    }
+
+    const result: any = {
+      orderId: shippingLog.orderId,
+      status: shippingLog.status,
+      shippingMethod: shippingLog.shippingMethod,
+      createdAt: shippingLog.createdAt,
+      updatedAt: shippingLog.updatedAt,
+    };
+
+    // If GHN order, fetch real-time tracking
+    if (shippingLog.ghnOrderCode && shippingLog.shippingMethod === 'GHN') {
+      try {
+        const ghnInfo = await this.ghnService.getOrderInfo(
+          shippingLog.ghnOrderCode,
+        );
+        result.ghnOrderCode = shippingLog.ghnOrderCode;
+        result.ghnTracking = {
+          status: ghnInfo.status,
+          expectedDeliveryTime: ghnInfo.expected_delivery_time,
+          currentLocation: ghnInfo.current_warehouse,
+          logs: ghnInfo.log || [],
+        };
+      } catch (error) {
+        this.logger.warn(`Failed to get GHN tracking: ${error.message}`);
+      }
+    }
+
+    // Add staff info if assigned
+    if (shippingLog.shippingStaff) {
+      result.shippingStaff = {
+        staffId: shippingLog.shippingStaff.userId,
+        fullName: shippingLog.shippingStaff.fullName,
+        phone: shippingLog.shippingStaff.phone,
+      };
+    }
+
+    return result;
   }
 }
