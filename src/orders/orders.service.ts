@@ -540,6 +540,57 @@ export class OrdersService {
         this.logger.warn(
           `⚠️ Could not find complete GHN codes. Found: wardCode=${toWardCode}, districtId=${toDistrictId}`,
         );
+
+        // Try to get missing info from nearby areas
+        try {
+          // If we have district but missing ward → get first ward in district
+          if (toDistrictId && !toWardCode) {
+            const wards = await this.ghnService.getWards(toDistrictId);
+            if (wards.length > 0) {
+              toWardCode = wards[0].WardCode;
+              this.logger.log(
+                `📍 Using first ward in district: ${wards[0].WardName} (${toWardCode})`,
+              );
+            }
+          }
+
+          // If we have province but missing district → get first district in province
+          if (ghnCodes.provinceId && !toDistrictId) {
+            const districts = await this.ghnService.getDistricts(
+              ghnCodes.provinceId,
+            );
+            if (districts.length > 0) {
+              toDistrictId = districts[0].DistrictID;
+              this.logger.log(
+                `📍 Using first district in province: ${districts[0].DistrictName} (${toDistrictId})`,
+              );
+
+              // Get first ward in this district
+              const wards = await this.ghnService.getWards(toDistrictId);
+              if (wards.length > 0) {
+                toWardCode = wards[0].WardCode;
+                this.logger.log(
+                  `📍 Using first ward: ${wards[0].WardName} (${toWardCode})`,
+                );
+              }
+            }
+          }
+
+          // If still missing, fallback to default TP.HCM address
+          if (!toWardCode || !toDistrictId) {
+            this.logger.warn(
+              `📍 Using default fallback: Thủ Đức, TP.HCM (District: 1442, Ward: 21012)`,
+            );
+            toWardCode = '21012'; // Phường Long Thạnh Mỹ, Thủ Đức
+            toDistrictId = 1442; // Quận Thủ Đức
+          }
+        } catch (fallbackError) {
+          this.logger.error(
+            `Failed to get fallback address: ${fallbackError.message}`,
+          );
+          toWardCode = '21012';
+          toDistrictId = 1442;
+        }
       } else {
         this.logger.log(
           `✅ Found GHN codes: wardCode=${toWardCode}, districtId=${toDistrictId}`,
