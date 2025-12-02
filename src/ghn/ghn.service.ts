@@ -146,14 +146,16 @@ export class GhnService {
    */
   async createShippingOrder(dto: CreateGhnOrderDto): Promise<GhnOrderResponse> {
     try {
-      const payload = {
+      // Build payload - use from_district_id instead of return_district_id per GHN API v2
+      const payload: any = {
         payment_type_id: dto.paymentTypeId,
         note: dto.note,
         required_note: dto.requiredNote || 'KHONGCHOXEMHANG',
-        return_phone: dto.returnPhone,
-        return_address: dto.returnAddress,
-        return_district_id: null, // GHN không cần field này khi dùng pick_station_id
-        return_ward_code: '', // GHN không cần field này khi dùng pick_station_id
+        from_name: 'Skinalyze',
+        from_phone: dto.returnPhone,
+        from_address: dto.returnAddress,
+        from_ward_code: dto.returnWardCode || '21012',
+        from_district_id: dto.returnDistrictId || 1442,
         client_order_code: dto.clientOrderCode || '',
         to_name: dto.toName,
         to_phone: dto.toPhone,
@@ -166,15 +168,18 @@ export class GhnService {
         length: dto.length,
         width: dto.width,
         height: dto.height,
-        pick_station_id: dto.pickStationId || dto.toDistrictId, // Dùng district của người nhận làm điểm lấy hàng
-        deliver_station_id: dto.deliverStationId,
-        insurance_value: dto.insuranceValue,
-        service_id: dto.serviceId || 0,
         service_type_id: dto.serviceTypeId || 2,
-        coupon: dto.coupon,
         pick_shift: dto.pickShift || [2],
         items: dto.items,
       };
+
+      // Add optional fields if provided
+      if (dto.pickStationId) payload.pick_station_id = dto.pickStationId;
+      if (dto.deliverStationId)
+        payload.deliver_station_id = dto.deliverStationId;
+      if (dto.insuranceValue) payload.insurance_value = dto.insuranceValue;
+      if (dto.serviceId) payload.service_id = dto.serviceId;
+      if (dto.coupon) payload.coupon = dto.coupon;
 
       this.logger.log(`📦 Creating GHN order for: ${dto.toName}`);
       this.logger.debug(
