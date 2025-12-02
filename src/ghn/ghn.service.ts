@@ -304,20 +304,32 @@ export class GhnService {
       // 1. Find province ID
       if (params.province) {
         const provinces = await this.getProvinces();
-        const normalizedProvince = this.normalizeVietnamese(params.province);
+        const searchTerms = this.extractSearchTerms(params.province);
 
         const province = provinces.find((p) => {
           const provinceName = this.normalizeVietnamese(p.ProvinceName);
-          return (
-            provinceName.includes(normalizedProvince) ||
-            normalizedProvince.includes(provinceName)
+          // Try exact match first
+          if (searchTerms.some((term) => provinceName === term)) return true;
+          // Then try contains
+          return searchTerms.some(
+            (term) =>
+              provinceName.includes(term) ||
+              term.includes(provinceName) ||
+              (p.NameExtension &&
+                p.NameExtension.some((ext) =>
+                  this.normalizeVietnamese(ext).includes(term),
+                )),
           );
         });
 
         if (province) {
           result.provinceId = province.ProvinceID;
           this.logger.log(
-            `Found province: ${province.ProvinceName} (ID: ${province.ProvinceID})`,
+            `✅ Found province: ${province.ProvinceName} (ID: ${province.ProvinceID})`,
+          );
+        } else {
+          this.logger.warn(
+            `⚠️ Province not found: "${params.province}" (searched: ${searchTerms.join(', ')})`,
           );
         }
       }
@@ -325,20 +337,24 @@ export class GhnService {
       // 2. Find district ID
       if (params.district && result.provinceId) {
         const districts = await this.getDistricts(result.provinceId);
-        const normalizedDistrict = this.normalizeVietnamese(params.district);
+        const searchTerms = this.extractSearchTerms(params.district);
 
         const district = districts.find((d) => {
           const districtName = this.normalizeVietnamese(d.DistrictName);
-          return (
-            districtName.includes(normalizedDistrict) ||
-            normalizedDistrict.includes(districtName)
+          return searchTerms.some(
+            (term) =>
+              districtName.includes(term) || term.includes(districtName),
           );
         });
 
         if (district) {
           result.districtId = district.DistrictID;
           this.logger.log(
-            `Found district: ${district.DistrictName} (ID: ${district.DistrictID})`,
+            `✅ Found district: ${district.DistrictName} (ID: ${district.DistrictID})`,
+          );
+        } else {
+          this.logger.warn(
+            `⚠️ District not found in province ${result.provinceId}: "${params.district}" (searched: ${searchTerms.join(', ')})`,
           );
         }
       }
@@ -346,20 +362,23 @@ export class GhnService {
       // 3. Find ward code
       if (params.ward && result.districtId) {
         const wards = await this.getWards(result.districtId);
-        const normalizedWard = this.normalizeVietnamese(params.ward);
+        const searchTerms = this.extractSearchTerms(params.ward);
 
         const ward = wards.find((w) => {
           const wardName = this.normalizeVietnamese(w.WardName);
-          return (
-            wardName.includes(normalizedWard) ||
-            normalizedWard.includes(wardName)
+          return searchTerms.some(
+            (term) => wardName.includes(term) || term.includes(wardName),
           );
         });
 
         if (ward) {
           result.wardCode = ward.WardCode;
           this.logger.log(
-            `Found ward: ${ward.WardName} (Code: ${ward.WardCode})`,
+            `✅ Found ward: ${ward.WardName} (Code: ${ward.WardCode})`,
+          );
+        } else {
+          this.logger.warn(
+            `⚠️ Ward not found in district ${result.districtId}: "${params.ward}" (searched: ${searchTerms.join(', ')})`,
           );
         }
       }
@@ -372,6 +391,46 @@ export class GhnService {
   }
 
   /**
+   * Extract multiple search terms from input
+   * "District 1" -> ["district 1", "quan 1", "q1", "1"]
+   * "Phường 14" -> ["phuong 14", "p14", "14"]
+   */
+  private extractSearchTerms(input: string): string[] {
+    const normalized = this.normalizeVietnamese(input);
+    const terms = [normalized];
+
+    // Handle "District X" -> "Quan X", "QX"
+    const districtMatch = normalized.match(/district\s+(\d+|[a-z]+)/i);
+    if (districtMatch) {
+      const num = districtMatch[1];
+      terms.push(`quan ${num}`, `q${num}`, `q.${num}`, num);
+    }
+
+    // Handle "Quận X" -> "District X", "QX"
+    const quanMatch = normalized.match(/quan\s+(\d+|[a-z]+)/i);
+    if (quanMatch) {
+      const num = quanMatch[1];
+      terms.push(`district ${num}`, `q${num}`, `q.${num}`, num);
+    }
+
+    // Handle "Ward X" -> "Phuong X", "PX"
+    const wardMatch = normalized.match(/ward\s+(\d+|[a-z\s]+)/i);
+    if (wardMatch) {
+      const name = wardMatch[1];
+      terms.push(`phuong ${name}`, `p${name}`, `p.${name}`, name);
+    }
+
+    // Handle "Phường X" -> "Ward X", "PX"
+    const phuongMatch = normalized.match(/phuong\s+(\d+|[a-z\s]+)/i);
+    if (phuongMatch) {
+      const name = phuongMatch[1];
+      terms.push(`ward ${name}`, `p${name}`, `p.${name}`, name);
+    }
+
+    return [...new Set(terms)]; // Remove duplicates
+  }
+
+  /**
    * Normalize Vietnamese text for comparison (remove diacritics, lowercase)
    */
   private normalizeVietnamese(text: string): string {
@@ -380,6 +439,7 @@ export class GhnService {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/đ/g, 'd')
-      .replace(/Đ/g, 'd');
+      .replace(/Đ/g, 'd')
+      .trim();
   }
 }
