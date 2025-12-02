@@ -152,8 +152,8 @@ export class GhnService {
         required_note: dto.requiredNote || 'KHONGCHOXEMHANG',
         return_phone: dto.returnPhone,
         return_address: dto.returnAddress,
-        return_district_id: dto.returnDistrictId,
-        return_ward_code: dto.returnWardCode || '',
+        return_district_id: null, // GHN không cần field này khi dùng pick_station_id
+        return_ward_code: '', // GHN không cần field này khi dùng pick_station_id
         client_order_code: dto.clientOrderCode || '',
         to_name: dto.toName,
         to_phone: dto.toPhone,
@@ -166,7 +166,7 @@ export class GhnService {
         length: dto.length,
         width: dto.width,
         height: dto.height,
-        pick_station_id: dto.pickStationId,
+        pick_station_id: dto.pickStationId || dto.toDistrictId, // Dùng district của người nhận làm điểm lấy hàng
         deliver_station_id: dto.deliverStationId,
         insurance_value: dto.insuranceValue,
         service_id: dto.serviceId || 0,
@@ -177,6 +177,16 @@ export class GhnService {
       };
 
       this.logger.log(`📦 Creating GHN order for: ${dto.toName}`);
+      this.logger.debug(
+        `📋 GHN payload: ${JSON.stringify({
+          return_address: payload.return_address,
+          return_district_id: payload.return_district_id,
+          return_ward_code: payload.return_ward_code,
+          to_address: payload.to_address,
+          to_district_id: payload.to_district_id,
+          to_ward_code: payload.to_ward_code,
+        })}`,
+      );
 
       const response = await firstValueFrom(
         this.httpService.post(
