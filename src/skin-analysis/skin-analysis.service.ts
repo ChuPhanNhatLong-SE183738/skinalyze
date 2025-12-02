@@ -9,11 +9,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DeepPartial } from 'typeorm';
+import { Repository, DeepPartial, In } from 'typeorm';
 import { SkinAnalysis } from './entities/skin-analysis.entity';
 import { CreateManualAnalysisDto } from './dto/create-manual-analysis.dto';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { Customer } from '../customers/entities/customer.entity';
+import { Product } from '../products/entities/product.entity';
 import axios from 'axios';
 import * as FormData from 'form-data';
 import { CustomersService } from 'src/customers/customers.service';
@@ -28,6 +29,8 @@ export class SkinAnalysisService {
     private skinAnalysisRepository: Repository<SkinAnalysis>,
     @InjectRepository(Customer)
     private customerRepository: Repository<Customer>,
+    @InjectRepository(Product)
+    private productRepository: Repository<Product>,
     private configService: ConfigService,
     private cloudinaryService: CloudinaryService,
     private readonly customersService: CustomersService,
@@ -36,10 +39,6 @@ export class SkinAnalysisService {
       this.configService.get<string>('AI_SERVICE_URL') ||
       'http://localhost:8000';
   }
-
-  // ==================================================================
-  // 1. HELPER METHODS
-  // ==================================================================
 
   private createFormData(file: Express.Multer.File): FormData {
     const formData = new FormData();
@@ -114,9 +113,52 @@ export class SkinAnalysisService {
     }
   }
 
-  // ==================================================================
-  // 2. AI MICROSERVICE CALLS
-  // ==================================================================
+  /**
+   * Finds product IDs by product names (case-insensitive partial match)
+   * Returns an array of product IDs
+   */
+  private async findProductIdsByNames(
+    productNames: string[],
+  ): Promise<string[]> {
+    if (!productNames || productNames.length === 0) {
+      return [];
+    }
+
+    try {
+      this.logger.debug(`Searching for products: ${productNames.join(', ')}`);
+
+      // Search for products by name (case-insensitive, partial match)
+      const products = await this.productRepository
+        .createQueryBuilder('product')
+        .where(
+          productNames
+            .map((_, index) => `LOWER(product.productName) LIKE LOWER(:name${index})`)
+            .join(' OR '),
+          productNames.reduce((acc, name, index) => {
+            acc[`name${index}`] = `%${name.trim()}%`;
+            return acc;
+          }, {}),
+        )
+        .getMany();
+
+      const foundProductIds = products.map((product) => product.productId);
+
+      this.logger.debug(
+        `Found ${foundProductIds.length} products: ${foundProductIds.join(', ')}`,
+      );
+
+      if (foundProductIds.length === 0) {
+        this.logger.warn(
+          `No products found for names: ${productNames.join(', ')}`,
+        );
+      }
+
+      return foundProductIds;
+    } catch (error) {
+      this.logger.error('Error finding products by names:', error);
+      return [];
+    }
+  }
 
   async detectFace(file: Express.Multer.File): Promise<boolean> {
     try {
@@ -179,10 +221,6 @@ export class SkinAnalysisService {
       this.handleAxiosError(error, 'condition classification');
     }
   }
-
-  // ==================================================================
-  // 3. MAIN BUSINESS LOGIC
-  // ==================================================================
 
   async createManualEntry(
     userId: string,
@@ -265,6 +303,11 @@ export class SkinAnalysisService {
       this.segmentDisease(file),
     ]);
 
+    // Log AI response to debug
+    this.logger.debug(
+      `AI Classification Response: ${JSON.stringify(classificationResult)}`,
+    );
+
     // 3. Process Mask
     let maskUrls: string[] | null = null;
     if (segmentationResult?.mask) {
@@ -278,7 +321,26 @@ export class SkinAnalysisService {
       }
     }
 
-    // 4. Save to DB with all predictions
+    // 4. Find product IDs from product suggestions
+    let recommendedProductIds: string[] | null = null;
+    if (
+      classificationResult.product_suggestions &&
+      Array.isArray(classificationResult.product_suggestions) &&
+      classificationResult.product_suggestions.length > 0
+    ) {
+      this.logger.debug(
+        `Product suggestions from AI: ${JSON.stringify(classificationResult.product_suggestions)}`,
+      );
+      recommendedProductIds = await this.findProductIdsByNames(
+        classificationResult.product_suggestions,
+      );
+      
+      if (recommendedProductIds.length === 0) {
+        recommendedProductIds = null; // Set to null if no products found
+      }
+    }
+
+    // 5. Save to DB with all predictions and product IDs
     const skinAnalysisData: DeepPartial<SkinAnalysis> = {
       customerId,
       source: 'AI_SCAN',
@@ -287,6 +349,7 @@ export class SkinAnalysisService {
       aiDetectedDisease: classificationResult.predicted_class,
       confidence: classificationResult.confidence,
       allPredictions: classificationResult.all_predictions,
+      aiRecommendedProducts: recommendedProductIds,
       mask: maskUrls,
     };
 
@@ -294,6 +357,10 @@ export class SkinAnalysisService {
     const savedAnalysis = await this.skinAnalysisRepository.save(entity);
 
     this.logger.log(`Disease analysis completed: ${savedAnalysis.analysisId}`);
+    this.logger.log(
+      `Recommended product IDs: ${JSON.stringify(savedAnalysis.aiRecommendedProducts)}`,
+    );
+    
     return savedAnalysis;
   }
 
@@ -319,14 +386,38 @@ export class SkinAnalysisService {
 
     const classificationResult = await this.classifyCondition(file);
 
+    // Log AI response to debug
+    this.logger.debug(
+      `AI Classification Response: ${JSON.stringify(classificationResult)}`,
+    );
+
+    // Find product IDs from product suggestions
+    let recommendedProductIds: string[] | null = null;
+    if (
+      classificationResult.product_suggestions &&
+      Array.isArray(classificationResult.product_suggestions) &&
+      classificationResult.product_suggestions.length > 0
+    ) {
+      this.logger.debug(
+        `Product suggestions from AI: ${JSON.stringify(classificationResult.product_suggestions)}`,
+      );
+      recommendedProductIds = await this.findProductIdsByNames(
+        classificationResult.product_suggestions,
+      );
+      
+      if (recommendedProductIds.length === 0) {
+        recommendedProductIds = null; // Set to null if no products found
+      }
+    }
+
     const skinAnalysisData: DeepPartial<SkinAnalysis> = {
       customerId,
       source: 'AI_SCAN',
       imageUrls: [imageUrl],
       aiDetectedCondition: classificationResult.predicted_condition,
-      // Add confidence and all_predictions if available in condition classification
       confidence: classificationResult.confidence ?? null,
       allPredictions: classificationResult.all_predictions ?? null,
+      aiRecommendedProducts: recommendedProductIds,
     };
 
     const entity = this.skinAnalysisRepository.create(skinAnalysisData);
@@ -335,12 +426,12 @@ export class SkinAnalysisService {
     this.logger.log(
       `Condition analysis completed: ${savedAnalysis.analysisId}`,
     );
+    this.logger.log(
+      `Recommended product IDs: ${JSON.stringify(savedAnalysis.aiRecommendedProducts)}`,
+    );
+
     return savedAnalysis;
   }
-
-  // ==================================================================
-  // 4. DATA RETRIEVAL
-  // ==================================================================
 
   async findOne(analysisId: string): Promise<SkinAnalysis> {
     const analysis = await this.skinAnalysisRepository.findOne({
