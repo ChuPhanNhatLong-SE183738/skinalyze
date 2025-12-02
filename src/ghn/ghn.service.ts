@@ -4,6 +4,19 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { CreateGhnOrderDto } from './dto/create-ghn-order.dto';
 
+export interface GhnProvince {
+  ProvinceID: number;
+  ProvinceName: string;
+  Code?: string;
+  NameExtension?: string[];
+}
+
+export interface GhnDistrict {
+  DistrictID: number;
+  DistrictName: string;
+  ProvinceID: number;
+}
+
 export interface GhnWard {
   WardCode: string;
   WardName: string;
@@ -51,6 +64,55 @@ export class GhnService {
 
     if (!this.token) {
       this.logger.warn('⚠️ GHN_TOKEN not configured in environment variables');
+    }
+  }
+
+  /**
+   * Get list of provinces
+   */
+  async getProvinces(): Promise<GhnProvince[]> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.baseUrl}/master-data/province`, {
+          headers: {
+            Token: this.token,
+            'Content-Type': 'application/json',
+          },
+        }),
+      );
+
+      return (response.data as any)?.data || [];
+    } catch (error: any) {
+      this.logger.error(
+        'Failed to get provinces:',
+        error.response?.data || error.message,
+      );
+      throw new BadRequestException('Failed to fetch province data from GHN');
+    }
+  }
+
+  /**
+   * Get list of districts by province ID
+   */
+  async getDistricts(provinceId: number): Promise<GhnDistrict[]> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.baseUrl}/master-data/district`, {
+          params: { province_id: provinceId },
+          headers: {
+            Token: this.token,
+            'Content-Type': 'application/json',
+          },
+        }),
+      );
+
+      return (response.data as any)?.data || [];
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to get districts for province ${provinceId}:`,
+        error.response?.data || error.message,
+      );
+      throw new BadRequestException('Failed to fetch district data from GHN');
     }
   }
 

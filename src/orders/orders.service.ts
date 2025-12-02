@@ -322,7 +322,10 @@ export class OrdersService {
             note: order.notes || 'Đơn hàng Skinalyze',
             requiredNote: GhnRequiredNote.NO_OPEN,
             returnPhone: '0332190444',
-            returnAddress: 'Đại Học FPT TP.HCM',
+            returnAddress:
+              'Lô E2a-7, Đường D1, Đ. D1, Long Thạnh Mỹ, Thành Phố Thủ Đức, Thành phố Hồ Chí Minh',
+            returnDistrictId: 1442, // Thủ Đức
+            returnWardCode: '21012', // Phường Long Thạnh Mỹ
             toName: order.customer?.user?.fullName || 'Khách hàng',
             toPhone: order.customer?.user?.phone || '',
             toAddress: order.shippingAddress,
@@ -695,7 +698,10 @@ export class OrdersService {
               note: checkoutDto.notes || 'Đơn hàng Skinalyze',
               requiredNote: GhnRequiredNote.NO_OPEN,
               returnPhone: '0332190444',
-              returnAddress: 'Đại Học FPT TP.HCM',
+              returnAddress:
+                'Lô E2a-7, Đường D1, Đ. D1, Long Thạnh Mỹ, Thành Phố Thủ Đức, Thành phố Hồ Chí Minh',
+              returnDistrictId: 1442, // Thủ Đức
+              returnWardCode: '21012', // Phường Long Thạnh Mỹ
               toName: customer.user?.fullName || 'Khách hàng',
               toPhone: customer.user?.phone || '',
               toAddress: checkoutDto.shippingAddress,
@@ -865,7 +871,10 @@ export class OrdersService {
             note: notes || 'Đơn hàng Skinalyze',
             requiredNote: GhnRequiredNote.NO_OPEN,
             returnPhone: '0332190444',
-            returnAddress: 'Đại Học FPT TP.HCM',
+            returnAddress:
+              'Lô E2a-7, Đường D1, Đ. D1, Long Thạnh Mỹ, Thành Phố Thủ Đức, Thành phố Hồ Chí Minh',
+            returnDistrictId: 1442, // Thủ Đức
+            returnWardCode: '21012', // Phường Long Thạnh Mỹ
             toName: customer.user?.fullName || 'Khách hàng',
             toPhone: customer.user?.phone || '0000000000',
             toAddress: shippingAddress,
