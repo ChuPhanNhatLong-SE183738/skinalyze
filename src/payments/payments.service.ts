@@ -160,6 +160,10 @@ export class PaymentsService {
       if (userId) paymentData.userId = userId;
       if (cartData) paymentData.cartData = JSON.stringify(cartData);
       if (shippingAddress) paymentData.shippingAddress = shippingAddress;
+      if (createPaymentDto.toWardCode)
+        paymentData.toWardCode = createPaymentDto.toWardCode;
+      if (createPaymentDto.toDistrictId)
+        paymentData.toDistrictId = createPaymentDto.toDistrictId;
       if (orderNotes) paymentData.orderNotes = orderNotes;
       if (createPaymentDto.shippingMethod)
         paymentData.shippingMethod = createPaymentDto.shippingMethod;
@@ -678,6 +682,8 @@ export class PaymentsService {
           customerId: payment.customerId,
           cartItems: items as Record<string, unknown>[],
           shippingAddress: payment.shippingAddress,
+          toWardCode: payment.toWardCode,
+          toDistrictId: payment.toDistrictId,
           notes: payment.orderNotes,
           totalAmount: amountReceived,
           paymentId: payment.paymentId,

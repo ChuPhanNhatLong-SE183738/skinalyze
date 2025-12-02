@@ -284,4 +284,102 @@ export class GhnService {
       );
     }
   }
+
+  /**
+   * Find GHN codes from province/district/ward names
+   * Returns { provinceId, districtId, wardCode }
+   */
+  async findAddressCodes(params: {
+    province?: string;
+    district?: string;
+    ward?: string;
+  }): Promise<{ provinceId?: number; districtId?: number; wardCode?: string }> {
+    const result: {
+      provinceId?: number;
+      districtId?: number;
+      wardCode?: string;
+    } = {};
+
+    try {
+      // 1. Find province ID
+      if (params.province) {
+        const provinces = await this.getProvinces();
+        const normalizedProvince = this.normalizeVietnamese(params.province);
+
+        const province = provinces.find((p) => {
+          const provinceName = this.normalizeVietnamese(p.ProvinceName);
+          return (
+            provinceName.includes(normalizedProvince) ||
+            normalizedProvince.includes(provinceName)
+          );
+        });
+
+        if (province) {
+          result.provinceId = province.ProvinceID;
+          this.logger.log(
+            `Found province: ${province.ProvinceName} (ID: ${province.ProvinceID})`,
+          );
+        }
+      }
+
+      // 2. Find district ID
+      if (params.district && result.provinceId) {
+        const districts = await this.getDistricts(result.provinceId);
+        const normalizedDistrict = this.normalizeVietnamese(params.district);
+
+        const district = districts.find((d) => {
+          const districtName = this.normalizeVietnamese(d.DistrictName);
+          return (
+            districtName.includes(normalizedDistrict) ||
+            normalizedDistrict.includes(districtName)
+          );
+        });
+
+        if (district) {
+          result.districtId = district.DistrictID;
+          this.logger.log(
+            `Found district: ${district.DistrictName} (ID: ${district.DistrictID})`,
+          );
+        }
+      }
+
+      // 3. Find ward code
+      if (params.ward && result.districtId) {
+        const wards = await this.getWards(result.districtId);
+        const normalizedWard = this.normalizeVietnamese(params.ward);
+
+        const ward = wards.find((w) => {
+          const wardName = this.normalizeVietnamese(w.WardName);
+          return (
+            wardName.includes(normalizedWard) ||
+            normalizedWard.includes(wardName)
+          );
+        });
+
+        if (ward) {
+          result.wardCode = ward.WardCode;
+          this.logger.log(
+            `Found ward: ${ward.WardName} (Code: ${ward.WardCode})`,
+          );
+        }
+      }
+
+      return result;
+    } catch (error: any) {
+      this.logger.error('Failed to find address codes:', error.message);
+      return result;
+    }
+  }
+
+  /**
+   * Normalize Vietnamese text for comparison (remove diacritics, lowercase)
+   */
+  private normalizeVietnamese(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'd');
+  }
 }

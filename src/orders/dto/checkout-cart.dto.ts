@@ -24,9 +24,38 @@ export enum ShippingMethod {
 }
 
 export class CheckoutCartDto {
-  @ApiProperty({ example: '123 Nguyen Hue, District 1, HCMC' })
+  @ApiProperty({
+    example: '72 Thành Thái, Phường 14, Quận 10, Hồ Chí Minh, Vietnam',
+  })
   @IsString()
   shippingAddress: string;
+
+  @ApiProperty({
+    example: 'Hồ Chí Minh',
+    description: 'Province/City name (BE will auto-find GHN code)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  province?: string;
+
+  @ApiProperty({
+    example: 'Quận 10',
+    description: 'District name (BE will auto-find GHN code)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  district?: string;
+
+  @ApiProperty({
+    example: 'Phường 14',
+    description: 'Ward name (BE will auto-find GHN code)',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  ward?: string;
 
   @ApiProperty({
     example: 500000,

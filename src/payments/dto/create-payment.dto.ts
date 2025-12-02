@@ -65,6 +65,24 @@ export class CreatePaymentDto {
   shippingAddress?: string;
 
   @ApiProperty({
+    description: 'GHN Ward Code',
+    example: '20308',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  toWardCode?: string;
+
+  @ApiProperty({
+    description: 'GHN District ID',
+    example: 1444,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  toDistrictId?: number;
+
+  @ApiProperty({
     description: 'Order notes',
     example: 'Giao giờ hành chính',
     required: false,

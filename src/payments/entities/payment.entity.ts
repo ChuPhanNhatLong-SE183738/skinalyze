@@ -110,6 +110,12 @@ export class Payment {
   @Column({ type: 'text', nullable: true })
   shippingAddress: string; // Địa chỉ giao hàng
 
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  toWardCode: string; // GHN Ward Code
+
+  @Column({ type: 'int', nullable: true })
+  toDistrictId: number; // GHN District ID
+
   @Column({ type: 'text', nullable: true })
   orderNotes: string; // Ghi chú đơn hàng
 

@@ -329,8 +329,8 @@ export class OrdersService {
             toName: order.customer?.user?.fullName || 'Khách hàng',
             toPhone: order.customer?.user?.phone || '',
             toAddress: order.shippingAddress,
-            toWardCode: '20308', // Mã phường (cần cập nhật từ order)
-            toDistrictId: 1444, // Mã quận (cần cập nhật từ order)
+            toWardCode: order.toWardCode || '20308',
+            toDistrictId: order.toDistrictId || 1444,
             codAmount: codAmount, // Số tiền thu hộ COD (integer)
             content: 'Đơn hàng mỹ phẩm Skinalyze',
             weight: totalWeight,
@@ -515,6 +515,38 @@ export class OrdersService {
       );
     }
 
+    // 3.5. 🗺️ TỰ ĐỘNG TÌM GHN CODES TỪ PROVINCE/DISTRICT/WARD
+    let toWardCode: string | undefined;
+    let toDistrictId: number | undefined;
+
+    if (
+      checkoutDto.shippingMethod === 'GHN' &&
+      (checkoutDto.province || checkoutDto.district || checkoutDto.ward)
+    ) {
+      this.logger.log(
+        `🔍 Finding GHN codes for: ${checkoutDto.province} > ${checkoutDto.district} > ${checkoutDto.ward}`,
+      );
+
+      const ghnCodes = await this.ghnService.findAddressCodes({
+        province: checkoutDto.province,
+        district: checkoutDto.district,
+        ward: checkoutDto.ward,
+      });
+
+      toWardCode = ghnCodes.wardCode;
+      toDistrictId = ghnCodes.districtId;
+
+      if (!toWardCode || !toDistrictId) {
+        this.logger.warn(
+          `⚠️ Could not find complete GHN codes. Found: wardCode=${toWardCode}, districtId=${toDistrictId}`,
+        );
+      } else {
+        this.logger.log(
+          `✅ Found GHN codes: wardCode=${toWardCode}, districtId=${toDistrictId}`,
+        );
+      }
+    }
+
     // 4. 💰 XỬ LÝ PHƯƠNG THỨC THANH TOÁN
     const paymentMethod = checkoutDto.paymentMethod || PaymentMethod.COD;
     const useWallet =
@@ -531,6 +563,8 @@ export class OrdersService {
         userId: userId,
         cartData: { items: selectedItems }, // ✅ Wrap in object with items property
         shippingAddress: checkoutDto.shippingAddress,
+        toWardCode: toWardCode,
+        toDistrictId: toDistrictId,
         orderNotes: checkoutDto.notes,
         shippingMethod: checkoutDto.shippingMethod || 'INTERNAL',
         amount: totalAmount,
@@ -628,6 +662,8 @@ export class OrdersService {
       customerId: customer.customerId,
       paymentId: savedPayment.paymentId,
       shippingAddress: checkoutDto.shippingAddress,
+      toWardCode: toWardCode,
+      toDistrictId: toDistrictId,
       notes: checkoutDto.notes,
       status: orderStatus,
       preferredShippingMethod: checkoutDto.shippingMethod || 'INTERNAL',
@@ -705,8 +741,8 @@ export class OrdersService {
               toName: customer.user?.fullName || 'Khách hàng',
               toPhone: customer.user?.phone || '',
               toAddress: checkoutDto.shippingAddress,
-              toWardCode: '20308',
-              toDistrictId: 1444,
+              toWardCode: toWardCode || '20308',
+              toDistrictId: toDistrictId || 1444,
               codAmount: codAmount,
               content: 'Đơn hàng mỹ phẩm Skinalyze',
               weight: totalWeight,
@@ -777,6 +813,8 @@ export class OrdersService {
     customerId: string;
     cartItems: any[];
     shippingAddress: string;
+    toWardCode?: string;
+    toDistrictId?: number;
     notes?: string;
     totalAmount: number;
     paymentId: number;
@@ -786,6 +824,8 @@ export class OrdersService {
       customerId,
       cartItems,
       shippingAddress,
+      toWardCode,
+      toDistrictId,
       notes,
       totalAmount,
       paymentId,
@@ -825,6 +865,8 @@ export class OrdersService {
       customerId,
       paymentId: paymentId,
       shippingAddress,
+      toWardCode: data.toWardCode,
+      toDistrictId: data.toDistrictId,
       notes,
       status: 'CONFIRMED' as any,
       preferredShippingMethod: shippingMethod || 'INTERNAL',
@@ -878,8 +920,8 @@ export class OrdersService {
             toName: customer.user?.fullName || 'Khách hàng',
             toPhone: customer.user?.phone || '0000000000',
             toAddress: shippingAddress,
-            toWardCode: '20308',
-            toDistrictId: 1444,
+            toWardCode: toWardCode || '20308',
+            toDistrictId: toDistrictId || 1444,
             codAmount: codAmount,
             content: 'Đơn hàng mỹ phẩm Skinalyze',
             weight: totalWeight,

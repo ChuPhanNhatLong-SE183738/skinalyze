@@ -61,6 +61,17 @@ export class Order {
   @Column({ type: 'text' })
   shippingAddress: string;
 
+  @Column({
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+    comment: 'GHN Ward Code',
+  })
+  toWardCode: string;
+
+  @Column({ type: 'int', nullable: true, comment: 'GHN District ID' })
+  toDistrictId: number;
+
   @Column({ type: 'text', nullable: true })
   notes: string;
 
