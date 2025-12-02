@@ -458,6 +458,50 @@ export class ShippingLogsService {
   }
 
   /**
+   * 📦 Get batch delivery suggestions for a customer
+   * Returns orders from same customer that can be batched together
+   */
+  async getBatchSuggestions(customerId: string): Promise<ShippingLog[]> {
+    // Find all pending/confirmed shipping logs for this customer
+    const logs = await this.shippingLogRepository.find({
+      where: {
+        order: { customerId },
+        status: In([ShippingStatus.PENDING, ShippingStatus.PICKED_UP]),
+        shippingMethod: In(['INTERNAL', 'BATCH']),
+      },
+      relations: [
+        'order',
+        'order.customer',
+        'order.customer.user',
+        'order.orderItems',
+        'order.orderItems.product',
+      ],
+      order: { createdAt: 'ASC' },
+    });
+
+    // Filter orders that:
+    // 1. Have same shipping address (or nearby)
+    // 2. Not yet assigned to batch (no staff and not in batch yet)
+    // 3. Created within 24 hours
+    const now = new Date();
+    const batchableOrders = logs.filter((log) => {
+      const orderAge = now.getTime() - log.createdAt.getTime();
+      const hoursOld = orderAge / (1000 * 60 * 60);
+      return (
+        hoursOld < 24 &&
+        !log.shippingStaffId &&
+        (!log.batchOrderIds || log.batchOrderIds.length === 0)
+      );
+    });
+
+    this.logger.log(
+      `📦 Found ${batchableOrders.length} batchable orders for customer ${customerId}`,
+    );
+
+    return batchableOrders;
+  }
+
+  /**
    * 📍 Track order shipping status for customer
    */
   async trackOrder(orderId: string, userId: string) {

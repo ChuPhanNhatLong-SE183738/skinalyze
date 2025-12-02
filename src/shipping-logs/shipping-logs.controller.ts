@@ -310,6 +310,52 @@ export class ShippingLogsController {
     });
   }
 
+  @Get('batch-suggestions/:customerId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get batch delivery suggestions for a customer (Staff/Admin)',
+    description:
+      'Returns orders from same customer that can be batched together for delivery',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch suggestions retrieved',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Batch suggestions for customer',
+        data: [
+          {
+            shippingLogId: '550e8400-e29b-41d4-a716-446655440001',
+            orderId: '550e8400-e29b-41d4-a716-446655440002',
+            status: 'PENDING',
+            shippingMethod: 'INTERNAL',
+            totalAmount: 150000,
+            createdAt: '2025-12-02T10:00:00Z',
+          },
+          {
+            shippingLogId: '550e8400-e29b-41d4-a716-446655440003',
+            orderId: '550e8400-e29b-41d4-a716-446655440004',
+            status: 'PENDING',
+            shippingMethod: 'INTERNAL',
+            totalAmount: 200000,
+            createdAt: '2025-12-02T11:30:00Z',
+          },
+        ],
+      },
+    },
+  })
+  async getBatchSuggestions(@Param('customerId') customerId: string) {
+    const suggestions =
+      await this.shippingLogsService.getBatchSuggestions(customerId);
+    return ResponseHelper.success(
+      'Batch suggestions for customer',
+      suggestions,
+    );
+  }
+
   @Get('track/:orderId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
