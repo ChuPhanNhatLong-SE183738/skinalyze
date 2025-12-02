@@ -341,9 +341,29 @@ export class GhnService {
 
         const district = districts.find((d) => {
           const districtName = this.normalizeVietnamese(d.DistrictName);
+
+          // Try exact match first (for numbered districts like "Quan 1", "District 1")
+          for (const term of searchTerms) {
+            if (districtName === term) return true;
+          }
+
+          // Then try word boundary match for numbered districts
+          if (params.district) {
+            const numberMatch = params.district.match(/\d+/);
+            if (numberMatch) {
+              const num = numberMatch[0];
+              // Match "Quan 1", "Q.1", "District 1" etc, but not "Quan 12"
+              const pattern = new RegExp(
+                `\\b(quan|district|q\\.?)\\s*${num}\\b`,
+                'i',
+              );
+              if (pattern.test(districtName)) return true;
+            }
+          }
+
+          // Finally try loose contains
           return searchTerms.some(
-            (term) =>
-              districtName.includes(term) || term.includes(districtName),
+            (term) => districtName.includes(term) && term.length > 2, // Avoid matching single digits
           );
         });
 
@@ -394,6 +414,7 @@ export class GhnService {
    * Extract multiple search terms from input
    * "District 1" -> ["district 1", "quan 1", "q1", "1"]
    * "Phường 14" -> ["phuong 14", "p14", "14"]
+   * "Ben Nghe Ward" -> ["ben nghe ward", "ben nghe", "phuong ben nghe"]
    */
   private extractSearchTerms(input: string): string[] {
     const normalized = this.normalizeVietnamese(input);
@@ -413,21 +434,29 @@ export class GhnService {
       terms.push(`district ${num}`, `q${num}`, `q.${num}`, num);
     }
 
-    // Handle "Ward X" -> "Phuong X", "PX"
-    const wardMatch = normalized.match(/ward\s+(\d+|[a-z\s]+)/i);
+    // Handle "Ward X" or "X Ward" -> "Phuong X", "PX"
+    const wardMatch = normalized.match(/(?:ward\s+)?([a-z\s]+?)(?:\s+ward)?$/i);
     if (wardMatch) {
-      const name = wardMatch[1];
-      terms.push(`phuong ${name}`, `p${name}`, `p.${name}`, name);
+      const name = wardMatch[1].trim();
+      if (name && name !== 'ward') {
+        terms.push(
+          `phuong ${name}`,
+          `p.${name}`,
+          `p. ${name}`,
+          name, // Just the name without prefix
+        );
+      }
     }
 
     // Handle "Phường X" -> "Ward X", "PX"
-    const phuongMatch = normalized.match(/phuong\s+(\d+|[a-z\s]+)/i);
+    const phuongMatch = normalized.match(/phuong\s+([a-z\s\d]+)/i);
     if (phuongMatch) {
-      const name = phuongMatch[1];
-      terms.push(`ward ${name}`, `p${name}`, `p.${name}`, name);
+      const name = phuongMatch[1].trim();
+      terms.push(`ward ${name}`, `p.${name}`, `p. ${name}`, name);
     }
 
-    return [...new Set(terms)]; // Remove duplicates
+    // Remove empty strings and duplicates
+    return [...new Set(terms.filter((t) => t && t.length > 0))];
   }
 
   /**
