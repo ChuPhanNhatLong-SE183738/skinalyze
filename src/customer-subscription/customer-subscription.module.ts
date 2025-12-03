@@ -6,6 +6,7 @@ import { CustomerSubscriptionController } from './customer-subscription.controll
 import { PaymentsModule } from '../payments/payments.module';
 import { CustomersModule } from '../customers/customers.module';
 import { SubscriptionPlansModule } from '../subscription-plans/subscription-plans.module';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { SubscriptionPlansModule } from '../subscription-plans/subscription-plan
     forwardRef(() => PaymentsModule),
     CustomersModule,
     SubscriptionPlansModule,
+    UsersModule,
   ],
   controllers: [CustomerSubscriptionController],
   providers: [CustomerSubscriptionService],
