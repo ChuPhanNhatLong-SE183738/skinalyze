@@ -28,7 +28,7 @@ export class RoutineRemindersService {
   /**
    *  Morning: 7:00 AM every day
    */
-  @Cron('17 15 * * *', { name: 'MorningRoutine', timeZone: 'Asia/Ho_Chi_Minh' })
+  @Cron('0 7 * * *', { name: 'MorningRoutine', timeZone: 'Asia/Ho_Chi_Minh' })
   async handleMorningReminders() {
     this.logger.log(' Starting Morning Routine Reminders...');
     await this.processRemindersForStep(
@@ -143,7 +143,7 @@ export class RoutineRemindersService {
       entry.items.push(content);
     }
 
-    // 3. Tạo thông báo cho từng Routine của từng User
+    // 3. Create Notifications for each unique [USER + ROUTINE]
     this.logger.log(
       `Sending reminders for ${remindersMap.size} unique routines...`,
     );

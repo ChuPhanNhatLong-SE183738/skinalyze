@@ -82,10 +82,6 @@ export class SkinAnalysisService {
     }
   }
 
-  /**
-   * Converts a Base64 string to a Buffer and uploads it to Cloudinary.
-   * Returns the Secure URL.
-   */
   private async uploadBase64ToCloudinary(
     base64String: string,
     folder: string,
@@ -113,10 +109,6 @@ export class SkinAnalysisService {
     }
   }
 
-  /**
-   * Finds product IDs by product names (case-insensitive partial match)
-   * Returns an array of product IDs
-   */
   private async findProductIdsByNames(
     productNames: string[],
   ): Promise<string[]> {
@@ -208,20 +200,6 @@ export class SkinAnalysisService {
     }
   }
 
-  async classifyCondition(file: Express.Multer.File) {
-    try {
-      const formData = this.createFormData(file);
-      const response = await axios.post(
-        `${this.aiServiceUrl}/api/classification-condition`,
-        formData,
-        { headers: { ...formData.getHeaders() } },
-      );
-      return response.data;
-    } catch (error) {
-      this.handleAxiosError(error, 'condition classification');
-    }
-  }
-
   async createManualEntry(
     userId: string,
     dto: CreateManualAnalysisDto,
@@ -269,7 +247,6 @@ export class SkinAnalysisService {
     const entity = this.skinAnalysisRepository.create(analysisData);
     const savedAnalysis = await this.skinAnalysisRepository.save(entity);
 
-    this.logger.log(`Manual entry created: ${savedAnalysis.analysisId}`);
     return savedAnalysis;
   }
 
@@ -361,75 +338,6 @@ export class SkinAnalysisService {
       `Recommended product IDs: ${JSON.stringify(savedAnalysis.aiRecommendedProducts)}`,
     );
     
-    return savedAnalysis;
-  }
-
-  async conditionDetection(
-    file: Express.Multer.File,
-    customerId: string,
-  ): Promise<SkinAnalysis> {
-    this.logger.log(`Starting condition detection for: ${customerId}`);
-    await this.validateCustomer(customerId);
-
-    const hasFace = await this.detectFace(file);
-    if (!hasFace) {
-      throw new BadRequestException(
-        'No face detected. Please upload a clear image of a face for skin condition analysis.',
-      );
-    }
-
-    const uploadResult = await this.cloudinaryService.uploadImage(
-      file,
-      'skin-analysis/condition-detection',
-    );
-    const imageUrl = uploadResult.secure_url;
-
-    const classificationResult = await this.classifyCondition(file);
-
-    // Log AI response to debug
-    this.logger.debug(
-      `AI Classification Response: ${JSON.stringify(classificationResult)}`,
-    );
-
-    // Find product IDs from product suggestions
-    let recommendedProductIds: string[] | null = null;
-    if (
-      classificationResult.product_suggestions &&
-      Array.isArray(classificationResult.product_suggestions) &&
-      classificationResult.product_suggestions.length > 0
-    ) {
-      this.logger.debug(
-        `Product suggestions from AI: ${JSON.stringify(classificationResult.product_suggestions)}`,
-      );
-      recommendedProductIds = await this.findProductIdsByNames(
-        classificationResult.product_suggestions,
-      );
-      
-      if (recommendedProductIds.length === 0) {
-        recommendedProductIds = null; // Set to null if no products found
-      }
-    }
-
-    const skinAnalysisData: DeepPartial<SkinAnalysis> = {
-      customerId,
-      source: 'AI_SCAN',
-      imageUrls: [imageUrl],
-      aiDetectedCondition: classificationResult.predicted_condition,
-      confidence: classificationResult.confidence ?? null,
-      allPredictions: classificationResult.all_predictions ?? null,
-      aiRecommendedProducts: recommendedProductIds,
-    };
-
-    const entity = this.skinAnalysisRepository.create(skinAnalysisData);
-    const savedAnalysis = await this.skinAnalysisRepository.save(entity);
-
-    this.logger.log(
-      `Condition analysis completed: ${savedAnalysis.analysisId}`,
-    );
-    this.logger.log(
-      `Recommended product IDs: ${JSON.stringify(savedAnalysis.aiRecommendedProducts)}`,
-    );
-
     return savedAnalysis;
   }
 
