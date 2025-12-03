@@ -82,10 +82,6 @@ export class SkinAnalysisService {
     }
   }
 
-  /**
-   * Converts a Base64 string to a Buffer and uploads it to Cloudinary.
-   * Returns the Secure URL.
-   */
   private async uploadBase64ToCloudinary(
     base64String: string,
     folder: string,
@@ -113,10 +109,6 @@ export class SkinAnalysisService {
     }
   }
 
-  /**
-   * Finds product IDs by product names (case-insensitive partial match)
-   * Returns an array of product IDs
-   */
   private async findProductIdsByNames(
     productNames: string[],
   ): Promise<string[]> {
@@ -255,7 +247,6 @@ export class SkinAnalysisService {
     const entity = this.skinAnalysisRepository.create(analysisData);
     const savedAnalysis = await this.skinAnalysisRepository.save(entity);
 
-    this.logger.log(`Manual entry created: ${savedAnalysis.analysisId}`);
     return savedAnalysis;
   }
 
