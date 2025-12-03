@@ -102,59 +102,7 @@ export class SkinAnalysisController {
   }
 
   // ==================================================================
-  // 2. PIPELINE: CONDITION DETECTION (AI + Strict Face Check)
-  // ==================================================================
-  @Post('condition-detection/:customerId')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Complete condition detection pipeline',
-    description:
-      '1. Strictly checks for face visibility\n' +
-      '2. Uploads to Cloudinary\n' +
-      '3. Detects skin condition (Oily, Dry, Normal)\n' +
-      '4. Saves result to MySQL',
-  })
-  @ApiParam({ name: 'customerId', required: true })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'Image file (Max 5MB)',
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Analysis saved successfully',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Invalid file OR No face detected',
-  })
-  @UseInterceptors(FileInterceptor('file'))
-  async detectCondition(
-    @Param('customerId') customerId: string,
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
-          new FileTypeValidator({ fileType: /(jpg|jpeg|png)$/ }),
-        ],
-      }),
-    )
-    file: Express.Multer.File,
-  ) {
-    return await this.skinAnalysisService.conditionDetection(file, customerId);
-  }
-
-  // ==================================================================
-  // 3. MANUAL ENTRY (No AI)
+  // 2. MANUAL ENTRY (No AI)
   // ==================================================================
   @Post('manual-entry')
   @UseGuards(JwtAuthGuard)
@@ -198,7 +146,7 @@ export class SkinAnalysisController {
   }
 
   // ==================================================================
-  // 4. HELPER ENDPOINTS (Testing Only - Optional)
+  // 3. HELPER ENDPOINTS (Testing Only - Optional)
   // ==================================================================
   @Post('classification')
   @UseInterceptors(FileInterceptor('file'))
@@ -216,7 +164,7 @@ export class SkinAnalysisController {
   }
 
   // ==================================================================
-  // 5. RETRIEVAL ENDPOINTS
+  // 4. RETRIEVAL ENDPOINTS
   // ==================================================================
   @Get(':id')
   @UseGuards(JwtAuthGuard)
