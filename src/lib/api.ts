@@ -30,7 +30,11 @@ async function baseRequest(
   }
 
   const defaultHeaders = new Headers(options.headers as HeadersInit);
-  defaultHeaders.set("Content-Type", "application/json");
+  
+  // Only set Content-Type if body is not FormData
+  if (!(options.body instanceof FormData)) {
+    defaultHeaders.set("Content-Type", "application/json");
+  }
 
   if (token) {
     defaultHeaders.set("Authorization", `Bearer ${token}`);
@@ -119,7 +123,7 @@ export const api = {
       {
         ...options,
         method: "PATCH",
-        body: JSON.stringify(body),
+        body: body instanceof FormData ? body : JSON.stringify(body),
       },
       req
     );

@@ -83,7 +83,7 @@ export function ShippingDetailModal({
     try {
       const response = await userService.getUsers(1, 100);
       const staff = response.users.filter(
-        (user: unknown) => user.role === "staff"
+        (user: any) => user.role === "staff"
       );
       setStaffList(staff);
     } catch (error) {

@@ -9,10 +9,10 @@ import {
 } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { dermatologistService } from "@/services/dermatologistService";
-import type { Dermatologist } from "@/types/dermatologist";
+import type { DermatologistProfile } from "@/types/dermatologist";
 
 interface DermatologistContextType {
-  profile: Dermatologist | null;
+  profile: DermatologistProfile | null;
   dermatologistId: string | null;
   isLoading: boolean;
 }
@@ -25,7 +25,7 @@ const DermatologistContext = createContext<DermatologistContextType>({
 
 export function DermatologistProvider({ children }: { children: ReactNode }) {
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-  const [profile, setProfile] = useState<Dermatologist | null>(null);
+  const [profile, setProfile] = useState<DermatologistProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

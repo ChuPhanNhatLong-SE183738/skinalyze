@@ -34,7 +34,10 @@ export class AuthService {
 
       return result.user;
     } catch (error: unknown) {
-      throw new Error((error instanceof Error ? error.message : String(error)) || "Login failed");
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Login failed"
+      );
     }
   }
 
@@ -126,6 +129,64 @@ export class AuthService {
 
     if (!this.isStaff()) {
       throw new Error("Access denied. Staff credentials required.");
+    }
+  }
+
+  /**
+   * Verify email with token
+   */
+  async verifyEmail(
+    token: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`/api/auth/verify-email?token=${token}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Email verification failed");
+      }
+
+      return result;
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Email verification failed"
+      );
+    }
+  }
+
+  /**
+   * Resend verification email
+   */
+  async resendVerification(
+    email: string
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+        credentials: "include",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to resend verification email");
+      }
+
+      return result;
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to resend verification email"
+      );
     }
   }
 
