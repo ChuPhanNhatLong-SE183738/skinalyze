@@ -14,6 +14,8 @@ import { DermatologistsService } from 'src/dermatologists/dermatologists.service
 
 @Injectable()
 export class RoutineDetailsService {
+  //  In 24h: Update Overwrite/hard Delete . After 24h: Create new version/Soft Delete.
+  private readonly EDIT_GRACE_PERIOD_MS = 24 * 60 * 60 * 1000;
   constructor(
     @InjectRepository(RoutineDetail)
     private readonly routineDetailRepository: Repository<RoutineDetail>,
@@ -130,46 +132,80 @@ export class RoutineDetailsService {
     await this.routineDetailRepository.remove(routineDetail);
   }
 
-  async updateWithVersioning(
+  async updateRoutineDetail(
     userId: string,
     detailId: string,
     updateDto: UpdateRoutineDetailDto,
   ): Promise<RoutineDetail> {
-    // Check ownership and get the old detail
-    const oldDetail = await this.checkOwnership(userId, detailId);
+    const currentDetail = await this.checkOwnership(userId, detailId);
 
-    if (!oldDetail.isActive) {
+    if (!currentDetail.isActive) {
       throw new BadRequestException(
-        'Cannot update an inactive routine detail.',
+        'Cannot update an inactive (history) routine detail.',
       );
     }
 
+    const now = new Date();
+    const createdAt = new Date(currentDetail.createdAt);
+    const timeDifference = now.getTime() - createdAt.getTime();
+
+    // === (IN-PLACE UPDATE) ===
+    // Applies when: Created within the last 24 hours (Doctor corrects typos, adjusts dosage on the same day)
+    if (timeDifference <= this.EDIT_GRACE_PERIOD_MS) {
+      Object.assign(currentDetail, updateDto);
+      return this.routineDetailRepository.save(currentDetail);
+    }
+
+    // === (VERSIONING) ===
+    // Applies when: More than 24 hours have passed (Clinical changes)
+    // Benefit: Retain the history of old versions for past time points.
     return this.entityManager.transaction(async (manager) => {
       const detailRepo = manager.getRepository(RoutineDetail);
 
-      // A. Inactive old detail
-      oldDetail.isActive = false;
-      await detailRepo.save(oldDetail);
+      // B1. Deactivate old record (Soft Delete)
+      // updatedAt will be automatically updated -> Mark the end time
+      currentDetail.isActive = false;
+      await detailRepo.save(currentDetail);
 
-      // B. Create new record (Clone old data + Apply new changes)
-      const newDetail = new RoutineDetail();
+      // B2. Clone old data + New data from DTO
+      const newDetail = detailRepo.create({
+        treatmentRoutine: currentDetail.treatmentRoutine,
+        stepType: currentDetail.stepType,
 
-      newDetail.description = updateDto.description ?? oldDetail.description;
-      newDetail.content = updateDto.content ?? oldDetail.content;
-      newDetail.products = updateDto.products ?? oldDetail.products;
-      newDetail.stepType = updateDto.stepType ?? oldDetail.stepType;
+        // Prioritize data from DTO, if not available then use old data
+        content: updateDto.content ?? currentDetail.content,
+        description: updateDto.description ?? currentDetail.description,
+        products: updateDto.products ?? currentDetail.products,
 
-      newDetail.isActive = true;
-      newDetail.treatmentRoutine = oldDetail.treatmentRoutine;
+        isActive: true,
+      });
 
       return await detailRepo.save(newDetail);
     });
   }
 
-  async softRemove(userId: string, detailId: string): Promise<void> {
+  async deleteRoutineDetail(userId: string, detailId: string): Promise<void> {
     const detail = await this.checkOwnership(userId, detailId);
-    // Soft delete
+
+    if (!detail.isActive) {
+      throw new BadRequestException('Detail is already inactive.');
+    }
+
+    const now = new Date();
+    const createdAt = new Date(detail.createdAt);
+    const timeDifference = now.getTime() - createdAt.getTime();
+
+    // === (HARD DELETE) ===
+
+    if (timeDifference <= this.EDIT_GRACE_PERIOD_MS) {
+      await this.routineDetailRepository.remove(detail);
+      return;
+    }
+
+    // === (SOFT DELETE) ===
+
     detail.isActive = false;
+    // TypeORM automatically updates 'updatedAt' to the current time
     await this.routineDetailRepository.save(detail);
   }
 }

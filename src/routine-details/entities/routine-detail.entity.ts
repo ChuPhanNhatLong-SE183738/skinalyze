@@ -46,7 +46,7 @@ export class RoutineDetail {
   stepType: RoutineStepType;
 
   @Column({ type: 'text', nullable: true })
-  description: string; // Giữ lại 'description' nếu muốn bác sĩ ghi chú thêm tiêu đề tùy ý (VD: "Chăm sóc cuối tuần")
+  description: string;
 
   @Column({ type: 'text' })
   content: string;

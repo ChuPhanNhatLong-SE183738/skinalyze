@@ -76,31 +76,6 @@ export class RoutineDetailsController {
     );
   }
 
-  // @Patch(':id')
-  // @Roles(UserRole.DERMATOLOGIST, UserRole.ADMIN)
-  // @ApiOperation({ summary: 'Update a Routine detail' })
-  // async update(
-  //   @Param('id') id: string,
-  //   @Body() updateRoutineDetailDto: UpdateRoutineDetailDto,
-  // ) {
-  //   const detail = await this.routineDetailsService.update(
-  //     id,
-  //     updateRoutineDetailDto,
-  //   );
-  //   return ResponseHelper.success(
-  //     'Routine detail updated successfully',
-  //     detail,
-  //   );
-  // }
-
-  // @Delete(':id')
-  // @Roles(UserRole.DERMATOLOGIST, UserRole.ADMIN)
-  // @ApiOperation({ summary: 'Delete a Routine detail' })
-  // async remove(@Param('id') id: string) {
-  //   await this.routineDetailsService.remove(id);
-  //   return ResponseHelper.success('Routine detail deleted successfully');
-  // }
-
   @Patch(':id')
   @Roles(UserRole.DERMATOLOGIST)
   @ApiOperation({ summary: 'Update a Routine detail (Versioning)' })
@@ -109,7 +84,7 @@ export class RoutineDetailsController {
     @Param('id') id: string,
     @Body() updateRoutineDetailDto: UpdateRoutineDetailDto,
   ) {
-    const detail = await this.routineDetailsService.updateWithVersioning(
+    const detail = await this.routineDetailsService.updateRoutineDetail(
       user.userId,
       id,
       updateRoutineDetailDto,
@@ -124,7 +99,7 @@ export class RoutineDetailsController {
   @Roles(UserRole.DERMATOLOGIST)
   @ApiOperation({ summary: 'Soft delete a Routine detail' })
   async remove(@GetUser() user: User, @Param('id') id: string) {
-    await this.routineDetailsService.softRemove(user.userId, id);
+    await this.routineDetailsService.deleteRoutineDetail(user.userId, id);
     return ResponseHelper.success('Routine detail deactivated successfully');
   }
 }

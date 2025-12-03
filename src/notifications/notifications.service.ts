@@ -300,15 +300,15 @@ export class NotificationsService {
 
   async notifyTreatmentRoutineCreated(
     userId: string,
-    RoutineId: string,
+    routineId: string,
   ): Promise<Notification> {
     return await this.create({
       userId,
-      type: NotificationType.TREATMENT_Routine,
+      type: NotificationType.TREATMENT_ROUTINE,
       title: 'New Treatment Routine',
       message: 'Your dermatologist has created a new treatment Routine for you',
-      data: { RoutineId },
-      actionUrl: `/treatment-Routines/${RoutineId}`,
+      data: { routineId },
+      actionUrl: `/treatment-routines/${routineId}`,
       priority: NotificationPriority.HIGH,
     });
   }
@@ -397,7 +397,10 @@ export class NotificationsService {
           `Broadcast notification image uploaded: ${uploadResult.secure_url}`,
         );
       } catch (error) {
-        this.logger.error('Failed to upload broadcast notification image:', error);
+        this.logger.error(
+          'Failed to upload broadcast notification image:',
+          error,
+        );
         // Continue without image if upload fails
       }
     }
