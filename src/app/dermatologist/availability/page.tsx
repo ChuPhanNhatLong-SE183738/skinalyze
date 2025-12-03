@@ -307,7 +307,7 @@ export default function AvailabilityPage() {
                 Price
               </span>
               <p className="font-semibold">
-                {selectedSlot.price?.toLocaleString("en-US") || "Default"} VND
+                {selectedSlot.price?.toLocaleString("vi-VN") || "Default"} VND
               </p>
             </div>
             <div>

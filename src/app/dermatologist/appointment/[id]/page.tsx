@@ -444,6 +444,7 @@ export default function AppointmentDetailPage() {
                 className="h-20 w-20 rounded-full border"
                 width={80}
                 height={80}
+                unoptimized
               />
               <div className="flex-1">
                 <CardTitle className="text-2xl">

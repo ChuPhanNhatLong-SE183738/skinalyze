@@ -20,7 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertTriangle, Eye } from "lucide-react";
+import { AlertTriangle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 
@@ -73,19 +73,19 @@ export default function AdminReportsPage() {
   }, [appointments, activeTab]);
 
   // Helper render lý do (Reason)
-  const renderReason = (appointment: Appointment) => {
-    if (appointment.terminatedReason) {
-      return (
-        <Badge
-          variant="outline"
-          className="border-red-200 bg-red-50 text-red-700"
-        >
-          {appointment.terminatedReason.replace(/_/g, " ")}
-        </Badge>
-      );
-    }
-    return <span className="text-muted-foreground italic">Unknown</span>;
-  };
+  // const renderReason = (appointment: Appointment) => {
+  //   if (appointment.terminatedReason) {
+  //     return (
+  //       <Badge
+  //         variant="outline"
+  //         className="border-red-200 bg-red-50 text-red-700"
+  //       >
+  //         {appointment.terminatedReason.replace(/_/g, " ")}
+  //       </Badge>
+  //     );
+  //   }
+  //   return <span className="text-muted-foreground italic">Unknown</span>;
+  // };
 
   if (isLoading) {
     return (
@@ -177,7 +177,7 @@ export default function AdminReportsPage() {
                         <TableHead>Date</TableHead>
                         <TableHead>Dermatologist</TableHead>
                         <TableHead>Customer</TableHead>
-                        <TableHead>Reason</TableHead>
+                        {/* <TableHead>Reason</TableHead> */}
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -208,7 +208,7 @@ export default function AdminReportsPage() {
                               {appt.customer?.user?.phone}
                             </div>
                           </TableCell>
-                          <TableCell>{renderReason(appt)}</TableCell>
+                          {/* <TableCell>{renderReason(appt)}</TableCell> */}
                           <TableCell className="text-right">
                             <Button
                               size="sm"

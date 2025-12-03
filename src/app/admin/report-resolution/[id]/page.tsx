@@ -387,6 +387,7 @@ export default function ReportResolutionPage() {
                   width={64}
                   height={64}
                   className="rounded-full border-2 border-slate-100"
+                  unoptimized
                 />
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
@@ -441,6 +442,7 @@ export default function ReportResolutionPage() {
                   width={64}
                   height={64}
                   className="rounded-full border-2 border-slate-100"
+                  unoptimized
                 />
                 <div className="flex-1">
                   <div className="flex justify-between items-start">

@@ -312,6 +312,7 @@ export default function MyAppointmentsPage() {
                                 fill
                                 className="object-cover"
                                 sizes="40px"
+                                unoptimized
                               />
                             </div>
                           ) : (
