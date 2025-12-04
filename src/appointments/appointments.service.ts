@@ -800,12 +800,6 @@ export class AppointmentsService {
 
     const meetLink = await this.generateMeetLinkForAppointment(appointment);
 
-    // const meetLink = await this.googleMeetService.createMeetLinkFromDates(
-    //   ` Skinalyze - ${appointment.appointmentId}`,
-    //   appointment.startTime,
-    //   appointment.endTime,
-    // );
-
     await this.appointmentRepository.update(appointmentId, {
       meetingUrl: meetLink,
     });

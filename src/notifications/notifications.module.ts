@@ -9,10 +9,12 @@ import { Notification } from './entities/notification.entity';
 import { UsersModule } from '../users/users.module';
 import { Customer } from '../customers/entities/customer.entity';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { RoutineRemindersService } from './routine-reminders.service';
+import { RoutineDetail } from 'src/routine-details/entities/routine-detail.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, Customer]),
+    TypeOrmModule.forFeature([Notification, Customer, RoutineDetail]),
     UsersModule, // Import để có DeviceTokensService
     CloudinaryModule,
     JwtModule.registerAsync({
@@ -27,7 +29,11 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
     }),
   ],
   controllers: [NotificationsController],
-  providers: [NotificationsService, NotificationsGateway],
+  providers: [
+    NotificationsService,
+    NotificationsGateway,
+    RoutineRemindersService,
+  ],
   exports: [NotificationsService, NotificationsGateway],
 })
 export class NotificationsModule {}

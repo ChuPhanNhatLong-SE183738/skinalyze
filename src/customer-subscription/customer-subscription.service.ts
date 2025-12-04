@@ -11,10 +11,16 @@ import { EntityManager, FindOptionsWhere, Repository } from 'typeorm';
 import { CustomerSubscription } from './entities/customer-subscription.entity';
 import { SubscriptionPlansService } from '../subscription-plans/subscription-plans.service';
 import { PaymentsService } from '../payments/payments.service';
-import { Payment, PaymentType } from '../payments/entities/payment.entity';
+import {
+  Payment,
+  PaymentMethod,
+  PaymentStatus,
+  PaymentType,
+} from '../payments/entities/payment.entity';
 import { CreateCustomerSubscriptionDto } from './dto/create-customer-subscription.dto';
 import { Customer } from 'src/customers/entities/customer.entity';
 import { SubscriptionPlan } from 'src/subscription-plans/entities/subscription-plan.entity';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class CustomerSubscriptionService {
@@ -24,6 +30,8 @@ export class CustomerSubscriptionService {
     @InjectRepository(CustomerSubscription)
     private readonly customerSubscriptionRepository: Repository<CustomerSubscription>,
     private readonly subscriptionPlansService: SubscriptionPlansService,
+    private readonly usersService: UsersService,
+    private readonly entityManager: EntityManager,
     @Inject(forwardRef(() => PaymentsService))
     private readonly paymentsService: PaymentsService,
   ) {}
@@ -35,6 +43,9 @@ export class CustomerSubscriptionService {
     const plan = await this.subscriptionPlansService.findOne(dto.planId);
     if (!plan) {
       throw new NotFoundException('Plan not found');
+    }
+    if (!plan.isActive) {
+      throw new BadRequestException('This plan is currently inactive.');
     }
     this.logger.log(
       `Creating payment for customer ${customerId} for plan ${plan.planId} with amount ${plan.basePrice}`,
@@ -50,11 +61,57 @@ export class CustomerSubscriptionService {
     return payment;
   }
 
-  /**
-   * KÍCH HOẠT MỘT GÓI (SUBSCRIPTION)
-   * Được gọi bởi PaymentsService (trong postProcess) sau khi webhook xác nhận thanh toán.
-   * Hàm này sẽ TẠO MỚI bản ghi CustomerSubscription.
-   */
+  async createSubscriptionWithWallet(
+    userId: string,
+    customerId: string,
+    dto: CreateCustomerSubscriptionDto,
+  ): Promise<CustomerSubscription> {
+    const plan = await this.subscriptionPlansService.findOne(dto.planId);
+    if (!plan) {
+      throw new NotFoundException('Plan not found');
+    }
+    if (!plan.isActive) {
+      throw new BadRequestException('This plan is currently inactive.');
+    }
+
+    return this.entityManager.transaction(async (manager) => {
+      const paymentRepo = manager.getRepository(Payment);
+
+      // A. deduct customer wallet
+      await this.usersService.updateBalance(
+        userId,
+        -Number(plan.basePrice),
+        manager,
+      );
+
+      const paidAt = new Date();
+      const payment = paymentRepo.create({
+        paymentType: PaymentType.SUBSCRIPTION,
+        amount: plan.basePrice,
+        customerId: customerId,
+        userId: userId,
+        planId: plan.planId,
+        paymentMethod: PaymentMethod.WALLET,
+        status: PaymentStatus.COMPLETED,
+        paidAt: paidAt,
+        paymentCode: `SKSW${customerId
+          .replace(/-/g, '')
+          .slice(-8)
+          .toUpperCase()}${Date.now().toString().slice(-6)}`,
+      });
+
+      const savedPayment = await paymentRepo.save(payment);
+
+      return await this.activateSubscription(
+        customerId,
+        plan.planId,
+        savedPayment,
+        paidAt,
+        manager,
+      );
+    });
+  }
+
   async activateSubscription(
     customerId: string,
     planId: string,

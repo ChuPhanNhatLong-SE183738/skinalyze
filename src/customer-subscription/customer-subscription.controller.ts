@@ -70,6 +70,31 @@ export class CustomerSubscriptionController {
     );
   }
 
+  @Post('use-wallet')
+  @Roles(UserRole.CUSTOMER)
+  @ApiOperation({ summary: 'Purchase subscription using Wallet balance' })
+  @ApiCreatedResponse({
+    description: 'Subscription activated immediately.',
+  })
+  async createSubscriptionWithWallet(
+    @GetUser() user: User,
+    @Body() createDto: CreateCustomerSubscriptionDto,
+  ) {
+    const customer = await this.customersService.findByUserId(user.userId);
+
+    const subscription =
+      await this.customerSubscriptionService.createSubscriptionWithWallet(
+        user.userId,
+        customer.customerId,
+        createDto,
+      );
+
+    return ResponseHelper.created(
+      'Subscription activated successfully using wallet balance.',
+      subscription,
+    );
+  }
+
   @Get('my')
   @Roles(UserRole.CUSTOMER)
   @ApiOperation({ summary: 'Get all my subscriptions (Customer only)' })
