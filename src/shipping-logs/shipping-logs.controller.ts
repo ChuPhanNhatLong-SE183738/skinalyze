@@ -60,6 +60,53 @@ export class ShippingLogsController {
     return ResponseHelper.success('Shipping logs retrieved successfully', logs);
   }
 
+  @Get('batches')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get all batch deliveries',
+    description: 'Get all batches with order count, total amount, and status',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batches retrieved successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Found 5 batches',
+        data: [
+          {
+            batchCode: 'BATCH-2025-12-04-YB5ULX',
+            orderCount: 3,
+            totalAmount: 90000,
+            status: 'IN_PROGRESS',
+            completedCount: 1,
+            createdAt: '2025-12-04T04:33:29.044Z',
+            shippingStaffId: '...',
+            shippingStaff: {
+              userId: '...',
+              fullName: 'Nguyen Van A',
+              phone: '0987654321',
+            },
+            orders: [
+              {
+                shippingLogId: '...',
+                orderId: '...',
+                status: 'DELIVERED',
+                totalAmount: 30000,
+              },
+            ],
+          },
+        ],
+      },
+    },
+  })
+  async getAllBatches() {
+    const batches = await this.shippingLogsService.getAllBatches();
+    return ResponseHelper.success(`Found ${batches.length} batches`, batches);
+  }
+
   @Get('available')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

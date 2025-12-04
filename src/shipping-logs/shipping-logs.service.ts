@@ -434,6 +434,89 @@ export class ShippingLogsService {
   }
 
   /**
+   * 📦 Get all batches with summary
+   */
+  async getAllBatches() {
+    // Get all logs with batchCode
+    const allLogs = await this.shippingLogRepository.find({
+      where: {
+        batchCode: IsNull() as any, // This will be negated below
+      },
+      relations: [
+        'order',
+        'order.customer',
+        'order.customer.user',
+        'order.orderItems',
+        'order.orderItems.product',
+        'shippingStaff',
+      ],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Filter logs that have batchCode (TypeORM doesn't support NOT IsNull directly)
+    const batchLogs = allLogs.filter((log) => log.batchCode != null);
+
+    // Group by batchCode
+    const batchesMap = new Map<string, ShippingLog[]>();
+    for (const log of batchLogs) {
+      if (!batchesMap.has(log.batchCode)) {
+        batchesMap.set(log.batchCode, []);
+      }
+      batchesMap.get(log.batchCode)!.push(log);
+    }
+
+    // Transform to response format
+    const batches = Array.from(batchesMap.entries()).map(
+      ([batchCode, logs]) => {
+        const orderCount = logs.length;
+        const totalAmount = logs.reduce(
+          (sum, log) => sum + Number(log.totalAmount || 0),
+          0,
+        );
+        const completedCount = logs.filter(
+          (log) => log.status === ShippingStatus.DELIVERED,
+        ).length;
+
+        // Determine batch status
+        let status: string;
+        if (completedCount === orderCount) {
+          status = 'COMPLETED';
+        } else if (completedCount > 0) {
+          status = 'IN_PROGRESS';
+        } else {
+          status = 'PENDING';
+        }
+
+        return {
+          batchCode,
+          orderCount,
+          totalAmount,
+          status,
+          completedCount,
+          createdAt: logs[0]?.createdAt,
+          shippingStaffId: logs[0]?.shippingStaffId,
+          shippingStaff: logs[0]?.shippingStaff
+            ? {
+                userId: logs[0].shippingStaff.userId,
+                fullName: logs[0].shippingStaff.fullName,
+                phone: logs[0].shippingStaff.phone,
+              }
+            : null,
+          orders: logs.map((log) => ({
+            shippingLogId: log.shippingLogId,
+            orderId: log.orderId,
+            status: log.status,
+            totalAmount: log.totalAmount,
+            order: log.order,
+          })),
+        };
+      },
+    );
+
+    return batches;
+  }
+
+  /**
    * 🔍 Lấy orders cùng customer để suggest batch delivery
    */
   async suggestBatchDelivery(customerId: string): Promise<Order[]> {
