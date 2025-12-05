@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, In } from 'typeorm';
+import { Repository, IsNull, Not, In } from 'typeorm';
 import { ShippingLog, ShippingMethod } from './entities/shipping-log.entity';
 import { CreateShippingLogDto } from './dto/create-shipping-log.dto';
 import { UpdateShippingLogDto } from './dto/update-shipping-log.dto';
@@ -546,10 +546,10 @@ export class ShippingLogsService {
    * 📦 Get all batches with summary
    */
   async getAllBatches() {
-    // Get all logs with batchCode
-    const allLogs = await this.shippingLogRepository.find({
+    // Get all logs that have batchCode (Not IsNull)
+    const batchLogs = await this.shippingLogRepository.find({
       where: {
-        batchCode: IsNull() as any, // This will be negated below
+        batchCode: Not(IsNull()),
       },
       relations: [
         'order',
@@ -561,9 +561,6 @@ export class ShippingLogsService {
       ],
       order: { createdAt: 'DESC' },
     });
-
-    // Filter logs that have batchCode (TypeORM doesn't support NOT IsNull directly)
-    const batchLogs = allLogs.filter((log) => log.batchCode != null);
 
     // Group by batchCode
     const batchesMap = new Map<string, ShippingLog[]>();
