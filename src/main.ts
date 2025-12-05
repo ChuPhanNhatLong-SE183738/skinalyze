@@ -37,7 +37,73 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+
+  // Custom options to add download button
+  const customOptions = {
+    customSiteTitle: 'Skinalyze API Documentation',
+    customCss: `
+      .swagger-ui .topbar { background-color: #2c3e50; }
+      .download-button-container {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 9999;
+      }
+      .download-swagger-btn {
+        background-color: #4CAF50;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-block;
+      }
+      .download-swagger-btn:hover {
+        background-color: #45a049;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        transform: translateY(-2px);
+      }
+    `,
+    customJsStr: `
+      window.onload = function() {
+        // Wait for Swagger UI to load
+        setTimeout(function() {
+          const topbar = document.querySelector('.topbar');
+          if (topbar && !document.querySelector('.download-button-container')) {
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'download-button-container';
+
+            const downloadButton = document.createElement('a');
+            downloadButton.href = '/api/docs-json';
+            downloadButton.download = 'swagger.json';
+            downloadButton.className = 'download-swagger-btn';
+            downloadButton.innerText = '📥 Download JSON';
+            downloadButton.title = 'Download Swagger specification as JSON';
+
+            buttonContainer.appendChild(downloadButton);
+            document.body.appendChild(buttonContainer);
+          }
+        }, 500);
+      }
+    `,
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  };
+
+  SwaggerModule.setup('api/docs', app, document, customOptions);
+
+  // Add endpoint to download swagger.json
+  app.use('/api/docs-json', (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename=swagger.json');
+    res.send(document);
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
