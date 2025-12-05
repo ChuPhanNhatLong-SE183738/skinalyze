@@ -26,8 +26,8 @@ import {
 import { SkinAnalysisService } from './skin-analysis.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateManualAnalysisDto } from './dto/create-manual-analysis.dto';
-import { GetUser } from 'src/auth/decorators/get-user.decorator';
-import { User } from 'src/users/entities/user.entity';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { User } from '../users/entities/user.entity';
 
 @ApiTags('Skin Analysis')
 @Controller('skin-analysis')
