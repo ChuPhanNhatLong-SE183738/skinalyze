@@ -63,6 +63,8 @@ import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 import { WithdrawalRequest } from './withdrawals/entities/withdrawal-request.entity';
 import { WithdrawalOtpSession } from './withdrawals/entities/withdrawal-otp-session.entity';
 import { GhnModule } from './ghn/ghn.module';
+import { SpecializationsModule } from './specializations/specializations.module';
+import { Specialization } from './specializations/entities/specialization.entity';
 
 @Module({
   imports: [
@@ -107,6 +109,7 @@ import { GhnModule } from './ghn/ghn.module';
         Review,
         WithdrawalRequest,
         WithdrawalOtpSession,
+        Specialization,
       ],
       synchronize: process.env.NODE_ENV === 'development',
       logging: process.env.NODE_ENV === 'development',
@@ -142,6 +145,7 @@ import { GhnModule } from './ghn/ghn.module';
     ReviewsModule,
     WithdrawalsModule,
     GhnModule,
+    SpecializationsModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

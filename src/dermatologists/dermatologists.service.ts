@@ -47,6 +47,7 @@ export class DermatologistsService {
           `Dermatologist profile for this user already exists`,
         );
       }
+      
       const dermatologist = this.dermatologistRepository.create({
         ...createDermatologistDto,
         user: { userId: userId },
