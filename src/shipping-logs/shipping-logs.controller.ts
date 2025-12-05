@@ -32,6 +32,7 @@ import {
   AssignGhnOrderDto,
   UpdateBatchOrderDto,
   CompleteBatchDto,
+  BulkUpdateBatchOrderDto,
 } from './dto/batch-delivery.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -392,6 +393,83 @@ export class ShippingLogsController {
       `Order status updated to ${updateDto.status}`,
       log,
     );
+  }
+
+  @Patch('batches/:batchCode/bulk-update')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Bulk update multiple orders in a batch' })
+  @ApiResponse({
+    status: 200,
+    description: 'Orders updated successfully',
+    schema: {
+      example: {
+        success: true,
+        message: 'Updated 3 orders successfully',
+        data: {
+          updated: 3,
+          failed: 0,
+          results: [
+            {
+              orderId: '...',
+              status: 'DELIVERED',
+              success: true,
+            },
+          ],
+        },
+      },
+    },
+  })
+  async bulkUpdateBatchOrders(
+    @Param('batchCode') batchCode: string,
+    @Body() bulkUpdateDto: { updates: UpdateBatchOrderDto[] },
+    @Request() req,
+  ) {
+    const staffId = req.user.userId;
+    const results: Array<{
+      orderId: string;
+      status?: string;
+      success: boolean;
+      error?: string;
+    }> = [];
+    let updated = 0;
+    let failed = 0;
+
+    for (const update of bulkUpdateDto.updates) {
+      try {
+        const log = await this.shippingLogsService.updateBatchOrder(
+          batchCode,
+          update.orderId,
+          {
+            status: update.status,
+            note: update.note,
+            unexpectedCase: update.unexpectedCase,
+            finishedPictures: update.finishedPictures,
+          },
+          staffId,
+        );
+        results.push({
+          orderId: update.orderId,
+          status: update.status,
+          success: true,
+        });
+        updated++;
+      } catch (error) {
+        results.push({
+          orderId: update.orderId,
+          success: false,
+          error: error.message,
+        });
+        failed++;
+      }
+    }
+
+    return ResponseHelper.success(`Updated ${updated} orders successfully`, {
+      updated,
+      failed,
+      results,
+    });
   }
 
   @Post('batches/:batchCode/complete')

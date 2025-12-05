@@ -139,6 +139,28 @@ export class CompleteBatchDto {
   totalCodAmount?: number;
 }
 
+export class BulkUpdateBatchOrderDto {
+  @ApiProperty({
+    example: [
+      {
+        orderId: '550e8400-e29b-41d4-a716-446655440001',
+        status: 'DELIVERED',
+        note: 'Giao thành công',
+        finishedPictures: ['https://storage.com/proof1.jpg'],
+      },
+      {
+        orderId: '550e8400-e29b-41d4-a716-446655440002',
+        status: 'FAILED',
+        unexpectedCase: 'Không có người nhận',
+      },
+    ],
+    description: 'Array of order updates',
+    type: [UpdateBatchOrderDto],
+  })
+  @IsArray()
+  updates: UpdateBatchOrderDto[];
+}
+
 export class UpdateShippingMethodDto {
   @ApiProperty({
     enum: ShippingMethod,
