@@ -25,11 +25,17 @@ import {
   DollarSign,
   CheckCircle,
   XCircle,
+  Plus,
+  FileText,
+  Building,
+  GraduationCap,
 } from "lucide-react";
 import type {
   DermatologistProfile,
   UpdatePersonalInfoRequest,
   UpdateProfessionalInfoRequest,
+  Specialization,
+  CreateSpecializationRequest,
 } from "@/types/dermatologist";
 
 export default function DermatologistProfilePage() {
@@ -51,6 +57,17 @@ export default function DermatologistProfilePage() {
       yearsOfExp: 0,
       defaultSlotPrice: 0,
     });
+  const [specializations, setSpecializations] = useState<Specialization[]>([]);
+  const [loadingSpecializations, setLoadingSpecializations] = useState(false);
+  const [showAddSpecialization, setShowAddSpecialization] = useState(false);
+  const [savingSpecialization, setSavingSpecialization] = useState(false);
+  const [specializationForm, setSpecializationForm] = useState<CreateSpecializationRequest>({
+    dermatologistId: "",
+    specializationName: "",
+    specialty: "",
+  });
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const certificateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const checkAuthAndLoadProfile = async () => {
@@ -80,6 +97,13 @@ export default function DermatologistProfilePage() {
           yearsOfExp: profileData.yearsOfExp,
           defaultSlotPrice: parseInt(profileData.defaultSlotPrice),
         });
+        setSpecializationForm({
+          ...specializationForm,
+          dermatologistId: profileData.dermatologistId,
+        });
+
+        // Load specializations
+        await loadSpecializations(profileData.dermatologistId);
       } catch (error) {
         console.error("Error loading profile:", error);
         toast({
@@ -95,6 +119,109 @@ export default function DermatologistProfilePage() {
 
     checkAuthAndLoadProfile();
   }, [router, toast]);
+
+  const loadSpecializations = async (dermatologistId: string) => {
+    try {
+      setLoadingSpecializations(true);
+      const data = await dermatologistService.getSpecializations(dermatologistId);
+      setSpecializations(data);
+    } catch (error) {
+      console.error("Error loading specializations:", error);
+      toast({
+        variant: "error",
+        title: "Error",
+        description: "Failed to load specializations.",
+      });
+    } finally {
+      setLoadingSpecializations(false);
+    }
+  };
+
+  const handleAddSpecialization = async () => {
+    if (!specializationForm.specializationName || !specializationForm.specialty) {
+      toast({
+        variant: "error",
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+      });
+      return;
+    }
+
+    try {
+      setSavingSpecialization(true);
+
+      const requestData: CreateSpecializationRequest = {
+        ...specializationForm,
+        certificateImage: certificateFile || undefined,
+      };
+
+      await dermatologistService.createSpecialization(requestData);
+      
+      toast({
+        variant: "success",
+        title: "Success",
+        description: "Specialization added successfully.",
+      });
+
+      // Reload specializations
+      if (profile) {
+        await loadSpecializations(profile.dermatologistId);
+      }
+
+      // Reset form
+      setSpecializationForm({
+        dermatologistId: profile?.dermatologistId || "",
+        specializationName: "",
+        specialty: "",
+        description: "",
+        level: "",
+        issuingAuthority: "",
+        issueDate: "",
+        expiryDate: "",
+      });
+      setCertificateFile(null);
+      setShowAddSpecialization(false);
+    } catch (error) {
+      console.error("Error adding specialization:", error);
+      toast({
+        variant: "error",
+        title: "Error",
+        description: "Failed to add specialization. Please try again.",
+      });
+    } finally {
+      setSavingSpecialization(false);
+    }
+  };
+
+  const handleCertificateUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        variant: "error",
+        title: "Invalid File",
+        description: "Please select an image file.",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "error",
+        title: "File Too Large",
+        description: "Please select an image smaller than 5MB.",
+      });
+      return;
+    }
+
+    setCertificateFile(file);
+    toast({
+      variant: "success",
+      title: "Certificate Selected",
+      description: file.name,
+    });
+  };
 
   const handleEdit = () => {
     setEditing(true);
@@ -697,6 +824,264 @@ export default function DermatologistProfilePage() {
                     )}
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Specializations */}
+            <Card className="bg-white border-slate-200">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="w-5 h-5 text-blue-600" />
+                    Specializations & Certifications
+                  </CardTitle>
+                  <Button
+                    onClick={() => setShowAddSpecialization(!showAddSpecialization)}
+                    className="bg-blue-600 hover:bg-blue-700"
+                    size="sm"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Specialization
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Add Specialization Form */}
+                {showAddSpecialization && (
+                  <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="specializationName">
+                          Specialization Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="specializationName"
+                          value={specializationForm.specializationName}
+                          onChange={(e) =>
+                            setSpecializationForm({
+                              ...specializationForm,
+                              specializationName: e.target.value,
+                            })
+                          }
+                          placeholder="e.g., Cosmetic Dermatology"
+                          className="mt-1 bg-white border-slate-300"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="specialty">
+                          Specialty <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="specialty"
+                          value={specializationForm.specialty}
+                          onChange={(e) =>
+                            setSpecializationForm({
+                              ...specializationForm,
+                              specialty: e.target.value,
+                            })
+                          }
+                          placeholder="e.g., Anti-aging treatments"
+                          className="mt-1 bg-white border-slate-300"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="level">Level</Label>
+                        <Input
+                          id="level"
+                          value={specializationForm.level || ""}
+                          onChange={(e) =>
+                            setSpecializationForm({
+                              ...specializationForm,
+                              level: e.target.value,
+                            })
+                          }
+                          placeholder="e.g., Expert, Advanced"
+                          className="mt-1 bg-white border-slate-300"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="issuingAuthority">Issuing Authority</Label>
+                        <Input
+                          id="issuingAuthority"
+                          value={specializationForm.issuingAuthority || ""}
+                          onChange={(e) =>
+                            setSpecializationForm({
+                              ...specializationForm,
+                              issuingAuthority: e.target.value,
+                            })
+                          }
+                          placeholder="e.g., American Board of Dermatology"
+                          className="mt-1 bg-white border-slate-300"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="issueDate">Issue Date</Label>
+                        <Input
+                          id="issueDate"
+                          type="date"
+                          value={specializationForm.issueDate || ""}
+                          onChange={(e) =>
+                            setSpecializationForm({
+                              ...specializationForm,
+                              issueDate: e.target.value,
+                            })
+                          }
+                          className="mt-1 bg-white border-slate-300"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="expiryDate">Expiry Date</Label>
+                        <Input
+                          id="expiryDate"
+                          type="date"
+                          value={specializationForm.expiryDate || ""}
+                          onChange={(e) =>
+                            setSpecializationForm({
+                              ...specializationForm,
+                              expiryDate: e.target.value,
+                            })
+                          }
+                          className="mt-1 bg-white border-slate-300"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="description">Description</Label>
+                        <textarea
+                          id="description"
+                          value={specializationForm.description || ""}
+                          onChange={(e) =>
+                            setSpecializationForm({
+                              ...specializationForm,
+                              description: e.target.value,
+                            })
+                          }
+                          placeholder="Describe your expertise in this area"
+                          rows={3}
+                          className="mt-1 w-full p-2 bg-white border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <Label htmlFor="certificate">Certificate Image (Optional)</Label>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Input
+                            ref={certificateInputRef}
+                            id="certificate"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleCertificateUpload}
+                            className="bg-white border-slate-300"
+                          />
+                          {certificateFile && (
+                            <span className="text-sm text-green-600">
+                              {certificateFile.name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowAddSpecialization(false);
+                          setCertificateFile(null);
+                        }}
+                        disabled={savingSpecialization}
+                        className="border-slate-300"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleAddSpecialization}
+                        disabled={savingSpecialization}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        {savingSpecialization ? "Saving..." : "Add Specialization"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Specializations List */}
+                {loadingSpecializations ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                  </div>
+                ) : specializations.length === 0 ? (
+                  <div className="text-center py-8 text-slate-600">
+                    <Award className="w-12 h-12 mx-auto mb-3 text-slate-400" />
+                    <p>No specializations added yet.</p>
+                    <p className="text-sm mt-1">Click "Add Specialization" to get started.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {specializations.map((spec) => (
+                      <div
+                        key={spec.specializationId}
+                        className="p-4 border border-slate-200 rounded-lg hover:border-blue-300 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold text-slate-900">
+                                {spec.specializationName}
+                              </h3>
+                              {spec.level && (
+                                <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                                  {spec.level}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex items-center gap-2 text-slate-600">
+                                <GraduationCap className="w-4 h-4" />
+                                <span>{spec.specialty}</span>
+                              </div>
+                              {spec.issuingAuthority && (
+                                <div className="flex items-center gap-2 text-slate-600">
+                                  <Building className="w-4 h-4" />
+                                  <span>{spec.issuingAuthority}</span>
+                                </div>
+                              )}
+                              {spec.description && (
+                                <div className="flex items-start gap-2 text-slate-600">
+                                  <FileText className="w-4 h-4 mt-0.5" />
+                                  <span>{spec.description}</span>
+                                </div>
+                              )}
+                              {(spec.issueDate || spec.expiryDate) && (
+                                <div className="flex items-center gap-2 text-slate-600">
+                                  <Calendar className="w-4 h-4" />
+                                  <span>
+                                    {spec.issueDate && formatDate(spec.issueDate)}
+                                    {spec.issueDate && spec.expiryDate && " - "}
+                                    {spec.expiryDate && formatDate(spec.expiryDate)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {spec.certificateImageUrl && (
+                            <a
+                              href={spec.certificateImageUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-4"
+                            >
+                              <img
+                                src={spec.certificateImageUrl}
+                                alt="Certificate"
+                                className="w-20 h-20 object-cover rounded border border-slate-200 hover:border-blue-400 transition-colors"
+                              />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

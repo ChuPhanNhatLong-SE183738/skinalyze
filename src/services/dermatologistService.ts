@@ -7,6 +7,9 @@ import type {
   UpdateProfessionalInfoRequest,
   GetMyPatientsDto,
   PatientsResponse,
+  Specialization,
+  CreateSpecializationRequest,
+  SpecializationsResponse,
 } from "@/types/dermatologist";
 import type { ApiResponse } from "@/types/api";
 
@@ -130,6 +133,72 @@ class DermatologistService {
     );
 
     return response.data;
+  }
+
+  async createSpecialization(data: CreateSpecializationRequest): Promise<Specialization> {
+    try {
+      const formData = new FormData();
+      
+      formData.append('dermatologistId', data.dermatologistId);
+      formData.append('specializationName', data.specializationName);
+      formData.append('specialty', data.specialty);
+      
+      if (data.certificateImage) {
+        formData.append('certificateImage', data.certificateImage);
+      }
+      if (data.description) {
+        formData.append('description', data.description);
+      }
+      if (data.level) {
+        formData.append('level', data.level);
+      }
+      if (data.issuingAuthority) {
+        formData.append('issuingAuthority', data.issuingAuthority);
+      }
+      if (data.issueDate) {
+        formData.append('issueDate', data.issueDate);
+      }
+      if (data.expiryDate) {
+        formData.append('expiryDate', data.expiryDate);
+      }
+
+      const response = await fetch("/api/specializations", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to create specialization");
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error("Error creating specialization:", error);
+      throw error;
+    }
+  }
+
+  async getSpecializations(dermatologistId: string): Promise<Specialization[]> {
+    try {
+      const response = await fetch(`/api/specializations/dermatologist/${dermatologistId}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to fetch specializations");
+      }
+
+      const result: SpecializationsResponse = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error("Error fetching specializations:", error);
+      throw error;
+    }
   }
 }
 

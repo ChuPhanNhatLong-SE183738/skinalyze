@@ -97,3 +97,36 @@ export interface PatientsResponse {
   page: number;
   limit: number;
 }
+
+export interface Specialization {
+  specializationId: string;
+  dermatologistId: string;
+  specializationName: string;
+  specialty: string;
+  certificateImageUrl?: string;
+  description?: string;
+  level?: string;
+  issuingAuthority?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSpecializationRequest {
+  dermatologistId: string;
+  specializationName: string;
+  specialty: string;
+  certificateImage?: File;
+  description?: string;
+  level?: string;
+  issuingAuthority?: string;
+  issueDate?: string;
+  expiryDate?: string;
+}
+
+export interface SpecializationsResponse {
+  success: boolean;
+  message: string;
+  data: Specialization[];
+}
