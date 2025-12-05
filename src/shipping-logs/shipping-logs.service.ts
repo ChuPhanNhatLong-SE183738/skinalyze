@@ -661,6 +661,59 @@ export class ShippingLogsService {
   }
 
   /**
+   * 📸 Upload batch completion photos to Cloudinary
+   */
+  async uploadBatchCompletionPhotos(
+    batchCode: string,
+    files: Express.Multer.File[],
+    staffId: string,
+  ): Promise<{ photoUrls: string[]; batchCode: string }> {
+    // Lấy batch logs
+    const logs = await this.shippingLogRepository.find({
+      where: { batchCode },
+    });
+
+    if (logs.length === 0) {
+      throw new NotFoundException(`Batch ${batchCode} not found`);
+    }
+
+    // Kiểm tra quyền
+    if (logs[0].shippingStaffId !== staffId) {
+      throw new BadRequestException(
+        "You don't have permission to upload photos for this batch",
+      );
+    }
+
+    // Kiểm tra batch đã complete chưa
+    if (logs[0].batchCompletedAt) {
+      throw new BadRequestException(
+        'Batch already completed. Cannot upload more photos.',
+      );
+    }
+
+    this.logger.log(
+      `📸 Uploading ${files.length} batch completion photos for ${batchCode}`,
+    );
+
+    // Upload lên Cloudinary
+    const uploadResults = await this.cloudinaryService.uploadMultipleImages(
+      files,
+      'batch-completion',
+    );
+
+    const photoUrls = uploadResults.map((result) => result.secure_url);
+
+    this.logger.log(
+      `✅ Uploaded ${photoUrls.length} batch completion photos successfully`,
+    );
+
+    return {
+      photoUrls,
+      batchCode,
+    };
+  }
+
+  /**
    * 📋 Lấy danh sách orders trong cùng 1 batch
    */
   async getOrdersByBatchCode(batchCode: string): Promise<ShippingLog[]> {

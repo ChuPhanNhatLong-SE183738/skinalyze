@@ -518,6 +518,58 @@ export class ShippingLogsController {
     return ResponseHelper.success('Batch completed successfully', result);
   }
 
+  @Post('batches/:batchCode/upload-completion-photos')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @UseInterceptors(FilesInterceptor('photos', 10)) // Max 10 ảnh cho batch
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: '📸 Upload batch completion proof photos',
+    description:
+      'Shipper uploads proof photos when completing entire batch (1-10 photos)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        photos: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Batch completion proof photos (1-10 images)',
+        },
+      },
+    },
+  })
+  async uploadBatchCompletionPhotos(
+    @Param('batchCode') batchCode: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Request() req,
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Please upload at least 1 photo');
+    }
+
+    if (files.length > 10) {
+      throw new BadRequestException('Maximum 10 photos allowed');
+    }
+
+    const staffId = req.user.userId;
+    const result = await this.shippingLogsService.uploadBatchCompletionPhotos(
+      batchCode,
+      files,
+      staffId,
+    );
+
+    return ResponseHelper.success(
+      'Batch completion photos uploaded successfully',
+      result,
+    );
+  }
+
   @Get('suggest-batch/:customerId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STAFF)
