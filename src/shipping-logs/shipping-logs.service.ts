@@ -588,17 +588,29 @@ export class ShippingLogsService {
       );
     }
 
-    // Kiểm tra tất cả orders đã hoàn thành chưa
-    const allCompleted = logs.every((log) =>
-      [
-        ShippingStatus.DELIVERED,
-        ShippingStatus.FAILED,
-        ShippingStatus.RETURNED,
-      ].includes(log.status),
-    );
+    // Tự động cập nhật status của các đơn chưa hoàn thành thành DELIVERED
+    for (const log of logs) {
+      if (
+        ![
+          ShippingStatus.DELIVERED,
+          ShippingStatus.FAILED,
+          ShippingStatus.RETURNED,
+        ].includes(log.status)
+      ) {
+        // Tự động đánh dấu là DELIVERED khi complete batch
+        log.status = ShippingStatus.DELIVERED;
+        log.deliveredDate = new Date();
 
-    if (!allCompleted) {
-      throw new BadRequestException('Not all orders in batch are completed');
+        // Cập nhật order status
+        if (log.order) {
+          log.order.status = OrderStatus.COMPLETED;
+          await this.orderRepository.save(log.order);
+        }
+
+        this.logger.log(
+          `📦 Auto-completing order ${log.order?.orderId} in batch ${batchCode}`,
+        );
+      }
     }
 
     // Kiểm tra batch đã complete chưa
