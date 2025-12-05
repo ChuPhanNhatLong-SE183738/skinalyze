@@ -44,8 +44,8 @@ export class WithdrawalsService {
     return `${visibleStart}${masked}${visibleEnd}`;
   }
 
-  private sanitizeRequest(request: WithdrawalRequest): WithdrawalRequest {
-    if (request.accountNumber) {
+  private sanitizeRequest(request: WithdrawalRequest, skipCensoring = false): WithdrawalRequest {
+    if (request.accountNumber && !skipCensoring) {
       request.accountNumber = this.censorAccountNumber(request.accountNumber);
     }
     return request;
@@ -194,7 +194,8 @@ export class WithdrawalsService {
       relations: ['user'],
       order: { createdAt: 'DESC' },
     });
-    return requests.map(req => this.sanitizeRequest(req));
+    // Admins need to see full account numbers to process withdrawals
+    return requests;
   }
 
   async updateStatus(
