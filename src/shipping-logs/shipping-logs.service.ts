@@ -475,7 +475,12 @@ export class ShippingLogsService {
   async updateBatchOrder(
     batchCode: string,
     orderId: string,
-    updateDto: { status: string; note?: string; finishedPictures?: string[] },
+    updateDto: {
+      status: string;
+      note?: string;
+      unexpectedCase?: string;
+      finishedPictures?: string[];
+    },
     staffId: string,
   ): Promise<ShippingLog> {
     // Tìm shipping log của order trong batch
@@ -495,12 +500,36 @@ export class ShippingLogsService {
       throw new BadRequestException('You are not assigned to this batch');
     }
 
+    // Validation theo API requirements
+    if (updateDto.status === 'DELIVERED') {
+      if (
+        !updateDto.finishedPictures ||
+        updateDto.finishedPictures.length === 0
+      ) {
+        throw new BadRequestException(
+          'finishedPictures are required for DELIVERED status',
+        );
+      }
+    }
+
+    if (updateDto.status === 'FAILED') {
+      if (!updateDto.unexpectedCase) {
+        throw new BadRequestException(
+          'unexpectedCase is required for FAILED status',
+        );
+      }
+    }
+
     // Cập nhật status
     const oldStatus = log.status;
     log.status = updateDto.status as ShippingStatus;
 
     if (updateDto.note) {
       log.note = updateDto.note;
+    }
+
+    if (updateDto.unexpectedCase) {
+      log.unexpectedCase = updateDto.unexpectedCase;
     }
 
     if (updateDto.finishedPictures) {
@@ -510,6 +539,11 @@ export class ShippingLogsService {
     // Nếu DELIVERED thì set deliveredDate
     if (updateDto.status === 'DELIVERED') {
       log.deliveredDate = new Date();
+    }
+
+    // Nếu FAILED thì set returnedDate
+    if (updateDto.status === 'FAILED') {
+      log.returnedDate = new Date();
     }
 
     const savedLog = await this.shippingLogRepository.save(log);
@@ -522,6 +556,108 @@ export class ShippingLogsService {
     );
 
     return savedLog;
+  }
+
+  /**
+   * ✅ Complete batch delivery with batch completion proof
+   */
+  async completeBatch(
+    batchCode: string,
+    completionDto: {
+      completionPhotos: string[];
+      completionNote?: string;
+      codCollected?: boolean;
+      totalCodAmount?: number;
+    },
+    staffId: string,
+  ) {
+    // Lấy tất cả logs trong batch
+    const logs = await this.shippingLogRepository.find({
+      where: { batchCode },
+      relations: ['order'],
+    });
+
+    if (logs.length === 0) {
+      throw new NotFoundException(`Batch ${batchCode} not found`);
+    }
+
+    // Kiểm tra staff có quyền complete không
+    if (logs[0].shippingStaffId !== staffId) {
+      throw new BadRequestException(
+        "You don't have permission to complete this batch",
+      );
+    }
+
+    // Kiểm tra tất cả orders đã hoàn thành chưa
+    const allCompleted = logs.every((log) =>
+      [
+        ShippingStatus.DELIVERED,
+        ShippingStatus.FAILED,
+        ShippingStatus.RETURNED,
+      ].includes(log.status),
+    );
+
+    if (!allCompleted) {
+      throw new BadRequestException('Not all orders in batch are completed');
+    }
+
+    // Kiểm tra batch đã complete chưa
+    if (logs[0].batchCompletedAt) {
+      throw new BadRequestException('Batch already completed');
+    }
+
+    // Validate completion photos
+    if (
+      !completionDto.completionPhotos ||
+      completionDto.completionPhotos.length === 0
+    ) {
+      throw new BadRequestException('Completion photos are required');
+    }
+
+    this.logger.log(
+      `📦 Completing batch ${batchCode} with ${completionDto.completionPhotos.length} photos`,
+    );
+
+    // Update tất cả logs trong batch với batch completion info
+    const completedAt = new Date();
+    const updatedLogs: ShippingLog[] = [];
+
+    for (const log of logs) {
+      log.batchCompletionPhotos = completionDto.completionPhotos;
+      log.batchCompletionNote = completionDto.completionNote;
+      log.batchCompletedAt = completedAt;
+      log.codCollected = completionDto.codCollected || false;
+      log.totalCodAmount = completionDto.totalCodAmount;
+
+      const savedLog = await this.shippingLogRepository.save(log);
+      updatedLogs.push(savedLog);
+    }
+
+    // Tính statistics
+    const deliveredCount = logs.filter(
+      (log) => log.status === ShippingStatus.DELIVERED,
+    ).length;
+    const failedCount = logs.filter(
+      (log) => log.status === ShippingStatus.FAILED,
+    ).length;
+
+    this.logger.log(
+      `✅ Batch ${batchCode} completed: ${deliveredCount} delivered, ${failedCount} failed`,
+    );
+
+    return {
+      batchCode,
+      status: 'COMPLETED',
+      orderCount: logs.length,
+      completedCount: logs.length,
+      deliveredCount,
+      failedCount,
+      completionPhotos: completionDto.completionPhotos,
+      completionNote: completionDto.completionNote,
+      completedAt,
+      codCollected: completionDto.codCollected || false,
+      totalCodAmount: completionDto.totalCodAmount,
+    };
   }
 
   /**

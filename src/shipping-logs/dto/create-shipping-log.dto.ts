@@ -8,13 +8,10 @@ import {
   IsBoolean,
   IsDateString,
 } from 'class-validator';
-import { ShippingStatus } from '../entities/shipping-log.entity';
-
-export enum ShippingMethod {
-  INTERNAL = 'INTERNAL',
-  GHN = 'GHN',
-  BATCH = 'BATCH',
-}
+import {
+  ShippingStatus,
+  ShippingMethod,
+} from '../entities/shipping-log.entity';
 
 export class CreateShippingLogDto {
   @ApiProperty({ example: '550e8400-e29b-41d4-a716-446655440000' })

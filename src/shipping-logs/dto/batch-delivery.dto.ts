@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsString, IsUUID, IsEnum, IsOptional } from 'class-validator';
+import {
+  IsArray,
+  IsString,
+  IsUUID,
+  IsEnum,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+} from 'class-validator';
 import { ShippingMethod } from '../entities/shipping-log.entity';
 
 export class CreateBatchDeliveryDto {
@@ -61,9 +69,9 @@ export class UpdateBatchOrderDto {
   @ApiProperty({
     example: 'DELIVERED',
     description: 'New status for this order',
-    enum: ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED'],
+    enum: ['OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED'],
   })
-  @IsEnum(['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED'])
+  @IsEnum(['OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED'])
   status: string;
 
   @ApiProperty({
@@ -75,14 +83,60 @@ export class UpdateBatchOrderDto {
   note?: string;
 
   @ApiProperty({
+    example: 'Khách không ở nhà',
+    description: 'Required when status is FAILED',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  unexpectedCase?: string;
+
+  @ApiProperty({
     example: ['https://cloudinary.com/image1.jpg'],
-    description: 'Proof of delivery images',
+    description: 'Proof of delivery images (required for DELIVERED)',
     required: false,
   })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   finishedPictures?: string[];
+}
+
+export class CompleteBatchDto {
+  @ApiProperty({
+    example: [
+      'https://cloudinary.com/photo1.jpg',
+      'https://cloudinary.com/photo2.jpg',
+    ],
+    description: 'Batch completion proof photos (minimum 1 required)',
+  })
+  @IsArray()
+  @IsString({ each: true })
+  completionPhotos: string[];
+
+  @ApiProperty({
+    example: 'Đã giao xong tất cả đơn trong batch',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  completionNote?: string;
+
+  @ApiProperty({
+    example: true,
+    description: 'Whether COD has been collected',
+    default: false,
+  })
+  @IsOptional()
+  codCollected?: boolean;
+
+  @ApiProperty({
+    example: 450000,
+    description: 'Total COD amount collected',
+    required: false,
+  })
+  @IsOptional()
+  totalCodAmount?: number;
 }
 
 export class UpdateShippingMethodDto {

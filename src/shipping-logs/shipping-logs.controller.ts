@@ -31,6 +31,7 @@ import {
   CreateBatchDeliveryDto,
   AssignGhnOrderDto,
   UpdateBatchOrderDto,
+  CompleteBatchDto,
 } from './dto/batch-delivery.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -382,6 +383,7 @@ export class ShippingLogsController {
       {
         status: updateDto.status,
         note: updateDto.note,
+        unexpectedCase: updateDto.unexpectedCase,
         finishedPictures: updateDto.finishedPictures,
       },
       staffId,
@@ -390,6 +392,52 @@ export class ShippingLogsController {
       `Order status updated to ${updateDto.status}`,
       log,
     );
+  }
+
+  @Post('batches/:batchCode/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '✅ Complete batch with batch completion proof',
+    description:
+      'Staff completes entire batch after all orders are delivered/failed. Uploads batch-level proof photos.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch completed successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Batch completed successfully',
+        data: {
+          batchCode: 'BATCH-2025-12-05-ABC123',
+          status: 'COMPLETED',
+          orderCount: 3,
+          completedCount: 3,
+          deliveredCount: 2,
+          failedCount: 1,
+          completionPhotos: ['url-1', 'url-2'],
+          completionNote: 'Đã giao xong tất cả đơn',
+          completedAt: '2025-12-05T12:00:00Z',
+          codCollected: true,
+          totalCodAmount: 450000,
+        },
+      },
+    },
+  })
+  async completeBatch(
+    @Param('batchCode') batchCode: string,
+    @Body() completionDto: CompleteBatchDto,
+    @Request() req,
+  ) {
+    const staffId = req.user.userId;
+    const result = await this.shippingLogsService.completeBatch(
+      batchCode,
+      completionDto,
+      staffId,
+    );
+    return ResponseHelper.success('Batch completed successfully', result);
   }
 
   @Get('suggest-batch/:customerId')
