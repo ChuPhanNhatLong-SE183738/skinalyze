@@ -4,9 +4,99 @@ import { useDermatologist } from "@/contexts/DermatologistContext";
 import { Loader2, User, Clock, DollarSign, Calendar, Award, Mail, Phone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
+import { appointmentService } from "@/services/appointmentService";
+import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 export default function DermatologistDashboardPage() {
   const { profile, isLoading } = useDermatologist();
+  const [appointments, setAppointments] = useState<any[]>([]);
+  const [chartData, setChartData] = useState({
+    appointmentsByStatus: [] as { name: string; value: number; color: string }[],
+    monthlyAppointments: [] as { month: string; appointments: number }[],
+    monthlyRevenue: [] as { month: string; revenue: number }[],
+  });
+
+  useEffect(() => {
+    if (profile?.dermatologistId) {
+      loadAppointments();
+    }
+  }, [profile?.dermatologistId]);
+
+  const loadAppointments = async () => {
+    try {
+      if (!profile?.dermatologistId) return;
+      
+      const data = await appointmentService.getAppointments({
+        dermatologistId: profile.dermatologistId,
+      });
+      
+      setAppointments(data);
+      calculateChartData(data);
+    } catch (error) {
+      console.error("Failed to load appointments:", error);
+    }
+  };
+
+  const calculateChartData = (appointmentsData: any[]) => {
+    // Calculate appointments by status
+    const statusCounts: { [key: string]: number } = {};
+    appointmentsData.forEach((apt) => {
+      statusCounts[apt.status] = (statusCounts[apt.status] || 0) + 1;
+    });
+
+    const statusColors: { [key: string]: string } = {
+      PENDING: "#f59e0b",
+      CONFIRMED: "#3b82f6",
+      COMPLETED: "#10b981",
+      CANCELLED: "#ef4444",
+      NO_SHOW: "#6b7280",
+    };
+
+    const appointmentsByStatus = Object.entries(statusCounts).map(([status, count]) => ({
+      name: status.replace("_", " "),
+      value: count,
+      color: statusColors[status] || "#64748b",
+    }));
+
+    // Calculate monthly appointments (last 6 months)
+    const monthlyData: { [key: string]: { appointments: number; revenue: number } } = {};
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      monthlyData[monthKey] = { appointments: 0, revenue: 0 };
+    }
+
+    appointmentsData.forEach((apt) => {
+      const aptDate = new Date(apt.createdAt);
+      const monthKey = aptDate.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      
+      if (monthlyData[monthKey]) {
+        monthlyData[monthKey].appointments++;
+        if (apt.status === "COMPLETED" && apt.totalCost) {
+          monthlyData[monthKey].revenue += parseFloat(apt.totalCost);
+        }
+      }
+    });
+
+    const monthlyAppointments = Object.entries(monthlyData).map(([month, data]) => ({
+      month,
+      appointments: data.appointments,
+    }));
+
+    const monthlyRevenue = Object.entries(monthlyData).map(([month, data]) => ({
+      month,
+      revenue: data.revenue,
+    }));
+
+    setChartData({
+      appointmentsByStatus,
+      monthlyAppointments,
+      monthlyRevenue,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -219,6 +309,95 @@ export default function DermatologistDashboardPage() {
                 <p className="text-sm text-slate-600 mt-1">Set your availability and time slots</p>
               </button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Appointments by Status - Pie Chart */}
+          <Card className="bg-white border-slate-200">
+            <CardHeader>
+              <CardTitle>Appointments by Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={chartData.appointmentsByStatus}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {chartData.appointmentsByStatus.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Monthly Appointments - Line Chart */}
+          <Card className="bg-white border-slate-200">
+            <CardHeader>
+              <CardTitle>Appointments Trend (Last 6 Months)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chartData.monthlyAppointments}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="appointments"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    name="Appointments"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Revenue Chart */}
+        <Card className="bg-white border-slate-200">
+          <CardHeader>
+            <CardTitle>Revenue Trend (Last 6 Months)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData.monthlyRevenue}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip
+                  formatter={(value: number) => {
+                    return new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    }).format(value);
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  name="Revenue (VND)"
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>

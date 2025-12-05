@@ -74,12 +74,15 @@ export default function AdminOrdersPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const checkAuthAndLoadOrders = async () => {
@@ -107,44 +110,33 @@ export default function AdminOrdersPage() {
     checkAuthAndLoadOrders();
   }, [router]);
 
+  // Load orders when search or status changes
+  useEffect(() => {
+    const delaySearch = setTimeout(() => {
+      loadOrders();
+    }, searchQuery ? 500 : 0);
+
+    return () => clearTimeout(delaySearch);
+  }, [searchQuery, statusFilter]);
+
   const loadOrders = async () => {
     try {
       setIsLoading(true);
-      const response = await orderService.getOrders();
+      const response = await orderService.getOrders({
+        search: searchQuery || undefined,
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
+      });
       setOrders(response.data);
-      setFilteredOrders(response.data);
+      setTotalOrders(response.data.length);
+      setCurrentPage(1); // Reset to first page when data changes
     } catch (error: unknown) {
       console.error("Failed to load orders:", error);
+      setOrders([]);
+      setTotalOrders(0);
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Filter orders based on search and status
-  useEffect(() => {
-    let filtered = orders;
-
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (order) =>
-          order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          order.shippingAddress
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          order.customerId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          order.customer?.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          order.customer?.user?.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Filter by status
-    if (statusFilter !== "ALL") {
-      filtered = filtered.filter((order) => order.status === statusFilter);
-    }
-
-    setFilteredOrders(filtered);
-  }, [searchQuery, statusFilter, orders]);
 
   const handleViewDetails = (orderId: string) => {
     setSelectedOrderId(orderId);
@@ -182,6 +174,68 @@ export default function AdminOrdersPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  // Pagination calculations - client-side
+  const totalPages = Math.ceil(totalOrders / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalOrders);
+  
+  // Get current page orders
+  const currentOrders = orders.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      setPageInput(page.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePageInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const page = parseInt(pageInput);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      handlePageChange(page);
+    } else {
+      setPageInput(currentPage.toString());
+    }
+  };
+
+  // Generate page numbers with ellipsis
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+
+      if (currentPage <= 3) {
+        for (let i = 2; i <= Math.min(4, totalPages - 1); i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+      } else if (currentPage >= totalPages - 2) {
+        pages.push('...');
+        for (let i = Math.max(2, totalPages - 3); i < totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+      }
+
+      pages.push(totalPages);
+    }
+
+    return pages;
   };
 
   if (isLoading) {
@@ -333,7 +387,7 @@ export default function AdminOrdersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 bg-white">
-                  {filteredOrders.length === 0 ? (
+                  {currentOrders.length === 0 ? (
                     <tr>
                       <td
                         colSpan={6}
@@ -343,7 +397,7 @@ export default function AdminOrdersPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map((order) => {
+                    currentOrders.map((order) => {
                       const status = statusConfig[order.status] || {
                         label: order.status,
                         icon: AlertCircle,
@@ -416,6 +470,71 @@ export default function AdminOrdersPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200">
+                <div className="text-sm text-slate-600">
+                  Showing {startIndex + 1} to {endIndex} of {totalOrders} orders
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-300"
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex gap-1">
+                    {getPageNumbers().map((page, index) => (
+                      page === '...' ? (
+                        <span key={`ellipsis-${index}`} className="px-2 py-1 text-slate-400">
+                          ...
+                        </span>
+                      ) : (
+                        <Button
+                          key={page}
+                          onClick={() => handlePageChange(page as number)}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          className={currentPage === page ? "bg-green-500 hover:bg-green-600" : "border-slate-300"}
+                        >
+                          {page}
+                        </Button>
+                      )
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-300"
+                  >
+                    Next
+                  </Button>
+                  <form onSubmit={handlePageInputSubmit} className="flex items-center gap-2 ml-4">
+                    <span className="text-sm text-slate-600">Go to:</span>
+                    <Input
+                      type="text"
+                      value={pageInput}
+                      onChange={(e) => setPageInput(e.target.value)}
+                      className="w-16 h-8 text-center border-slate-300"
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-300"
+                    >
+                      Go
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

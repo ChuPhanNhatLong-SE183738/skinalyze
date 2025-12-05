@@ -81,5 +81,8 @@ export interface OrdersResponse {
   statusCode: number;
   message: string;
   data: Order[];
+  total?: number;
+  page?: number;
+  limit?: number;
   timestamp: string;
 }

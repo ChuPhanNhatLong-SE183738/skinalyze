@@ -33,11 +33,15 @@ export default function AdminProductsPage() {
   const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const checkAuthAndLoadProducts = async () => {
@@ -65,43 +69,35 @@ export default function AdminProductsPage() {
     checkAuthAndLoadProducts();
   }, [router]);
 
-  const loadProducts = async (params: Partial<ProductQueryParams> = {}) => {
+  const loadProducts = async (page = 1, search = "") => {
     try {
       setIsLoading(true);
       const response = await productService.getProducts({
-        page: 1,
-        limit: 100,
-        ...params,
+        page,
+        limit: itemsPerPage,
+        search: search || undefined,
       });
       setProducts(response.products || []);
       setFilteredProducts(response.products || []);
+      setTotalProducts(response.total || 0);
     } catch (error: unknown) {
       console.error("Failed to load products:", error);
       setProducts([]);
       setFilteredProducts([]);
+      setTotalProducts(0);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Filter products based on search
+  // Load products when page or search changes
   useEffect(() => {
-    if (searchQuery) {
-      const filtered = products.filter(
-        (product) =>
-          product.productName
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          product.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.productDescription
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
-      );
-      setFilteredProducts(filtered);
-    } else {
-      setFilteredProducts(products);
-    }
-  }, [searchQuery, products]);
+    const delaySearch = setTimeout(() => {
+      loadProducts(currentPage, searchQuery);
+    }, searchQuery ? 500 : 0); // Debounce search by 500ms
+
+    return () => clearTimeout(delaySearch);
+  }, [currentPage, searchQuery]);
 
   const handleCreateProduct = () => {
     setModalMode("create");
@@ -122,7 +118,7 @@ export default function AdminProductsPage() {
 
     try {
       await productService.deleteProduct(productId);
-      await loadProducts();
+      await loadProducts(currentPage, searchQuery);
       toast({
         variant: "success",
         title: "Success",
@@ -191,7 +187,7 @@ export default function AdminProductsPage() {
           description: "Product updated successfully",
         });
       }
-      await loadProducts();
+      await loadProducts(currentPage, searchQuery);
       setIsModalOpen(false);
     } catch (error: unknown) {
       toast({
@@ -246,6 +242,71 @@ export default function AdminProductsPage() {
   }
 
   const stats = calculateStats();
+
+  // Pagination calculations
+  const totalPages = Math.ceil(totalProducts / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalProducts);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      setPageInput(page.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePageInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const page = parseInt(pageInput);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      handlePageChange(page);
+    } else {
+      setPageInput(currentPage.toString());
+    }
+  };
+
+  // Generate page numbers with ellipsis
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible + 2) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+
+      if (currentPage <= 3) {
+        // Near start
+        for (let i = 2; i <= Math.min(4, totalPages - 1); i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+      } else if (currentPage >= totalPages - 2) {
+        // Near end
+        pages.push('...');
+        for (let i = Math.max(2, totalPages - 3); i < totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // Middle
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+      }
+
+      // Always show last page
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   return (
     <AdminLayout>
@@ -376,8 +437,8 @@ export default function AdminProductsPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 bg-white">
-                  {filteredProducts.length === 0 ? (
+                <tbody className="divide-y divide-slate-200">
+                  {products.length === 0 ? (
                     <tr>
                       <td
                         colSpan={7}
@@ -387,12 +448,12 @@ export default function AdminProductsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredProducts.map((product) => (
+                    products.map((product) => (
                       <tr
                         key={product.productId}
                         className="hover:bg-slate-50 transition-colors"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             {product.productImages[0] && (
                               <Image
@@ -401,14 +462,14 @@ export default function AdminProductsPage() {
                                 width={40}
                                 height={40}
                                 unoptimized
-                                className="h-10 w-10 rounded object-cover"
+                                className="h-10 w-10 rounded object-cover flex-shrink-0"
                               />
                             )}
-                            <div className="max-w-xs">
-                              <div className="font-medium text-slate-900">
+                            <div className="min-w-0 max-w-xs">
+                              <div className="font-medium text-slate-900 truncate">
                                 {product.productName}
                               </div>
-                              <div className="text-sm text-slate-600 line-clamp-1">
+                              <div className="text-sm text-slate-600 truncate">
                                 {product.productDescription}
                               </div>
                             </div>
@@ -519,6 +580,71 @@ export default function AdminProductsPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200">
+                <div className="text-sm text-slate-600">
+                  Showing {startIndex + 1} to {endIndex} of {totalProducts} products
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-300"
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex gap-1">
+                    {getPageNumbers().map((page, index) => (
+                      page === '...' ? (
+                        <span key={`ellipsis-${index}`} className="px-2 py-1 text-slate-400">
+                          ...
+                        </span>
+                      ) : (
+                        <Button
+                          key={page}
+                          onClick={() => handlePageChange(page as number)}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          className={currentPage === page ? "bg-green-500 hover:bg-green-600" : "border-slate-300"}
+                        >
+                          {page}
+                        </Button>
+                      )
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-300"
+                  >
+                    Next
+                  </Button>
+                  <form onSubmit={handlePageInputSubmit} className="flex items-center gap-2 ml-4">
+                    <span className="text-sm text-slate-600">Go to:</span>
+                    <Input
+                      type="text"
+                      value={pageInput}
+                      onChange={(e) => setPageInput(e.target.value)}
+                      className="w-16 h-8 text-center border-slate-300"
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-300"
+                    >
+                      Go
+                    </Button>
+                  </form>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

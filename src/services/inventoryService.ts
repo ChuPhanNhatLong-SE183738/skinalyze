@@ -149,6 +149,45 @@ export class InventoryService {
   }
 
   /**
+   * Get processed adjustment requests (Admin only)
+   */
+  async getProcessedAdjustments(): Promise<PendingAdjustment[]> {
+    try {
+      const response = await fetch("/api/inventory/adjustments/processed", {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(
+          (error instanceof Error ? error.message : String(error)) ||
+            "Failed to fetch processed adjustments"
+        );
+      }
+
+      const result = await response.json();
+
+      // Handle if backend returns array directly
+      if (Array.isArray(result)) {
+        return result;
+      }
+
+      // Handle backend response format { data: [...] }
+      if (result.data && Array.isArray(result.data)) {
+        return result.data;
+      }
+
+      return [];
+    } catch (error: unknown) {
+      throw new Error(
+        (error instanceof Error ? error.message : String(error)) ||
+          "Failed to fetch processed adjustments"
+      );
+    }
+  }
+
+  /**
    * Approve or reject adjustment request (Admin only)
    */
   async reviewAdjustment(

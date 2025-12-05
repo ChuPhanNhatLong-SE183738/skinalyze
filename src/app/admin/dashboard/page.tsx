@@ -19,6 +19,21 @@ import { productService } from "@/services/productService";
 import { userService } from "@/services/userService";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import type { User as UserType } from "@/types/auth";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -31,6 +46,14 @@ export default function AdminDashboardPage() {
     pendingOrders: 0,
     isLoading: true,
   });
+
+  const [chartData, setChartData] = useState({
+    ordersByStatus: [] as { name: string; value: number; color: string }[],
+    revenueByMonth: [] as { month: string; revenue: number }[],
+    usersByRole: [] as { role: string; count: number; color: string }[],
+  });
+
+  const [rawOrders, setRawOrders] = useState<any[]>([]);
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -60,6 +83,27 @@ export default function AdminDashboardPage() {
     checkAuthStatus();
   }, [router]);
 
+  const calculateRevenueData = (orders: any[]) => {
+    const revenueData: Record<string, number> = {};
+    orders.forEach(order => {
+      if (order.status === 'COMPLETED' || order.status === 'DELIVERED') {
+        const date = new Date(order.createdAt);
+        const periodKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        
+        const orderTotal = order.orderItems?.reduce(
+          (sum: number, item: any) => sum + (parseFloat(item.priceAtTime) * item.quantity), 
+          0
+        ) || 0;
+        revenueData[periodKey] = (revenueData[periodKey] || 0) + orderTotal;
+      }
+    });
+
+    const revenueEntries = Object.entries(revenueData)
+      .map(([period, revenue]) => ({ month: period, revenue }));
+    
+    return revenueEntries.slice(-6);
+  };
+
   const fetchDashboardData = async () => {
     try {
       setStats(prev => ({ ...prev, isLoading: true }));
@@ -76,18 +120,21 @@ export default function AdminDashboardPage() {
       const products = productsData.products || [];
       const users = usersData.users || [];
 
+      // Store raw orders for later use
+      setRawOrders(orders);
+
       const totalRevenue = orders
-        .filter(order => order.status === 'COMPLETED' || order.status === 'DELIVERED')
-        .reduce((sum, order) => {
+        .filter((order: any) => order.status === 'COMPLETED' || order.status === 'DELIVERED')
+        .reduce((sum: number, order: any) => {
           const orderTotal = order.orderItems?.reduce(
-            (itemSum, item) => itemSum + (parseFloat(item.priceAtTime) * item.quantity), 
+            (itemSum: number, item: any) => itemSum + (parseFloat(item.priceAtTime) * item.quantity), 
             0
           ) || 0;
           return sum + orderTotal;
         }, 0);
 
-      const pendingOrders = orders.filter(order => order.status === 'PENDING').length;
-      const activeUsers = users.filter(user => user.isActive).length;
+      const pendingOrders = orders.filter((order: any) => order.status === 'PENDING').length;
+      const activeUsers = users.filter((user: any) => user.isActive).length;
 
       setStats({
         totalRevenue,
@@ -96,6 +143,57 @@ export default function AdminDashboardPage() {
         totalProducts: products.length,
         pendingOrders,
         isLoading: false,
+      });
+
+      // Prepare chart data
+      const statusCounts: Record<string, number> = {};
+      orders.forEach((order: any) => {
+        statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
+      });
+
+      const statusColors: Record<string, string> = {
+        PENDING: '#f59e0b',
+        PROCESSING: '#3b82f6',
+        COMPLETED: '#10b981',
+        DELIVERED: '#8b5cf6',
+        CANCELLED: '#ef4444',
+        CONFIRMED: '#06b6d4',
+        SHIPPING: '#f97316',
+      };
+
+      const ordersByStatus = Object.entries(statusCounts).map(([name, value]) => ({
+        name,
+        value,
+        color: statusColors[name] || '#6b7280',
+      }));
+
+      // Calculate initial revenue data
+      const revenueByMonth = calculateRevenueData(orders);
+
+      // Users by role (excluding admin)
+      const roleCounts: Record<string, number> = {};
+      users.forEach((user: any) => {
+        if (user.role !== 'admin') {
+          roleCounts[user.role] = (roleCounts[user.role] || 0) + 1;
+        }
+      });
+
+      const roleColors: Record<string, string> = {
+        staff: '#3b82f6',
+        customer: '#10b981',
+        dermatologist: '#f59e0b',
+      };
+
+      const usersByRole = Object.entries(roleCounts).map(([role, count]) => ({
+        role: role.charAt(0).toUpperCase() + role.slice(1),
+        count,
+        color: roleColors[role] || '#6b7280',
+      }));
+
+      setChartData({
+        ordersByStatus,
+        revenueByMonth,
+        usersByRole,
       });
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -193,6 +291,143 @@ export default function AdminDashboardPage() {
               <p className="text-xs opacity-75 mt-1">
                 All systems operational
               </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid gap-6 md:grid-cols-2 mb-8">
+          {/* Revenue Chart */}
+          <Card className="bg-white border-slate-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-slate-900">
+                <TrendingUp className="w-5 h-5" />
+                Revenue Trend (Last 6 Months)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {stats.isLoading ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={chartData.revenueByMonth}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis 
+                      dataKey="month" 
+                      stroke="#64748b"
+                      style={{ fontSize: '12px' }}
+                    />
+                    <YAxis 
+                      stroke="#64748b"
+                      style={{ fontSize: '12px' }}
+                      tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)}
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="#10b981" 
+                      strokeWidth={2}
+                      dot={{ fill: '#10b981', r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Orders by Status Chart */}
+          <Card className="bg-white border-slate-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-slate-900">
+                <ShoppingBag className="w-5 h-5" />
+                Orders by Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {stats.isLoading ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={chartData.ordersByStatus}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {chartData.ordersByStatus.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Users Chart */}
+        <div className="mb-8">
+          <Card className="bg-white border-slate-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-slate-900">
+                <Users className="w-5 h-5" />
+                Users by Role
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {stats.isLoading ? (
+                <div className="h-[300px] flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData.usersByRole}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis 
+                      dataKey="role" 
+                      stroke="#64748b"
+                      style={{ fontSize: '12px' }}
+                    />
+                    <YAxis 
+                      stroke="#64748b"
+                      style={{ fontSize: '12px' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'white', 
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]}>
+                      {chartData.usersByRole.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </div>

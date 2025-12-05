@@ -32,6 +32,9 @@ export default function AdminReportsPage() {
   );
   const { toast } = useToast();
   const router = useRouter();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const itemsPerPage = 10;
 
   // 1. Tải dữ liệu (Lấy cả INTERRUPTED và DISPUTED cùng lúc)
   useEffect(() => {
@@ -71,6 +74,65 @@ export default function AdminReportsPage() {
   const filteredAppointments = useMemo(() => {
     return appointments.filter((a) => a.appointmentStatus === activeTab);
   }, [appointments, activeTab]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredAppointments.length);
+  const currentAppointments = filteredAppointments.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      setPageInput(page.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePageInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const page = parseInt(pageInput);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      handlePageChange(page);
+    } else {
+      setPageInput(currentPage.toString());
+    }
+  };
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+
+      if (currentPage <= 3) {
+        for (let i = 2; i <= Math.min(4, totalPages - 1); i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+      } else if (currentPage >= totalPages - 2) {
+        pages.push('...');
+        for (let i = Math.max(2, totalPages - 3); i < totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+      }
+
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   // Helper render lý do (Reason)
   // const renderReason = (appointment: Appointment) => {
@@ -118,7 +180,10 @@ export default function AdminReportsPage() {
         <Tabs
           defaultValue={AppointmentStatus.INTERRUPTED}
           value={activeTab}
-          onValueChange={setActiveTab}
+          onValueChange={(value) => {
+            setActiveTab(value);
+            setCurrentPage(1);
+          }}
           className="w-full"
         >
           <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
@@ -182,7 +247,7 @@ export default function AdminReportsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredAppointments.map((appt) => (
+                      {currentAppointments.map((appt) => (
                         <TableRow key={appt.appointmentId}>
                           <TableCell className="font-mono text-xs text-muted-foreground">
                             {appt.appointmentId.substring(0, 8)}...
@@ -227,6 +292,71 @@ export default function AdminReportsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                )}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200">
+                    <div className="text-sm text-slate-600">
+                      Showing {startIndex + 1} to {endIndex} of {filteredAppointments.length} reports
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        variant="outline"
+                        size="sm"
+                        className="border-slate-300"
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex gap-1">
+                        {getPageNumbers().map((page, index) => (
+                          page === '...' ? (
+                            <span key={`ellipsis-${index}`} className="px-2 py-1 text-slate-400">
+                              ...
+                            </span>
+                          ) : (
+                            <Button
+                              key={page}
+                              onClick={() => handlePageChange(page as number)}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              className={currentPage === page ? "bg-green-500 hover:bg-green-600" : "border-slate-300"}
+                            >
+                              {page}
+                            </Button>
+                          )
+                        ))}
+                      </div>
+                      <Button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        variant="outline"
+                        size="sm"
+                        className="border-slate-300"
+                      >
+                        Next
+                      </Button>
+                      <form onSubmit={handlePageInputSubmit} className="flex items-center gap-2 ml-4">
+                        <span className="text-sm text-slate-600">Go to:</span>
+                        <input
+                          type="text"
+                          value={pageInput}
+                          onChange={(e) => setPageInput(e.target.value)}
+                          className="w-16 h-8 text-center border border-slate-300 rounded"
+                        />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          variant="outline"
+                          className="border-slate-300"
+                        >
+                          Go
+                        </Button>
+                      </form>
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>

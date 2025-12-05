@@ -29,6 +29,9 @@ export default function CategoriesPage() {
   );
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [toast, setToast] = useState<Toast | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const itemsPerPage = 9; // 3x3 grid
 
   useEffect(() => {
     checkAuthAndLoadCategories();
@@ -150,6 +153,65 @@ export default function CategoriesPage() {
         .includes(searchQuery.toLowerCase())
   );
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredCategories.length);
+  const currentCategories = filteredCategories.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      setPageInput(page.toString());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePageInputSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const page = parseInt(pageInput);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      handlePageChange(page);
+    } else {
+      setPageInput(currentPage.toString());
+    }
+  };
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+
+      if (currentPage <= 3) {
+        for (let i = 2; i <= Math.min(4, totalPages - 1); i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+      } else if (currentPage >= totalPages - 2) {
+        pages.push('...');
+        for (let i = Math.max(2, totalPages - 3); i < totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('...');
+      }
+
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -220,7 +282,10 @@ export default function CategoriesPage() {
               type="text"
               placeholder="Search categories..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-10 bg-white border-slate-300 text-slate-900"
             />
           </div>
@@ -250,7 +315,7 @@ export default function CategoriesPage() {
               </p>
             </div>
           ) : (
-            filteredCategories.map((category) => (
+            currentCategories.map((category) => (
               <Card
                 key={category.categoryId}
                 className="overflow-hidden hover:shadow-lg transition-shadow bg-white border-slate-200"
@@ -298,6 +363,71 @@ export default function CategoriesPage() {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 bg-white rounded-lg border border-slate-200 mt-6">
+            <div className="text-sm text-slate-600">
+              Showing {startIndex + 1} to {endIndex} of {filteredCategories.length} categories
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                variant="outline"
+                size="sm"
+                className="border-slate-300"
+              >
+                Previous
+              </Button>
+              <div className="flex gap-1">
+                {getPageNumbers().map((page, index) => (
+                  page === '...' ? (
+                    <span key={`ellipsis-${index}`} className="px-2 py-1 text-slate-400">
+                      ...
+                    </span>
+                  ) : (
+                    <Button
+                      key={page}
+                      onClick={() => handlePageChange(page as number)}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      className={currentPage === page ? "bg-green-500 hover:bg-green-600" : "border-slate-300"}
+                    >
+                      {page}
+                    </Button>
+                  )
+                ))}
+              </div>
+              <Button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                variant="outline"
+                size="sm"
+                className="border-slate-300"
+              >
+                Next
+              </Button>
+              <form onSubmit={handlePageInputSubmit} className="flex items-center gap-2 ml-4">
+                <span className="text-sm text-slate-600">Go to:</span>
+                <Input
+                  type="text"
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  className="w-16 h-8 text-center border-slate-300"
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="outline"
+                  className="border-slate-300"
+                >
+                  Go
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Category Form Modal */}

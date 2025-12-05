@@ -58,6 +58,7 @@ interface Order {
   paymentId: string | null;
   status: string;
   shippingAddress: string;
+  preferredShippingMethod?: string;
   notes: string | null;
   rejectionReason: string | null;
   processedBy: string | null;
@@ -592,6 +593,16 @@ export function OrderDetailModal({
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 {order.shippingAddress}
               </p>
+              {order.preferredShippingMethod && (
+                <div className="mt-2">
+                  <span className="text-sm font-medium text-slate-500">
+                    Shipping Method:
+                  </span>
+                  <span className="ml-2 text-sm text-slate-600 dark:text-slate-400">
+                    {order.preferredShippingMethod === "INTERNAL" ? "Internal Delivery" : "GHN Delivery"}
+                  </span>
+                </div>
+              )}
               {order.notes && (
                 <div className="mt-2">
                   <span className="text-sm font-medium text-slate-500">
@@ -754,7 +765,7 @@ export function OrderDetailModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
-          {order && order.status === "CONFIRMED" && (
+          {order && order.status === "CONFIRMED" && order.preferredShippingMethod === "INTERNAL" && (
             <Button
               onClick={() => setShowShippingModal(true)}
               className="bg-blue-600 hover:bg-blue-700"

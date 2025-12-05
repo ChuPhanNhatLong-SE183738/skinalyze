@@ -3,22 +3,31 @@ import type { OrdersResponse, Order } from "@/types/order";
 export class OrderService {
   /**
    * Get all orders (staff only)
-   * @param customerId - Optional customer ID to filter orders
+   * @param params - Pagination and filter parameters
    */
-  async getOrders(customerId?: string): Promise<OrdersResponse> {
+  async getOrders(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    customerId?: string;
+  }): Promise<OrdersResponse> {
     try {
-      const endpoint = customerId
-        ? `/orders?customerId=${customerId}`
-        : "/orders";
+      const queryParams = new URLSearchParams();
+      
+      if (params?.page) queryParams.append("page", params.page.toString());
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
+      if (params?.search) queryParams.append("search", params.search);
+      if (params?.status) queryParams.append("status", params.status);
+      if (params?.customerId) queryParams.append("customerId", params.customerId);
 
-      // This will be called through our API route that includes the auth token
-      const response = await fetch(
-        `/api/orders${customerId ? `?customerId=${customerId}` : ""}`,
-        {
-          method: "GET",
-          credentials: "include",
-        }
-      );
+      const queryString = queryParams.toString();
+      const url = `/api/orders${queryString ? `?${queryString}` : ""}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+      });
 
       if (!response.ok) {
         const error = await response.json();
