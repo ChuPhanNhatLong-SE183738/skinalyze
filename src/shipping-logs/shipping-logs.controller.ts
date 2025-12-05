@@ -30,6 +30,7 @@ import { AssignStaffDto } from './dto/assign-staff.dto';
 import {
   CreateBatchDeliveryDto,
   AssignGhnOrderDto,
+  UpdateBatchOrderDto,
 } from './dto/batch-delivery.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -303,6 +304,91 @@ export class ShippingLogsController {
     return ResponseHelper.success(
       `Found ${logs.length} orders in batch ${batchCode}`,
       logs,
+    );
+  }
+
+  @Post('batches/:batchCode/pickup')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '🚚 Staff pickup batch delivery',
+    description:
+      'Staff picks up a batch - all orders move to IN_TRANSIT status',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch picked up successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Batch BATCH-2025-12-05-ABC123 picked up successfully',
+        data: [
+          {
+            shippingLogId: '...',
+            orderId: '...',
+            status: 'IN_TRANSIT',
+            batchCode: 'BATCH-2025-12-05-ABC123',
+          },
+        ],
+      },
+    },
+  })
+  async pickupBatch(@Param('batchCode') batchCode: string, @Request() req) {
+    const staffId = req.user.userId;
+    const logs = await this.shippingLogsService.pickupBatch(batchCode, staffId);
+    return ResponseHelper.success(
+      `Batch ${batchCode} picked up successfully`,
+      logs,
+    );
+  }
+
+  @Patch('batches/:batchCode/orders/:orderId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '📝 Update status of an order in batch',
+    description:
+      'Staff updates individual order status while delivering batch (e.g., DELIVERED, FAILED)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Order status updated successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Order status updated to DELIVERED',
+        data: {
+          shippingLogId: '...',
+          orderId: '...',
+          batchCode: 'BATCH-2025-12-05-ABC123',
+          status: 'DELIVERED',
+          deliveredDate: '2025-12-05T10:30:00.000Z',
+        },
+      },
+    },
+  })
+  async updateBatchOrder(
+    @Param('batchCode') batchCode: string,
+    @Param('orderId') orderId: string,
+    @Body() updateDto: UpdateBatchOrderDto,
+    @Request() req,
+  ) {
+    const staffId = req.user.userId;
+    const log = await this.shippingLogsService.updateBatchOrder(
+      batchCode,
+      updateDto.orderId,
+      {
+        status: updateDto.status,
+        note: updateDto.note,
+        finishedPictures: updateDto.finishedPictures,
+      },
+      staffId,
+    );
+    return ResponseHelper.success(
+      `Order status updated to ${updateDto.status}`,
+      log,
     );
   }
 

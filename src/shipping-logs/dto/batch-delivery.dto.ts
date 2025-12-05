@@ -50,6 +50,41 @@ export class AssignGhnOrderDto {
   ghnTrackingData?: any;
 }
 
+export class UpdateBatchOrderDto {
+  @ApiProperty({
+    example: '550e8400-e29b-41d4-a716-446655440001',
+    description: 'Order ID to update status',
+  })
+  @IsUUID()
+  orderId: string;
+
+  @ApiProperty({
+    example: 'DELIVERED',
+    description: 'New status for this order',
+    enum: ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED'],
+  })
+  @IsEnum(['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED'])
+  status: string;
+
+  @ApiProperty({
+    example: 'Đã giao thành công cho khách hàng',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  note?: string;
+
+  @ApiProperty({
+    example: ['https://cloudinary.com/image1.jpg'],
+    description: 'Proof of delivery images',
+    required: false,
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  finishedPictures?: string[];
+}
+
 export class UpdateShippingMethodDto {
   @ApiProperty({
     enum: ShippingMethod,

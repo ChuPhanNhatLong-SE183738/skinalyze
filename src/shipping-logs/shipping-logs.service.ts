@@ -356,25 +356,23 @@ export class ShippingLogsService {
         });
       }
 
-      // Cập nhật batch info
+      // Cập nhật batch info - CHỈ GÁN BATCH, CHƯA PICKUP
       log.shippingStaffId = dto.shippingStaffId;
       log.shippingMethod = ShippingMethod.BATCH;
       log.batchCode = batchCode;
       log.batchOrderIds = dto.orderIds;
-      log.status = ShippingStatus.PICKED_UP;
+      // GIỮ NGUYÊN STATUS PENDING - staff sẽ gọi pickupBatch() để chuyển sang IN_TRANSIT
+      log.status = ShippingStatus.PENDING;
       if (dto.note) {
-        log.note = dto.note;
+        log.note = `Batch ${batchCode} - ${dto.note || 'Waiting for pickup'}`;
       }
 
       const savedLog = await this.shippingLogRepository.save(log);
       batchLogs.push(savedLog);
-
-      // Cập nhật order status
-      await this.syncOrderStatus(order.orderId, ShippingStatus.PICKED_UP);
     }
 
     this.logger.log(
-      `✅ Created batch delivery with ${batchLogs.length} orders`,
+      `✅ Created batch delivery ${batchCode} with ${batchLogs.length} orders (PENDING - waiting for staff pickup)`,
     );
     return batchLogs;
   }
@@ -412,6 +410,117 @@ export class ShippingLogsService {
     this.logger.log(
       `✅ Assigned GHN order ${dto.ghnOrderCode} to order ${dto.orderId}`,
     );
+    return savedLog;
+  }
+
+  /**
+   * 🚚 Staff pickup batch - tất cả orders chuyển sang IN_TRANSIT
+   */
+  async pickupBatch(
+    batchCode: string,
+    staffId: string,
+  ): Promise<ShippingLog[]> {
+    // Tìm tất cả shipping logs trong batch
+    const logs = await this.shippingLogRepository.find({
+      where: { batchCode },
+      relations: ['order', 'shippingStaff'],
+    });
+
+    if (logs.length === 0) {
+      throw new NotFoundException(`Batch ${batchCode} not found`);
+    }
+
+    // Kiểm tra staff có quyền pickup batch này không
+    const assignedStaffId = logs[0].shippingStaffId;
+    if (assignedStaffId !== staffId) {
+      throw new BadRequestException('You are not assigned to this batch');
+    }
+
+    // Kiểm tra batch phải ở trạng thái PENDING (chưa pickup)
+    const allPending = logs.every(
+      (log) => log.status === ShippingStatus.PENDING,
+    );
+    if (!allPending) {
+      throw new BadRequestException(
+        'This batch has already been picked up or some orders are not ready',
+      );
+    }
+
+    this.logger.log(
+      `📦 Staff ${staffId} is picking up batch ${batchCode} with ${logs.length} orders`,
+    );
+
+    // Cập nhật tất cả orders sang IN_TRANSIT
+    const updatedLogs: ShippingLog[] = [];
+    for (const log of logs) {
+      log.status = ShippingStatus.IN_TRANSIT;
+      log.note = `Batch ${batchCode} đang được vận chuyển - ${new Date().toLocaleString('vi-VN')}`;
+
+      const savedLog = await this.shippingLogRepository.save(log);
+      updatedLogs.push(savedLog);
+
+      // Đồng bộ order status
+      await this.syncOrderStatus(log.orderId, ShippingStatus.IN_TRANSIT);
+    }
+
+    this.logger.log(
+      `✅ Batch ${batchCode} is now IN_TRANSIT with ${updatedLogs.length} orders`,
+    );
+    return updatedLogs;
+  }
+
+  /**
+   * 📝 Cập nhật status của một order trong batch
+   */
+  async updateBatchOrder(
+    batchCode: string,
+    orderId: string,
+    updateDto: { status: string; note?: string; finishedPictures?: string[] },
+    staffId: string,
+  ): Promise<ShippingLog> {
+    // Tìm shipping log của order trong batch
+    const log = await this.shippingLogRepository.findOne({
+      where: { batchCode, orderId },
+      relations: ['order', 'shippingStaff'],
+    });
+
+    if (!log) {
+      throw new NotFoundException(
+        `Order ${orderId} not found in batch ${batchCode}`,
+      );
+    }
+
+    // Kiểm tra staff có quyền update không
+    if (log.shippingStaffId !== staffId) {
+      throw new BadRequestException('You are not assigned to this batch');
+    }
+
+    // Cập nhật status
+    const oldStatus = log.status;
+    log.status = updateDto.status as ShippingStatus;
+
+    if (updateDto.note) {
+      log.note = updateDto.note;
+    }
+
+    if (updateDto.finishedPictures) {
+      log.finishedPictures = updateDto.finishedPictures;
+    }
+
+    // Nếu DELIVERED thì set deliveredDate
+    if (updateDto.status === 'DELIVERED') {
+      log.deliveredDate = new Date();
+    }
+
+    const savedLog = await this.shippingLogRepository.save(log);
+
+    // Đồng bộ order status
+    await this.syncOrderStatus(orderId, log.status);
+
+    this.logger.log(
+      `✅ Updated order ${orderId} in batch ${batchCode}: ${oldStatus} → ${log.status}`,
+    );
+
     return savedLog;
   }
 
