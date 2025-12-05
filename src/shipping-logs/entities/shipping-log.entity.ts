@@ -116,19 +116,25 @@ export class ShippingLog {
   finishedPictures: string[];
 
   // 📦 Batch completion information
-  @Column({ type: 'json', nullable: true })
+  @Column({ name: 'batch_completion_photos', type: 'json', nullable: true })
   batchCompletionPhotos?: string[]; // Ảnh bằng chứng hoàn thành cả batch
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ name: 'batch_completion_note', type: 'text', nullable: true })
   batchCompletionNote?: string; // Ghi chú khi hoàn thành batch
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ name: 'batch_completed_at', type: 'datetime', nullable: true })
   batchCompletedAt?: Date; // Thời điểm hoàn thành batch
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ name: 'cod_collected', type: 'boolean', default: false })
   codCollected?: boolean; // Đã thu COD chưa
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    name: 'total_cod_amount',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
   totalCodAmount?: number; // Tổng số tiền COD thu được
 
   // Staff người thực hiện ship
