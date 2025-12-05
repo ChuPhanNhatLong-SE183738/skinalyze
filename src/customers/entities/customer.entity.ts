@@ -9,10 +9,10 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { CustomerSubscription } from '../../customer-subscription/entities/customer-subscription.entity';
-import { User } from 'src/users/entities/user.entity';
-import { TreatmentRoutine } from 'src/treatment-routines/entities/treatment-routine.entity';
-import { Appointment } from 'src/appointments/entities/appointment.entity';
-import { SkinAnalysis } from 'src/skin-analysis/entities/skin-analysis.entity';
+import { User } from '../../users/entities/user.entity';
+import { TreatmentRoutine } from '../../treatment-routines/entities/treatment-routine.entity';
+import { Appointment } from '../../appointments/entities/appointment.entity';
+import { SkinAnalysis } from '../../skin-analysis/entities/skin-analysis.entity';
 
 @Entity('customers')
 export class Customer {

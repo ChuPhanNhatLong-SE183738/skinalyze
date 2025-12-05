@@ -18,9 +18,9 @@ import {
   PaymentType,
 } from '../payments/entities/payment.entity';
 import { CreateCustomerSubscriptionDto } from './dto/create-customer-subscription.dto';
-import { Customer } from 'src/customers/entities/customer.entity';
-import { SubscriptionPlan } from 'src/subscription-plans/entities/subscription-plan.entity';
-import { UsersService } from 'src/users/users.service';
+import { Customer } from '../customers/entities/customer.entity';
+import { SubscriptionPlan } from '../subscription-plans/entities/subscription-plan.entity';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class CustomerSubscriptionService {

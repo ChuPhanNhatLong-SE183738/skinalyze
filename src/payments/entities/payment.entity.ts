@@ -9,9 +9,9 @@ import {
   OneToOne,
 } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
-import { Appointment } from 'src/appointments/entities/appointment.entity';
-import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
-import { User } from 'src/users/entities/user.entity';
+import { Appointment } from '../../appointments/entities/appointment.entity';
+import { CustomerSubscription } from '../../customer-subscription/entities/customer-subscription.entity';
+import { User } from '../../users/entities/user.entity';
 
 export enum PaymentStatus {
   PENDING = 'pending',

@@ -12,9 +12,9 @@ import { Customer } from '../../customers/entities/customer.entity';
 import { Dermatologist } from '../../dermatologists/entities/dermatologist.entity';
 import { TreatmentRoutine } from '../../treatment-routines/entities/treatment-routine.entity';
 import { SkinAnalysis } from '../../skin-analysis/entities/skin-analysis.entity'; // Import SkinAnalysis
-import { AvailabilitySlot } from 'src/availability-slots/entities/availability-slot.entity';
-import { Payment } from 'src/payments/entities/payment.entity';
-import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
+import { AvailabilitySlot } from '../../availability-slots/entities/availability-slot.entity';
+import { Payment } from '../../payments/entities/payment.entity';
+import { CustomerSubscription } from '../../customer-subscription/entities/customer-subscription.entity';
 import {
   AppointmentStatus,
   AppointmentType,

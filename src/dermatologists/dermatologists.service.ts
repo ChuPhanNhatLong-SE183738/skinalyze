@@ -12,16 +12,16 @@ import {
   CreateDermatologistDto,
   UpdateDermatologistDto,
 } from './dto/create-dermatologist.dto';
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from '../users/users.service';
 import {
   GetMyPatientsDto,
   PatientListItemDto,
 } from './dto/get-my-patients.dto';
-import { Customer } from 'src/customers/entities/customer.entity';
+import { Customer } from '../customers/entities/customer.entity';
 import { differenceInYears, isSameDay } from 'date-fns';
 import { Brackets } from 'typeorm';
-import { Appointment } from 'src/appointments/entities/appointment.entity';
-import { AppointmentStatus } from 'src/appointments/types/appointment.types';
+import { Appointment } from '../appointments/entities/appointment.entity';
+import { AppointmentStatus } from '../appointments/types/appointment.types';
 
 @Injectable()
 export class DermatologistsService {
@@ -47,7 +47,7 @@ export class DermatologistsService {
           `Dermatologist profile for this user already exists`,
         );
       }
-      
+
       const dermatologist = this.dermatologistRepository.create({
         ...createDermatologistDto,
         user: { userId: userId },

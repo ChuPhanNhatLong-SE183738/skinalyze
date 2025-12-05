@@ -26,14 +26,14 @@ import { SkinAnalysis } from '../skin-analysis/entities/skin-analysis.entity';
 import { TreatmentRoutine } from '../treatment-routines/entities/treatment-routine.entity';
 
 import { AvailabilitySlotsService } from '../availability-slots/availability-slots.service';
-import { PaymentsService } from 'src/payments/payments.service';
+import { PaymentsService } from '../payments/payments.service';
 import {
   Payment,
   PaymentMethod,
   PaymentStatus,
   PaymentType,
-} from 'src/payments/entities/payment.entity';
-import { GoogleMeetService } from 'src/google-meet/google-meet.service';
+} from '../payments/entities/payment.entity';
+import { GoogleMeetService } from '../google-meet/google-meet.service';
 
 import {
   AppointmentStatus,
@@ -41,15 +41,15 @@ import {
   TerminationReason,
 } from './types/appointment.types';
 import { CreateSubscriptionAppointmentDto } from './dto/create-subscription-appointment.dto';
-import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
-import { UserRole } from 'src/users/entities/user.entity';
+import { CustomerSubscriptionService } from '../customer-subscription/customer-subscription.service';
+import { UserRole } from '../users/entities/user.entity';
 import { CompleteAppointmentDto } from './dto/complete-appointment.dto';
 import {
   AppointmentDetailDto,
   FindAppointmentsDto,
 } from './dto/find-appointment.dto';
-import { UsersService } from 'src/users/users.service';
-import { AvailabilitySlot } from 'src/availability-slots/entities/availability-slot.entity';
+import { UsersService } from '../users/users.service';
+import { AvailabilitySlot } from '../availability-slots/entities/availability-slot.entity';
 import { ReportNoShowDto } from './dto/report-no-show-dto';
 import { InterruptAppointmentDto } from './dto/report-interrupt-appointment';
 

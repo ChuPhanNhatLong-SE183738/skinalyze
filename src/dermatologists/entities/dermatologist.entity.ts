@@ -10,9 +10,9 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { TreatmentRoutine } from '../../treatment-routines/entities/treatment-routine.entity';
-import { Appointment } from 'src/appointments/entities/appointment.entity';
+import { Appointment } from '../../appointments/entities/appointment.entity';
 import { SubscriptionPlan } from '../../subscription-plans/entities/subscription-plan.entity';
-import { AvailabilitySlot } from 'src/availability-slots/entities/availability-slot.entity';
+import { AvailabilitySlot } from '../../availability-slots/entities/availability-slot.entity';
 import { Specialization } from '../../specializations/entities/specialization.entity';
 
 @Entity('dermatologists')
@@ -59,6 +59,9 @@ export class Dermatologist {
   @OneToMany(() => AvailabilitySlot, (slot) => slot.dermatologist)
   slots: AvailabilitySlot[];
 
-  @OneToMany(() => Specialization, (specialization) => specialization.dermatologist)
+  @OneToMany(
+    () => Specialization,
+    (specialization) => specialization.dermatologist,
+  )
   specializations: Specialization[];
 }

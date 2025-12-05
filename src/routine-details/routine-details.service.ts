@@ -10,7 +10,7 @@ import { CreateRoutineDetailDto } from './dto/create-routine-detail.dto';
 import { UpdateRoutineDetailDto } from './dto/update-routine-detail.dto';
 import { RoutineDetail } from './entities/routine-detail.entity';
 import { TreatmentRoutine } from '../treatment-routines/entities/treatment-routine.entity';
-import { DermatologistsService } from 'src/dermatologists/dermatologists.service';
+import { DermatologistsService } from '../dermatologists/dermatologists.service';
 
 @Injectable()
 export class RoutineDetailsService {

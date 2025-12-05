@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import { Customer } from '../../customers/entities/customer.entity';
 import { SubscriptionPlan } from '../../subscription-plans/entities/subscription-plan.entity';
-import { Payment } from 'src/payments/entities/payment.entity';
+import { Payment } from '../../payments/entities/payment.entity';
 
 @Entity('customer_subscription')
 export class CustomerSubscription {

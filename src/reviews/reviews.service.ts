@@ -11,7 +11,7 @@ import { UpdateReviewDto } from './dto/update-review.dto';
 import { Review } from './entities/review.entity';
 import { Order } from '../orders/entities/order.entity';
 import { ResponseHelper } from '../utils/responses';
-import { OrderItem } from 'src/orders/entities/order-item.entity';
+import { OrderItem } from '../orders/entities/order-item.entity';
 
 @Injectable()
 export class ReviewsService {
@@ -55,7 +55,7 @@ export class ReviewsService {
     });
 
     const savedReview = await this.reviewRepository.save(review);
-    
+
     return ResponseHelper.created('Review created successfully', savedReview);
   }
 
@@ -88,7 +88,10 @@ export class ReviewsService {
       order: { createdAt: 'DESC' },
     });
 
-    return ResponseHelper.success('User reviews retrieved successfully', reviews);
+    return ResponseHelper.success(
+      'User reviews retrieved successfully',
+      reviews,
+    );
   }
 
   async findOne(reviewId: string) {
@@ -143,7 +146,7 @@ export class ReviewsService {
     }
 
     await this.reviewRepository.remove(review);
-    
+
     return ResponseHelper.success(
       `Review with ID ${reviewId} deleted successfully`,
     );

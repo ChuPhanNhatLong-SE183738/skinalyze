@@ -17,7 +17,7 @@ import { Customer } from '../customers/entities/customer.entity';
 import { Product } from '../products/entities/product.entity';
 import axios from 'axios';
 import * as FormData from 'form-data';
-import { CustomersService } from 'src/customers/customers.service';
+import { CustomersService } from '../customers/customers.service';
 
 @Injectable()
 export class SkinAnalysisService {
@@ -124,7 +124,10 @@ export class SkinAnalysisService {
         .createQueryBuilder('product')
         .where(
           productNames
-            .map((_, index) => `LOWER(product.productName) LIKE LOWER(:name${index})`)
+            .map(
+              (_, index) =>
+                `LOWER(product.productName) LIKE LOWER(:name${index})`,
+            )
             .join(' OR '),
           productNames.reduce((acc, name, index) => {
             acc[`name${index}`] = `%${name.trim()}%`;
@@ -311,7 +314,7 @@ export class SkinAnalysisService {
       recommendedProductIds = await this.findProductIdsByNames(
         classificationResult.product_suggestions,
       );
-      
+
       if (recommendedProductIds.length === 0) {
         recommendedProductIds = null; // Set to null if no products found
       }
@@ -337,7 +340,7 @@ export class SkinAnalysisService {
     this.logger.log(
       `Recommended product IDs: ${JSON.stringify(savedAnalysis.aiRecommendedProducts)}`,
     );
-    
+
     return savedAnalysis;
   }
 

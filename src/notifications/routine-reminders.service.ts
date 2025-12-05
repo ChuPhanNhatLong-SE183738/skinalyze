@@ -12,7 +12,7 @@ import {
   NotificationPriority,
 } from './entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
-import { RoutineStatus } from 'src/treatment-routines/entities/treatment-routine.entity';
+import { RoutineStatus } from '../treatment-routines/entities/treatment-routine.entity';
 
 @Injectable()
 export class RoutineRemindersService {

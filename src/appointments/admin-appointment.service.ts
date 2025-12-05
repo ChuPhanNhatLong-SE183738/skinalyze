@@ -11,8 +11,8 @@ import {
   AppointmentStatus,
   TerminationReason,
 } from './types/appointment.types';
-import { UsersService } from 'src/users/users.service';
-import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
+import { UsersService } from '../users/users.service';
+import { CustomerSubscriptionService } from '../customer-subscription/customer-subscription.service';
 import { DisputeDecision, ResolveDisputeDto } from './dto/resolve-dispute.dto';
 
 @Injectable()
