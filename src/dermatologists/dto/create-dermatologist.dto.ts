@@ -1,8 +1,6 @@
 import {
   IsOptional,
-  IsString,
   IsNumber,
-  IsArray,
   IsPositive,
   Min,
 } from 'class-validator';
@@ -17,11 +15,6 @@ export class CreateDermatologistDto {
   @IsPositive()
   @Min(0)
   defaultSlotPrice?: number;
-
-  @IsArray()
-  @IsOptional()
-  @IsString({ each: true })
-  specializations?: string[];
 }
 
 export class UpdateDermatologistDto {
@@ -34,9 +27,4 @@ export class UpdateDermatologistDto {
   @IsPositive()
   @Min(0)
   defaultSlotPrice?: number;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  specializations?: string[];
 }

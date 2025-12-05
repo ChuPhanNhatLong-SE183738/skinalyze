@@ -151,7 +151,6 @@ export class AuthService {
     } else if (user.role === UserRole.DERMATOLOGIST) {
       await this.dermatologistsService.create(user.userId, {
         yearsOfExp: 0,
-        specializations: [],
       });
     }
 
