@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, Not, In } from 'typeorm';
+import { Repository, IsNull, Not, In, LessThan } from 'typeorm';
 import { ShippingLog, ShippingMethod } from './entities/shipping-log.entity';
 import { CreateShippingLogDto } from './dto/create-shipping-log.dto';
 import { UpdateShippingLogDto } from './dto/update-shipping-log.dto';
@@ -17,6 +17,8 @@ import {
   AssignGhnOrderDto,
 } from './dto/batch-delivery.dto';
 import { GhnService } from '../ghn/ghn.service';
+import { User, UserRole } from '../users/entities/user.entity';
+import { subHours } from 'date-fns';
 
 @Injectable()
 export class ShippingLogsService {
@@ -27,6 +29,8 @@ export class ShippingLogsService {
     private readonly shippingLogRepository: Repository<ShippingLog>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly ghnService: GhnService,
   ) {}
@@ -952,5 +956,90 @@ export class ShippingLogsService {
     }
 
     return result;
+  }
+
+  /**
+   * 🤖 Auto-assign shipping logs to random staff after 24 hours
+   * This method is called by the scheduler
+   */
+  async autoAssignUnassignedShippingLogs(): Promise<{
+    assignedCount: number;
+    logs: ShippingLog[];
+  }> {
+    // Calculate 24 hours ago
+    const twentyFourHoursAgo = subHours(new Date(), 24);
+
+    this.logger.log(
+      `🔍 Looking for shipping logs created before ${twentyFourHoursAgo.toISOString()} without assigned staff...`,
+    );
+
+    // Find all shipping logs that are PENDING, have no staff, and were created more than 24 hours ago
+    const unassignedLogs = await this.shippingLogRepository.find({
+      where: {
+        shippingStaffId: IsNull(),
+        status: ShippingStatus.PENDING,
+        createdAt: LessThan(twentyFourHoursAgo),
+      },
+      relations: ['order', 'order.customer'],
+    });
+
+    if (unassignedLogs.length === 0) {
+      this.logger.log('✅ No unassigned shipping logs found');
+      return { assignedCount: 0, logs: [] };
+    }
+
+    this.logger.log(
+      `📦 Found ${unassignedLogs.length} unassigned shipping logs older than 24 hours`,
+    );
+
+    // Get all active staff users
+    const activeStaff = await this.userRepository.find({
+      where: {
+        role: UserRole.STAFF,
+        isActive: true,
+      },
+    });
+
+    if (activeStaff.length === 0) {
+      this.logger.warn('⚠️ No active staff members found for auto-assignment');
+      return { assignedCount: 0, logs: [] };
+    }
+
+    this.logger.log(
+      `👥 Found ${activeStaff.length} active staff members available for assignment`,
+    );
+
+    const assignedLogs: ShippingLog[] = [];
+
+    // Randomly assign each shipping log to a staff member
+    for (const log of unassignedLogs) {
+      // Get random staff
+      const randomStaff =
+        activeStaff[Math.floor(Math.random() * activeStaff.length)];
+
+      this.logger.log(
+        `🎲 Auto-assigning shipping log ${log.shippingLogId} (Order: ${log.orderId}) to staff ${randomStaff.fullName} (${randomStaff.userId})`,
+      );
+
+      // Assign staff and update status
+      log.shippingStaffId = randomStaff.userId;
+      log.status = ShippingStatus.PICKED_UP;
+      log.note = `Tự động gán cho staff ${randomStaff.fullName} vào ${new Date().toLocaleString('vi-VN')} (sau 24 giờ chưa có staff nhận)`;
+
+      const savedLog = await this.shippingLogRepository.save(log);
+      assignedLogs.push(savedLog);
+
+      // Sync order status to SHIPPING
+      await this.syncOrderStatus(log.orderId, ShippingStatus.PICKED_UP);
+    }
+
+    this.logger.log(
+      `✅ Successfully auto-assigned ${assignedLogs.length} shipping logs`,
+    );
+
+    return {
+      assignedCount: assignedLogs.length,
+      logs: assignedLogs,
+    };
   }
 }
