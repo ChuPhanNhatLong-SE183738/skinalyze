@@ -130,3 +130,20 @@ export interface SpecializationsResponse {
   message: string;
   data: Specialization[];
 }
+
+export interface SpecializationDetailResponse {
+  success: boolean;
+  message: string;
+  data: Specialization;
+}
+
+export interface UpdateSpecializationRequest {
+  specializationName?: string;
+  specialty?: string;
+  certificateImage?: File;
+  description?: string;
+  level?: string;
+  issuingAuthority?: string;
+  issueDate?: string;
+  expiryDate?: string;
+}

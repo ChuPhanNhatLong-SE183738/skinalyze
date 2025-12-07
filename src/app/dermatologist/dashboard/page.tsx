@@ -289,29 +289,6 @@ export default function DermatologistDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <Card className="bg-white border-slate-200">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
-                <h3 className="font-medium text-slate-900">View Appointments</h3>
-                <p className="text-sm text-slate-600 mt-1">Check your upcoming appointments</p>
-              </button>
-              <button className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
-                <h3 className="font-medium text-slate-900">Update Profile</h3>
-                <p className="text-sm text-slate-600 mt-1">Modify your professional information</p>
-              </button>
-              <button className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-left">
-                <h3 className="font-medium text-slate-900">Manage Schedule</h3>
-                <p className="text-sm text-slate-600 mt-1">Set your availability and time slots</p>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Appointments by Status - Pie Chart */}

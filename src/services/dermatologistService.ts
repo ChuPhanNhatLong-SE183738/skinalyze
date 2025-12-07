@@ -10,6 +10,8 @@ import type {
   Specialization,
   CreateSpecializationRequest,
   SpecializationsResponse,
+  SpecializationDetailResponse,
+  UpdateSpecializationRequest,
 } from "@/types/dermatologist";
 import type { ApiResponse } from "@/types/api";
 
@@ -197,6 +199,91 @@ class DermatologistService {
       return result.data;
     } catch (error) {
       console.error("Error fetching specializations:", error);
+      throw error;
+    }
+  }
+
+  async getSpecializationById(id: string): Promise<Specialization> {
+    try {
+      const response = await fetch(`/api/specializations/${id}`, {
+        method: "GET",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to fetch specialization");
+      }
+
+      const result: SpecializationDetailResponse = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error("Error fetching specialization:", error);
+      throw error;
+    }
+  }
+
+  async updateSpecialization(id: string, data: UpdateSpecializationRequest): Promise<Specialization> {
+    try {
+      const formData = new FormData();
+      
+      if (data.specializationName) {
+        formData.append('specializationName', data.specializationName);
+      }
+      if (data.specialty) {
+        formData.append('specialty', data.specialty);
+      }
+      if (data.certificateImage) {
+        formData.append('certificateImage', data.certificateImage);
+      }
+      if (data.description !== undefined) {
+        formData.append('description', data.description);
+      }
+      if (data.level !== undefined) {
+        formData.append('level', data.level);
+      }
+      if (data.issuingAuthority !== undefined) {
+        formData.append('issuingAuthority', data.issuingAuthority);
+      }
+      if (data.issueDate !== undefined) {
+        formData.append('issueDate', data.issueDate);
+      }
+      if (data.expiryDate !== undefined) {
+        formData.append('expiryDate', data.expiryDate);
+      }
+
+      const response = await fetch(`/api/specializations/${id}`, {
+        method: "PATCH",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update specialization");
+      }
+
+      const result: SpecializationDetailResponse = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error("Error updating specialization:", error);
+      throw error;
+    }
+  }
+
+  async deleteSpecialization(id: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/specializations/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete specialization");
+      }
+    } catch (error) {
+      console.error("Error deleting specialization:", error);
       throw error;
     }
   }
