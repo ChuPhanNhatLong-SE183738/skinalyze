@@ -45,6 +45,13 @@ class TreatmentRoutineService {
     return res.data;
   }
 
+  async updateMetadata(
+    id: string,
+    payload: Pick<UpdateTreatmentRoutineDto, "routineName" | "status">
+  ): Promise<TreatmentRoutine> {
+    return this.update(id, payload);
+  }
+
   async getTreatmentTimeline(routineId: string): Promise<TimelineEvent[]> {
     const res = await http.get<ApiResponse<TimelineEvent[]>>(
       `/api/treatment-routines/${routineId}/timeline`

@@ -20,6 +20,7 @@ import { customerService } from "@/services/customerService";
 import type {
   TreatmentRoutine,
   TimelineEvent,
+  UpdateTreatmentRoutineDto,
 } from "@/types/treatment-routine";
 import type {
   RoutineDetail,
@@ -61,6 +62,11 @@ interface TreatmentContextType {
     dto: UpdateRoutineDetailDto
   ) => Promise<void>;
   deleteRoutineDetail: (detailId: string) => Promise<void>;
+
+  // --- Actions: Routine Meta ---
+  updateRoutineMeta: (
+    updates: Pick<UpdateTreatmentRoutineDto, "routineName" | "status">
+  ) => Promise<void>;
 
   // --- Actions: Cache & Cart ---
   cacheProducts: (products: Product[]) => void;
@@ -325,6 +331,43 @@ export function TreatmentProvider({ children }: { children: React.ReactNode }) {
     [refreshRoutineData, toast]
   );
 
+  const updateRoutineMeta = useCallback(
+    async (
+      updates: Pick<UpdateTreatmentRoutineDto, "routineName" | "status">
+    ) => {
+      if (!currentActiveRoutine) {
+        throw new Error("No routine selected to update.");
+      }
+
+      setIsUpdating(true);
+      try {
+        await treatmentRoutineService.updateMetadata(
+          currentActiveRoutine.routineId,
+          updates
+        );
+        await refreshRoutineData();
+        toast({
+          title: "Routine updated",
+          description: "Routine information saved successfully.",
+          variant: "success",
+        });
+      } catch (error) {
+        console.error("Routine metadata update failed", error);
+        toast({
+          title: "Failed to update routine",
+          description: "Please try again.",
+          variant: "error",
+        });
+        throw error instanceof Error
+          ? error
+          : new Error("Failed to update routine metadata");
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [currentActiveRoutine, refreshRoutineData, toast]
+  );
+
   const addToPending = useCallback((product: Product) => {
     setPendingProducts((prev) => {
       if (prev.some((p) => p.productId === product.productId)) return prev;
@@ -344,7 +387,7 @@ export function TreatmentProvider({ children }: { children: React.ReactNode }) {
     <TreatmentContext.Provider
       value={{
         initializeCreateMode,
-        
+
         // Data
         customer,
         activeRoutine,
@@ -366,6 +409,7 @@ export function TreatmentProvider({ children }: { children: React.ReactNode }) {
         addRoutineDetail,
         updateRoutineDetail,
         deleteRoutineDetail,
+        updateRoutineMeta,
         // Cache & Cart
         cacheProducts,
         pendingProducts,
