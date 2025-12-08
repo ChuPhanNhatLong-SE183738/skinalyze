@@ -24,6 +24,20 @@ export class SkinAnalysisService {
   private readonly logger = new Logger(SkinAnalysisService.name);
   private readonly aiServiceUrl: string;
 
+  private readonly DISEASE_TO_SKIN_TYPES: Record<string, string[]> = {
+    warts: ['combination', 'dry', 'normal', 'oily', 'sensitive'],
+    acne: ['combination', 'oily', 'sensitive'],
+    actinic_keratosis: ['dry', 'normal'],
+    drug_eruption: ['combination', 'dry', 'normal', 'oily', 'sensitive'],
+    eczema: ['combination', 'dry', 'normal', 'oily', 'sensitive'],
+    psoriasis: ['dry'],
+    rosacea: ['combination', 'oily', 'sensitive'],
+    seborrh_keratoses: ['normal', 'oily', 'sensitive'],
+    sun_sunlight_damage: ['combination', 'dry', 'normal', 'sensitive'],
+    tinea: ['combination', 'oily'],
+    normal: ['normal'],
+  };
+
   constructor(
     @InjectRepository(SkinAnalysis)
     private skinAnalysisRepository: Repository<SkinAnalysis>,
@@ -316,17 +330,26 @@ export class SkinAnalysisService {
       );
 
       if (recommendedProductIds.length === 0) {
-        recommendedProductIds = null; // Set to null if no products found
+        recommendedProductIds = null;
       }
     }
 
-    // 5. Save to DB with all predictions and product IDs
+    // 5. Map disease to skin conditions
+    const detectedDisease = classificationResult.predicted_class;
+    const skinConditions = this.mapDiseaseToConditions(detectedDisease);
+
+    this.logger.debug(
+      `Mapped disease "${detectedDisease}" to conditions: ${JSON.stringify(skinConditions)}`,
+    );
+
+    // 6. Save to DB with all predictions, product IDs, and skin conditions
     const skinAnalysisData: DeepPartial<SkinAnalysis> = {
       customerId,
       source: 'AI_SCAN',
       imageUrls: [imageUrl],
       notes: notes ?? null,
-      aiDetectedDisease: classificationResult.predicted_class,
+      aiDetectedDisease: detectedDisease,
+      aiDetectedCondition: skinConditions ? skinConditions.join(', ') : null, // Store as comma-separated string
       confidence: classificationResult.confidence,
       allPredictions: classificationResult.all_predictions,
       aiRecommendedProducts: recommendedProductIds,
@@ -339,6 +362,9 @@ export class SkinAnalysisService {
     this.logger.log(`Disease analysis completed: ${savedAnalysis.analysisId}`);
     this.logger.log(
       `Recommended product IDs: ${JSON.stringify(savedAnalysis.aiRecommendedProducts)}`,
+    );
+    this.logger.log(
+      `Detected conditions: ${savedAnalysis.aiDetectedCondition}`,
     );
 
     return savedAnalysis;
@@ -370,5 +396,39 @@ export class SkinAnalysisService {
       relations: ['customer'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  /**
+   * Maps the detected disease to possible skin conditions/types
+   * @param disease - The AI detected disease (e.g., "Acne", "Tinea", "Normal")
+   * @returns Array of possible skin conditions or null if no mapping found
+   */
+  private mapDiseaseToConditions(disease: string | null): string[] | null {
+    if (!disease) {
+      return null;
+    }
+
+    // Normalize the disease name: lowercase and replace spaces with underscores
+    const normalizedDisease = disease.toLowerCase().replace(/\s+/g, '_');
+
+    // Try to find exact match first
+    if (this.DISEASE_TO_SKIN_TYPES[normalizedDisease]) {
+      return this.DISEASE_TO_SKIN_TYPES[normalizedDisease];
+    }
+
+    // Try partial match for cases like "Seborrh_Keratoses" vs "seborrheic_keratoses"
+    for (const [key, conditions] of Object.entries(this.DISEASE_TO_SKIN_TYPES)) {
+      if (
+        normalizedDisease.includes(key) ||
+        key.includes(normalizedDisease) ||
+        normalizedDisease.replace(/_/g, '').includes(key.replace(/_/g, '')) ||
+        key.replace(/_/g, '').includes(normalizedDisease.replace(/_/g, ''))
+      ) {
+        return conditions;
+      }
+    }
+
+    this.logger.warn(`No skin condition mapping found for disease: ${disease}`);
+    return null;
   }
 }

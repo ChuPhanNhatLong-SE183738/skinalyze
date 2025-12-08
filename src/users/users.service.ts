@@ -284,4 +284,39 @@ export class UsersService {
 
     return { oldBalance, newBalance };
   }
+
+  /**
+   * Upload user profile photo to Cloudinary
+   * @param userId - User ID
+   * @param photo - Image file to upload
+   * @returns Updated user with new photoUrl
+   */
+  async uploadProfilePhoto(
+    userId: string,
+    photo: Express.Multer.File,
+  ): Promise<any> {
+    const user = await this.findOne(userId);
+
+    try {
+      const uploadResult = await this.cloudinaryService.uploadImage(
+        photo,
+        'user-profiles',
+      );
+
+      user.photoUrl = uploadResult.secure_url;
+      const updatedUser = await this.userRepository.save(user);
+
+      this.logger.log(
+        `Profile photo uploaded for user ${userId}: ${uploadResult.secure_url}`,
+      );
+
+      return ResponseHelper.success('Profile photo uploaded successfully', {
+        userId: updatedUser.userId,
+        photoUrl: updatedUser.photoUrl,
+      });
+    } catch (error) {
+      this.logger.error('Failed to upload profile photo:', error);
+      throw new BadRequestException('Failed to upload profile photo');
+    }
+  }
 }

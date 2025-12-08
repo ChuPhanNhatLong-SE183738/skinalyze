@@ -350,4 +350,54 @@ export class UsersController {
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
+
+  @Post('upload-photo')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('photo'))
+  @ApiOperation({ summary: 'Upload profile photo' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Profile photo file',
+    schema: {
+      type: 'object',
+      properties: {
+        photo: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image file (jpg, jpeg, png, gif, webp)',
+        },
+      },
+      required: ['photo'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Photo uploaded successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Profile photo uploaded successfully',
+        data: {
+          userId: 'uuid',
+          photoUrl: 'https://res.cloudinary.com/...',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Bad request - Invalid file' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async uploadProfilePhoto(
+    @GetUser() user: User,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+          new FileTypeValidator({ fileType: /(jpg|jpeg|png|gif|webp)$/i }),
+        ],
+      }),
+    )
+    photo: Express.Multer.File,
+  ) {
+    return this.usersService.uploadProfilePhoto(user.userId, photo);
+  }
 }
