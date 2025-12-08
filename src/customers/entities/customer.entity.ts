@@ -27,9 +27,6 @@ export class Customer {
   aiUsageAmount: number;
 
   @Column({ type: 'json', nullable: true })
-  allergicTo: string[];
-
-  @Column({ type: 'json', nullable: true })
   pastDermatologicalHistory: string[];
 
   @Column({
