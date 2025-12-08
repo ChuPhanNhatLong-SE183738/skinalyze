@@ -25,7 +25,10 @@ async function bootstrap() {
   // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('Skinalyze API')
-    .setDescription('The Skinalyze API documentation')
+    .setDescription(
+      'The Skinalyze API documentation\n\n' +
+      '**[📥 Download Swagger JSON](/api/docs-json)**',
+    )
     .setVersion('1.0')
     .addTag('Products')
     .addTag('Users')
@@ -37,7 +40,14 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+
+  SwaggerModule.setup('api/docs', app, document, {
+    customSiteTitle: 'Skinalyze API Documentation',
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+    jsonDocumentUrl: '/api/docs-json',
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

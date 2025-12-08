@@ -7,6 +7,7 @@ import {
   IsArray,
   IsNumber,
 } from 'class-validator';
+import { ShippingMethod } from '../../shipping-logs/entities/shipping-log.entity';
 
 export enum PaymentMethod {
   WALLET = 'wallet', // Thanh toán bằng balance
@@ -16,11 +17,6 @@ export enum PaymentMethod {
   MOMO = 'momo',
   ZALOPAY = 'zalopay',
   VNPAY = 'vnpay',
-}
-
-export enum ShippingMethod {
-  INTERNAL = 'INTERNAL', // Shipper nội bộ
-  GHN = 'GHN', // Giao hàng nhanh
 }
 
 export class CheckoutCartDto {
@@ -109,7 +105,8 @@ export class CheckoutCartDto {
   @ApiProperty({
     example: 'INTERNAL',
     enum: ShippingMethod,
-    description: 'Shipping method: INTERNAL (nội bộ) or GHN (giao hàng nhanh)',
+    description:
+      'Shipping method: INTERNAL (nội bộ), GHN (third-party), or BATCH (combine orders)',
     default: ShippingMethod.INTERNAL,
     required: false,
   })

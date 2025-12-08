@@ -23,15 +23,15 @@ import { OrderStatus } from '../orders/entities/order.entity';
 import { UsersService } from '../users/users.service';
 import { CartService } from '../cart/cart.service';
 import { Appointment } from '../appointments/entities/appointment.entity';
-import { AppointmentsService } from 'src/appointments/appointments.service';
+import { AppointmentsService } from '../appointments/appointments.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   AppointmentStatus,
   TerminationReason,
-} from 'src/appointments/types/appointment.types';
-import { CustomerSubscriptionService } from 'src/customer-subscription/customer-subscription.service';
-import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
-import { SlotStatus } from 'src/availability-slots/entities/availability-slot.entity';
+} from '../appointments/types/appointment.types';
+import { CustomerSubscriptionService } from '../customer-subscription/customer-subscription.service';
+import { CustomerSubscription } from '../customer-subscription/entities/customer-subscription.entity';
+import { SlotStatus } from '../availability-slots/entities/availability-slot.entity';
 
 interface PaymentProcessingResult {
   success: boolean;

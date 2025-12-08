@@ -16,13 +16,7 @@ export class CreateCustomerDto {
   @IsOptional()
   @IsNumber()
   aiUsageAmount?: number;
-
-  @ApiProperty({ example: [], required: false })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  allergicTo?: string[];
-
+  
   @ApiProperty({ example: [], required: false })
   @IsOptional()
   @IsArray()

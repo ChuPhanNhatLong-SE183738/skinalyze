@@ -21,9 +21,9 @@ export enum ShippingStatus {
 }
 
 export enum ShippingMethod {
-  INTERNAL = 'INTERNAL', // Shipper nội bộ giao
+  INTERNAL = 'INTERNAL', // Shipper nội bộ giao đơn lẻ
   GHN = 'GHN', // Giao qua GHN
-  BATCH = 'BATCH', // Gom nhiều đơn giao cùng lúc (internal)
+  BATCH = 'BATCH', // Gom nhiều đơn giao cùng lúc
 }
 
 @Entity('shipping_logs')
@@ -114,6 +114,28 @@ export class ShippingLog {
   // 📸 Ảnh bằng chứng hoàn thành giao hàng (multiple images)
   @Column({ type: 'json', nullable: true })
   finishedPictures: string[];
+
+  // 📦 Batch completion information
+  @Column({ name: 'batch_completion_photos', type: 'json', nullable: true })
+  batchCompletionPhotos?: string[]; // Ảnh bằng chứng hoàn thành cả batch
+
+  @Column({ name: 'batch_completion_note', type: 'text', nullable: true })
+  batchCompletionNote?: string; // Ghi chú khi hoàn thành batch
+
+  @Column({ name: 'batch_completed_at', type: 'datetime', nullable: true })
+  batchCompletedAt?: Date; // Thời điểm hoàn thành batch
+
+  @Column({ name: 'cod_collected', type: 'boolean', default: false })
+  codCollected?: boolean; // Đã thu COD chưa
+
+  @Column({
+    name: 'total_cod_amount',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+  })
+  totalCodAmount?: number; // Tổng số tiền COD thu được
 
   // Staff người thực hiện ship
   @ManyToOne(() => User, { nullable: true })

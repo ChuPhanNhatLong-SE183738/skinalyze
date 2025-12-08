@@ -13,7 +13,7 @@ import { Dermatologist } from '../../dermatologists/entities/dermatologist.entit
 import { Customer } from '../../customers/entities/customer.entity';
 import { Appointment } from '../../appointments/entities/appointment.entity';
 import { RoutineDetail } from '../../routine-details/entities/routine-detail.entity';
-import { SkinAnalysis } from 'src/skin-analysis/entities/skin-analysis.entity';
+import { SkinAnalysis } from '../../skin-analysis/entities/skin-analysis.entity';
 
 export enum RoutineStatus {
   ACTIVE = 'ACTIVE',

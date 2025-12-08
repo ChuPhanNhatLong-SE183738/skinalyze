@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, In } from 'typeorm';
+import { Repository, IsNull, Not, In, LessThan } from 'typeorm';
 import { ShippingLog, ShippingMethod } from './entities/shipping-log.entity';
 import { CreateShippingLogDto } from './dto/create-shipping-log.dto';
 import { UpdateShippingLogDto } from './dto/update-shipping-log.dto';
@@ -17,6 +17,8 @@ import {
   AssignGhnOrderDto,
 } from './dto/batch-delivery.dto';
 import { GhnService } from '../ghn/ghn.service';
+import { User, UserRole } from '../users/entities/user.entity';
+import { subHours } from 'date-fns';
 
 @Injectable()
 export class ShippingLogsService {
@@ -27,6 +29,8 @@ export class ShippingLogsService {
     private readonly shippingLogRepository: Repository<ShippingLog>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     private readonly cloudinaryService: CloudinaryService,
     private readonly ghnService: GhnService,
   ) {}
@@ -356,25 +360,23 @@ export class ShippingLogsService {
         });
       }
 
-      // Cập nhật batch info
+      // Cập nhật batch info - CHỈ GÁN BATCH, CHƯA PICKUP
       log.shippingStaffId = dto.shippingStaffId;
       log.shippingMethod = ShippingMethod.BATCH;
       log.batchCode = batchCode;
       log.batchOrderIds = dto.orderIds;
-      log.status = ShippingStatus.PICKED_UP;
+      // GIỮ NGUYÊN STATUS PENDING - staff sẽ gọi pickupBatch() để chuyển sang IN_TRANSIT
+      log.status = ShippingStatus.PENDING;
       if (dto.note) {
-        log.note = dto.note;
+        log.note = `Batch ${batchCode} - ${dto.note || 'Waiting for pickup'}`;
       }
 
       const savedLog = await this.shippingLogRepository.save(log);
       batchLogs.push(savedLog);
-
-      // Cập nhật order status
-      await this.syncOrderStatus(order.orderId, ShippingStatus.PICKED_UP);
     }
 
     this.logger.log(
-      `✅ Created batch delivery with ${batchLogs.length} orders`,
+      `✅ Created batch delivery ${batchCode} with ${batchLogs.length} orders (PENDING - waiting for staff pickup)`,
     );
     return batchLogs;
   }
@@ -416,6 +418,318 @@ export class ShippingLogsService {
   }
 
   /**
+   * 🚚 Staff pickup batch - tất cả orders chuyển sang IN_TRANSIT
+   */
+  async pickupBatch(
+    batchCode: string,
+    staffId: string,
+  ): Promise<ShippingLog[]> {
+    // Tìm tất cả shipping logs trong batch
+    const logs = await this.shippingLogRepository.find({
+      where: { batchCode },
+      relations: ['order', 'shippingStaff'],
+    });
+
+    if (logs.length === 0) {
+      throw new NotFoundException(`Batch ${batchCode} not found`);
+    }
+
+    // Kiểm tra staff có quyền pickup batch này không
+    const assignedStaffId = logs[0].shippingStaffId;
+    if (assignedStaffId !== staffId) {
+      throw new BadRequestException('You are not assigned to this batch');
+    }
+
+    // Kiểm tra batch phải ở trạng thái PENDING (chưa pickup)
+    const allPending = logs.every(
+      (log) => log.status === ShippingStatus.PENDING,
+    );
+    if (!allPending) {
+      throw new BadRequestException(
+        'This batch has already been picked up or some orders are not ready',
+      );
+    }
+
+    this.logger.log(
+      `📦 Staff ${staffId} is picking up batch ${batchCode} with ${logs.length} orders`,
+    );
+
+    // Cập nhật tất cả orders sang IN_TRANSIT
+    const updatedLogs: ShippingLog[] = [];
+    for (const log of logs) {
+      log.status = ShippingStatus.IN_TRANSIT;
+      log.note = `Batch ${batchCode} đang được vận chuyển - ${new Date().toLocaleString('vi-VN')}`;
+
+      const savedLog = await this.shippingLogRepository.save(log);
+      updatedLogs.push(savedLog);
+
+      // Đồng bộ order status
+      await this.syncOrderStatus(log.orderId, ShippingStatus.IN_TRANSIT);
+    }
+
+    this.logger.log(
+      `✅ Batch ${batchCode} is now IN_TRANSIT with ${updatedLogs.length} orders`,
+    );
+    return updatedLogs;
+  }
+
+  /**
+   * 📝 Cập nhật status của một order trong batch
+   */
+  async updateBatchOrder(
+    batchCode: string,
+    orderId: string,
+    updateDto: {
+      status: string;
+      note?: string;
+      unexpectedCase?: string;
+      finishedPictures?: string[];
+    },
+    staffId: string,
+  ): Promise<ShippingLog> {
+    // Tìm shipping log của order trong batch
+    const log = await this.shippingLogRepository.findOne({
+      where: { batchCode, orderId },
+      relations: ['order', 'shippingStaff'],
+    });
+
+    if (!log) {
+      throw new NotFoundException(
+        `Order ${orderId} not found in batch ${batchCode}`,
+      );
+    }
+
+    // Kiểm tra staff có quyền update không
+    if (log.shippingStaffId !== staffId) {
+      throw new BadRequestException('You are not assigned to this batch');
+    }
+
+    // Validation theo API requirements
+    if (updateDto.status === 'DELIVERED') {
+      if (
+        !updateDto.finishedPictures ||
+        updateDto.finishedPictures.length === 0
+      ) {
+        throw new BadRequestException(
+          'finishedPictures are required for DELIVERED status',
+        );
+      }
+    }
+
+    if (updateDto.status === 'FAILED') {
+      if (!updateDto.unexpectedCase) {
+        throw new BadRequestException(
+          'unexpectedCase is required for FAILED status',
+        );
+      }
+    }
+
+    // Cập nhật status
+    const oldStatus = log.status;
+    log.status = updateDto.status as ShippingStatus;
+
+    if (updateDto.note) {
+      log.note = updateDto.note;
+    }
+
+    if (updateDto.unexpectedCase) {
+      log.unexpectedCase = updateDto.unexpectedCase;
+    }
+
+    if (updateDto.finishedPictures) {
+      log.finishedPictures = updateDto.finishedPictures;
+    }
+
+    // Nếu DELIVERED thì set deliveredDate
+    if (updateDto.status === 'DELIVERED') {
+      log.deliveredDate = new Date();
+    }
+
+    // Nếu FAILED thì set returnedDate
+    if (updateDto.status === 'FAILED') {
+      log.returnedDate = new Date();
+    }
+
+    const savedLog = await this.shippingLogRepository.save(log);
+
+    // Đồng bộ order status
+    await this.syncOrderStatus(orderId, log.status);
+
+    this.logger.log(
+      `✅ Updated order ${orderId} in batch ${batchCode}: ${oldStatus} → ${log.status}`,
+    );
+
+    return savedLog;
+  }
+
+  /**
+   * ✅ Complete batch delivery with batch completion proof
+   */
+  async completeBatch(
+    batchCode: string,
+    completionDto: {
+      completionPhotos: string[];
+      completionNote?: string;
+      codCollected?: boolean;
+      totalCodAmount?: number;
+    },
+    staffId: string,
+  ) {
+    // Lấy tất cả logs trong batch
+    const logs = await this.shippingLogRepository.find({
+      where: { batchCode },
+      relations: ['order'],
+    });
+
+    if (logs.length === 0) {
+      throw new NotFoundException(`Batch ${batchCode} not found`);
+    }
+
+    // Kiểm tra staff có quyền complete không
+    if (logs[0].shippingStaffId !== staffId) {
+      throw new BadRequestException(
+        "You don't have permission to complete this batch",
+      );
+    }
+
+    // Tự động cập nhật status của các đơn chưa hoàn thành thành DELIVERED
+    for (const log of logs) {
+      if (
+        ![
+          ShippingStatus.DELIVERED,
+          ShippingStatus.FAILED,
+          ShippingStatus.RETURNED,
+        ].includes(log.status)
+      ) {
+        // Tự động đánh dấu là DELIVERED khi complete batch
+        log.status = ShippingStatus.DELIVERED;
+        log.deliveredDate = new Date();
+
+        // Cập nhật order status
+        if (log.order) {
+          log.order.status = OrderStatus.COMPLETED;
+          await this.orderRepository.save(log.order);
+        }
+
+        this.logger.log(
+          `📦 Auto-completing order ${log.order?.orderId} in batch ${batchCode}`,
+        );
+      }
+    }
+
+    // Kiểm tra batch đã complete chưa
+    if (logs[0].batchCompletedAt) {
+      throw new BadRequestException('Batch already completed');
+    }
+
+    // Validate completion photos
+    if (
+      !completionDto.completionPhotos ||
+      completionDto.completionPhotos.length === 0
+    ) {
+      throw new BadRequestException('Completion photos are required');
+    }
+
+    this.logger.log(
+      `📦 Completing batch ${batchCode} with ${completionDto.completionPhotos.length} photos`,
+    );
+
+    // Update tất cả logs trong batch với batch completion info
+    const completedAt = new Date();
+    const updatedLogs: ShippingLog[] = [];
+
+    for (const log of logs) {
+      log.batchCompletionPhotos = completionDto.completionPhotos;
+      log.batchCompletionNote = completionDto.completionNote;
+      log.batchCompletedAt = completedAt;
+      log.codCollected = completionDto.codCollected || false;
+      log.totalCodAmount = completionDto.totalCodAmount;
+
+      const savedLog = await this.shippingLogRepository.save(log);
+      updatedLogs.push(savedLog);
+    }
+
+    // Tính statistics
+    const deliveredCount = logs.filter(
+      (log) => log.status === ShippingStatus.DELIVERED,
+    ).length;
+    const failedCount = logs.filter(
+      (log) => log.status === ShippingStatus.FAILED,
+    ).length;
+
+    this.logger.log(
+      `✅ Batch ${batchCode} completed: ${deliveredCount} delivered, ${failedCount} failed`,
+    );
+
+    return {
+      batchCode,
+      status: 'COMPLETED',
+      orderCount: logs.length,
+      completedCount: logs.length,
+      deliveredCount,
+      failedCount,
+      completionPhotos: completionDto.completionPhotos,
+      completionNote: completionDto.completionNote,
+      completedAt,
+      codCollected: completionDto.codCollected || false,
+      totalCodAmount: completionDto.totalCodAmount,
+    };
+  }
+
+  /**
+   * 📸 Upload batch completion photos to Cloudinary
+   */
+  async uploadBatchCompletionPhotos(
+    batchCode: string,
+    files: Express.Multer.File[],
+    staffId: string,
+  ): Promise<{ photoUrls: string[]; batchCode: string }> {
+    // Lấy batch logs
+    const logs = await this.shippingLogRepository.find({
+      where: { batchCode },
+    });
+
+    if (logs.length === 0) {
+      throw new NotFoundException(`Batch ${batchCode} not found`);
+    }
+
+    // Kiểm tra quyền
+    if (logs[0].shippingStaffId !== staffId) {
+      throw new BadRequestException(
+        "You don't have permission to upload photos for this batch",
+      );
+    }
+
+    // Kiểm tra batch đã complete chưa
+    if (logs[0].batchCompletedAt) {
+      throw new BadRequestException(
+        'Batch already completed. Cannot upload more photos.',
+      );
+    }
+
+    this.logger.log(
+      `📸 Uploading ${files.length} batch completion photos for ${batchCode}`,
+    );
+
+    // Upload lên Cloudinary
+    const uploadResults = await this.cloudinaryService.uploadMultipleImages(
+      files,
+      'batch-completion',
+    );
+
+    const photoUrls = uploadResults.map((result) => result.secure_url);
+
+    this.logger.log(
+      `✅ Uploaded ${photoUrls.length} batch completion photos successfully`,
+    );
+
+    return {
+      photoUrls,
+      batchCode,
+    };
+  }
+
+  /**
    * 📋 Lấy danh sách orders trong cùng 1 batch
    */
   async getOrdersByBatchCode(batchCode: string): Promise<ShippingLog[]> {
@@ -431,6 +745,86 @@ export class ShippingLogsService {
       ],
       order: { createdAt: 'ASC' },
     });
+  }
+
+  /**
+   * 📦 Get all batches with summary
+   */
+  async getAllBatches() {
+    // Get all logs that have batchCode (Not IsNull)
+    const batchLogs = await this.shippingLogRepository.find({
+      where: {
+        batchCode: Not(IsNull()),
+      },
+      relations: [
+        'order',
+        'order.customer',
+        'order.customer.user',
+        'order.orderItems',
+        'order.orderItems.product',
+        'shippingStaff',
+      ],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Group by batchCode
+    const batchesMap = new Map<string, ShippingLog[]>();
+    for (const log of batchLogs) {
+      if (!batchesMap.has(log.batchCode)) {
+        batchesMap.set(log.batchCode, []);
+      }
+      batchesMap.get(log.batchCode)!.push(log);
+    }
+
+    // Transform to response format
+    const batches = Array.from(batchesMap.entries()).map(
+      ([batchCode, logs]) => {
+        const orderCount = logs.length;
+        const totalAmount = logs.reduce(
+          (sum, log) => sum + Number(log.totalAmount || 0),
+          0,
+        );
+        const completedCount = logs.filter(
+          (log) => log.status === ShippingStatus.DELIVERED,
+        ).length;
+
+        // Determine batch status
+        let status: string;
+        if (completedCount === orderCount) {
+          status = 'COMPLETED';
+        } else if (completedCount > 0) {
+          status = 'IN_PROGRESS';
+        } else {
+          status = 'PENDING';
+        }
+
+        return {
+          batchCode,
+          orderCount,
+          totalAmount,
+          status,
+          completedCount,
+          createdAt: logs[0]?.createdAt,
+          shippingStaffId: logs[0]?.shippingStaffId,
+          shippingStaff: logs[0]?.shippingStaff
+            ? {
+                userId: logs[0].shippingStaff.userId,
+                fullName: logs[0].shippingStaff.fullName,
+                phone: logs[0].shippingStaff.phone,
+              }
+            : null,
+          orders: logs.map((log) => ({
+            shippingLogId: log.shippingLogId,
+            orderId: log.orderId,
+            status: log.status,
+            totalAmount: log.totalAmount,
+            order: log.order,
+          })),
+        };
+      },
+    );
+
+    return batches;
   }
 
   /**
@@ -562,5 +956,90 @@ export class ShippingLogsService {
     }
 
     return result;
+  }
+
+  /**
+   * 🤖 Auto-assign shipping logs to random staff after 24 hours
+   * This method is called by the scheduler
+   */
+  async autoAssignUnassignedShippingLogs(): Promise<{
+    assignedCount: number;
+    logs: ShippingLog[];
+  }> {
+    // Calculate 24 hours ago
+    const twentyFourHoursAgo = subHours(new Date(), 24);
+
+    this.logger.log(
+      `🔍 Looking for shipping logs created before ${twentyFourHoursAgo.toISOString()} without assigned staff...`,
+    );
+
+    // Find all shipping logs that are PENDING, have no staff, and were created more than 24 hours ago
+    const unassignedLogs = await this.shippingLogRepository.find({
+      where: {
+        shippingStaffId: IsNull(),
+        status: ShippingStatus.PENDING,
+        createdAt: LessThan(twentyFourHoursAgo),
+      },
+      relations: ['order', 'order.customer'],
+    });
+
+    if (unassignedLogs.length === 0) {
+      this.logger.log('✅ No unassigned shipping logs found');
+      return { assignedCount: 0, logs: [] };
+    }
+
+    this.logger.log(
+      `📦 Found ${unassignedLogs.length} unassigned shipping logs older than 24 hours`,
+    );
+
+    // Get all active staff users
+    const activeStaff = await this.userRepository.find({
+      where: {
+        role: UserRole.STAFF,
+        isActive: true,
+      },
+    });
+
+    if (activeStaff.length === 0) {
+      this.logger.warn('⚠️ No active staff members found for auto-assignment');
+      return { assignedCount: 0, logs: [] };
+    }
+
+    this.logger.log(
+      `👥 Found ${activeStaff.length} active staff members available for assignment`,
+    );
+
+    const assignedLogs: ShippingLog[] = [];
+
+    // Randomly assign each shipping log to a staff member
+    for (const log of unassignedLogs) {
+      // Get random staff
+      const randomStaff =
+        activeStaff[Math.floor(Math.random() * activeStaff.length)];
+
+      this.logger.log(
+        `🎲 Auto-assigning shipping log ${log.shippingLogId} (Order: ${log.orderId}) to staff ${randomStaff.fullName} (${randomStaff.userId})`,
+      );
+
+      // Assign staff and update status
+      log.shippingStaffId = randomStaff.userId;
+      log.status = ShippingStatus.PICKED_UP;
+      log.note = `Tự động gán cho staff ${randomStaff.fullName} vào ${new Date().toLocaleString('vi-VN')} (sau 24 giờ chưa có staff nhận)`;
+
+      const savedLog = await this.shippingLogRepository.save(log);
+      assignedLogs.push(savedLog);
+
+      // Sync order status to SHIPPING
+      await this.syncOrderStatus(log.orderId, ShippingStatus.PICKED_UP);
+    }
+
+    this.logger.log(
+      `✅ Successfully auto-assigned ${assignedLogs.length} shipping logs`,
+    );
+
+    return {
+      assignedCount: assignedLogs.length,
+      logs: assignedLogs,
+    };
   }
 }

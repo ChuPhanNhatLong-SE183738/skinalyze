@@ -1,11 +1,6 @@
 import { IsString, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-
-export enum ShippingMethod {
-  INTERNAL = 'INTERNAL',
-  GHN = 'GHN',
-  BATCH = 'BATCH',
-}
+import { ShippingMethod } from '../../shipping-logs/entities/shipping-log.entity';
 
 export class ConfirmOrderDto {
   @ApiProperty({

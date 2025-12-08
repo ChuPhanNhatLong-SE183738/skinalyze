@@ -27,9 +27,11 @@ import { PaymentType } from '../payments/entities/payment.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/entities/notification.entity';
 import { ShippingLogsService } from '../shipping-logs/shipping-logs.service';
-import { ShippingStatus } from '../shipping-logs/entities/shipping-log.entity';
+import {
+  ShippingStatus,
+  ShippingMethod,
+} from '../shipping-logs/entities/shipping-log.entity';
 import { GhnService } from '../ghn/ghn.service';
-import { ShippingMethod } from './dto/confirm-order.dto';
 import { GhnRequiredNote } from '../ghn/dto/create-ghn-order.dto';
 
 @Injectable()

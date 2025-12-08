@@ -20,8 +20,8 @@ import { TimelineEventDto } from './dto/treatment-timeline.dto';
 import {
   AppointmentStatus,
   AppointmentType,
-} from 'src/appointments/types/appointment.types';
-import { RoutineDetail } from 'src/routine-details/entities/routine-detail.entity';
+} from '../appointments/types/appointment.types';
+import { RoutineDetail } from '../routine-details/entities/routine-detail.entity';
 import { endOfDay } from 'date-fns';
 
 @Injectable()

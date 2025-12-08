@@ -22,7 +22,6 @@ export class CustomersService {
   async create(createCustomerDto: CreateCustomerDto): Promise<Customer> {
     const {
       userId,
-      allergicTo,
       pastDermatologicalHistory,
       purchaseHistory,
       ...rest
@@ -30,7 +29,6 @@ export class CustomersService {
 
     const customer = this.customerRepository.create({
       ...rest,
-      allergicTo: allergicTo ?? [],
       pastDermatologicalHistory: pastDermatologicalHistory ?? [],
       purchaseHistory: purchaseHistory ?? [],
       user: { userId } as User,

@@ -30,6 +30,9 @@ import { AssignStaffDto } from './dto/assign-staff.dto';
 import {
   CreateBatchDeliveryDto,
   AssignGhnOrderDto,
+  UpdateBatchOrderDto,
+  CompleteBatchDto,
+  BulkUpdateBatchOrderDto,
 } from './dto/batch-delivery.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -58,6 +61,53 @@ export class ShippingLogsController {
   async findAll() {
     const logs = await this.shippingLogsService.findAll();
     return ResponseHelper.success('Shipping logs retrieved successfully', logs);
+  }
+
+  @Get('batches')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get all batch deliveries',
+    description: 'Get all batches with order count, total amount, and status',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batches retrieved successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Found 5 batches',
+        data: [
+          {
+            batchCode: 'BATCH-2025-12-04-YB5ULX',
+            orderCount: 3,
+            totalAmount: 90000,
+            status: 'IN_PROGRESS',
+            completedCount: 1,
+            createdAt: '2025-12-04T04:33:29.044Z',
+            shippingStaffId: '...',
+            shippingStaff: {
+              userId: '...',
+              fullName: 'Nguyen Van A',
+              phone: '0987654321',
+            },
+            orders: [
+              {
+                shippingLogId: '...',
+                orderId: '...',
+                status: 'DELIVERED',
+                totalAmount: 30000,
+              },
+            ],
+          },
+        ],
+      },
+    },
+  })
+  async getAllBatches() {
+    const batches = await this.shippingLogsService.getAllBatches();
+    return ResponseHelper.success(`Found ${batches.length} batches`, batches);
   }
 
   @Get('available')
@@ -256,6 +306,267 @@ export class ShippingLogsController {
     return ResponseHelper.success(
       `Found ${logs.length} orders in batch ${batchCode}`,
       logs,
+    );
+  }
+
+  @Post('batches/:batchCode/pickup')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '🚚 Staff pickup batch delivery',
+    description:
+      'Staff picks up a batch - all orders move to IN_TRANSIT status',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch picked up successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Batch BATCH-2025-12-05-ABC123 picked up successfully',
+        data: [
+          {
+            shippingLogId: '...',
+            orderId: '...',
+            status: 'IN_TRANSIT',
+            batchCode: 'BATCH-2025-12-05-ABC123',
+          },
+        ],
+      },
+    },
+  })
+  async pickupBatch(@Param('batchCode') batchCode: string, @Request() req) {
+    const staffId = req.user.userId;
+    const logs = await this.shippingLogsService.pickupBatch(batchCode, staffId);
+    return ResponseHelper.success(
+      `Batch ${batchCode} picked up successfully`,
+      logs,
+    );
+  }
+
+  @Patch('batches/:batchCode/orders/:orderId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '📝 Update status of an order in batch',
+    description:
+      'Staff updates individual order status while delivering batch (e.g., DELIVERED, FAILED)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Order status updated successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Order status updated to DELIVERED',
+        data: {
+          shippingLogId: '...',
+          orderId: '...',
+          batchCode: 'BATCH-2025-12-05-ABC123',
+          status: 'DELIVERED',
+          deliveredDate: '2025-12-05T10:30:00.000Z',
+        },
+      },
+    },
+  })
+  async updateBatchOrder(
+    @Param('batchCode') batchCode: string,
+    @Param('orderId') orderId: string,
+    @Body() updateDto: UpdateBatchOrderDto,
+    @Request() req,
+  ) {
+    const staffId = req.user.userId;
+    const log = await this.shippingLogsService.updateBatchOrder(
+      batchCode,
+      updateDto.orderId,
+      {
+        status: updateDto.status,
+        note: updateDto.note,
+        unexpectedCase: updateDto.unexpectedCase,
+        finishedPictures: updateDto.finishedPictures,
+      },
+      staffId,
+    );
+    return ResponseHelper.success(
+      `Order status updated to ${updateDto.status}`,
+      log,
+    );
+  }
+
+  @Patch('batches/:batchCode/bulk-update')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Bulk update multiple orders in a batch' })
+  @ApiResponse({
+    status: 200,
+    description: 'Orders updated successfully',
+    schema: {
+      example: {
+        success: true,
+        message: 'Updated 3 orders successfully',
+        data: {
+          updated: 3,
+          failed: 0,
+          results: [
+            {
+              orderId: '...',
+              status: 'DELIVERED',
+              success: true,
+            },
+          ],
+        },
+      },
+    },
+  })
+  async bulkUpdateBatchOrders(
+    @Param('batchCode') batchCode: string,
+    @Body() bulkUpdateDto: { updates: UpdateBatchOrderDto[] },
+    @Request() req,
+  ) {
+    const staffId = req.user.userId;
+    const results: Array<{
+      orderId: string;
+      status?: string;
+      success: boolean;
+      error?: string;
+    }> = [];
+    let updated = 0;
+    let failed = 0;
+
+    for (const update of bulkUpdateDto.updates) {
+      try {
+        const log = await this.shippingLogsService.updateBatchOrder(
+          batchCode,
+          update.orderId,
+          {
+            status: update.status,
+            note: update.note,
+            unexpectedCase: update.unexpectedCase,
+            finishedPictures: update.finishedPictures,
+          },
+          staffId,
+        );
+        results.push({
+          orderId: update.orderId,
+          status: update.status,
+          success: true,
+        });
+        updated++;
+      } catch (error) {
+        results.push({
+          orderId: update.orderId,
+          success: false,
+          error: error.message,
+        });
+        failed++;
+      }
+    }
+
+    return ResponseHelper.success(`Updated ${updated} orders successfully`, {
+      updated,
+      failed,
+      results,
+    });
+  }
+
+  @Post('batches/:batchCode/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '✅ Complete batch with batch completion proof',
+    description:
+      'Staff completes entire batch after all orders are delivered/failed. Uploads batch-level proof photos.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch completed successfully',
+    schema: {
+      example: {
+        statusCode: 200,
+        message: 'Batch completed successfully',
+        data: {
+          batchCode: 'BATCH-2025-12-05-ABC123',
+          status: 'COMPLETED',
+          orderCount: 3,
+          completedCount: 3,
+          deliveredCount: 2,
+          failedCount: 1,
+          completionPhotos: ['url-1', 'url-2'],
+          completionNote: 'Đã giao xong tất cả đơn',
+          completedAt: '2025-12-05T12:00:00Z',
+          codCollected: true,
+          totalCodAmount: 450000,
+        },
+      },
+    },
+  })
+  async completeBatch(
+    @Param('batchCode') batchCode: string,
+    @Body() completionDto: CompleteBatchDto,
+    @Request() req,
+  ) {
+    const staffId = req.user.userId;
+    const result = await this.shippingLogsService.completeBatch(
+      batchCode,
+      completionDto,
+      staffId,
+    );
+    return ResponseHelper.success('Batch completed successfully', result);
+  }
+
+  @Post('batches/:batchCode/upload-completion-photos')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiBearerAuth()
+  @UseInterceptors(FilesInterceptor('photos', 10)) // Max 10 ảnh cho batch
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: '📸 Upload batch completion proof photos',
+    description:
+      'Shipper uploads proof photos when completing entire batch (1-10 photos)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        photos: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
+          description: 'Batch completion proof photos (1-10 images)',
+        },
+      },
+    },
+  })
+  async uploadBatchCompletionPhotos(
+    @Param('batchCode') batchCode: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Request() req,
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Please upload at least 1 photo');
+    }
+
+    if (files.length > 10) {
+      throw new BadRequestException('Maximum 10 photos allowed');
+    }
+
+    const staffId = req.user.userId;
+    const result = await this.shippingLogsService.uploadBatchCompletionPhotos(
+      batchCode,
+      files,
+      staffId,
+    );
+
+    return ResponseHelper.success(
+      'Batch completion photos uploaded successfully',
+      result,
     );
   }
 
