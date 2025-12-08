@@ -70,8 +70,6 @@ export function PatientSidebar() {
   }
 
   const user = customer.user as User;
-  const allergies = customer.allergicTo?.filter((entry) => entry?.trim()) ?? [];
-  const hasAllergies = allergies.length > 0;
 
   const avatarSrc = user.photoUrl ?? "";
 
@@ -148,24 +146,6 @@ export function PatientSidebar() {
             </div>
           </div>
         </div>
-
-        {/* Cảnh báo dị ứng (Chỉ hiện khi có dữ liệu) */}
-        {hasAllergies && (
-          <Alert
-            variant="destructive"
-            className="py-2 px-3 border-red-200 bg-red-50 text-red-800"
-          >
-            <AlertCircle className="h-4 w-4 stroke-red-600" />
-            <div className="ml-2">
-              <AlertTitle className="text-xs font-bold uppercase tracking-wide">
-                Allergy Alert
-              </AlertTitle>
-              <AlertDescription className="text-xs font-medium mt-0.5">
-                {allergies.join(", ")}
-              </AlertDescription>
-            </div>
-          </Alert>
-        )}
       </div>
 
       {/* --- Timeline --- */}

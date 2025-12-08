@@ -22,15 +22,19 @@ interface SessionProductRowProps {
   item: RoutineProductItem;
   onRemove: () => void;
   onUpdate: (field: keyof RoutineProductItem, value: string) => void;
+  showExternalNameError?: boolean;
 }
 
 export function SessionProductRow({
   item,
   onRemove,
   onUpdate,
+  showExternalNameError = false,
 }: SessionProductRowProps) {
   // Mặc định mở rộng nếu chưa có liều lượng
   const [isExpanded, setIsExpanded] = useState(!item.usage);
+
+  const trimmedName = (item.productName || "").trim();
 
   const {
     attributes,
@@ -87,7 +91,7 @@ export function SessionProductRow({
                 <Input
                   className={cn(
                     "h-7 text-sm font-medium px-2 py-1",
-                    !item.productName.trim()
+                    !trimmedName
                       ? "border-red-300 bg-red-50 focus-visible:ring-red-200"
                       : "border-transparent bg-transparent hover:border-slate-300 focus:bg-white"
                   )}
@@ -96,6 +100,11 @@ export function SessionProductRow({
                   onChange={(e) => onUpdate("productName", e.target.value)}
                   onKeyDown={(e) => e.stopPropagation()} // Avoid toggle on Enter/Space
                 />
+                {showExternalNameError && !trimmedName && (
+                  <p className="mt-1 text-[10px] text-red-500">
+                    Enter a product name for external items.
+                  </p>
+                )}
               </div>
             ) : (
               // 2. If Inventory: Display Text Only (No Edit)

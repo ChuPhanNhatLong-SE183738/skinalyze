@@ -1,17 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useTreatment } from "@/contexts/TreatmentContext"; // Check path
-import { useEngineSignal } from "@/contexts/EngineSignalContext"; // Check path
+import { useTreatment } from "@/contexts/TreatmentContext";
+import { useEngineSignal } from "@/contexts/EngineSignalContext";
 import type { RoutineDetail, RoutineProductItem } from "@/types/routine-detail";
 import type { Product } from "@/types/product";
 import { cn } from "@/lib/utils";
 
-// --- Components Imports ---
 import { SessionProductRow } from "./SessionProductRow";
-// (Đã xóa ProductSearch theo yêu cầu trước đó của bạn)
 
-// --- UI Imports ---
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +46,6 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { fa } from "zod/v4/locales";
 
 interface RoutineDetailEditorProps {
   detail: RoutineDetail;
@@ -80,6 +76,7 @@ export function RoutineDetailEditor({
   const [validationErrors, setValidationErrors] = useState<{
     description?: string;
     content?: string;
+    products?: string;
   }>({});
 
   // 3. Effects
@@ -143,12 +140,30 @@ export function RoutineDetailEditor({
     const newProducts = [...safeProducts];
     newProducts[index] = { ...newProducts[index], [field]: value };
     handleFieldChange("products", newProducts);
+
+    if (field === "productName") {
+      const hasMissingNames = newProducts.some(
+        (product) => product.isExternal && !(product.productName || "").trim()
+      );
+
+      if (!hasMissingNames) {
+        setValidationErrors((prev) => ({ ...prev, products: undefined }));
+      }
+    }
   };
 
   const handleRemoveProduct = (index: number) => {
     const newProducts = [...safeProducts];
     newProducts.splice(index, 1);
     handleFieldChange("products", newProducts);
+
+    const hasMissingNames = newProducts.some(
+      (product) => product.isExternal && !(product.productName || "").trim()
+    );
+
+    if (!hasMissingNames) {
+      setValidationErrors((prev) => ({ ...prev, products: undefined }));
+    }
   };
 
   // Helper Add Product
@@ -194,10 +209,23 @@ export function RoutineDetailEditor({
       return;
     }
 
+    const externalWithMissingName = safeProducts.filter(
+      (product) => product.isExternal && !(product.productName || "").trim()
+    );
+
+    if (externalWithMissingName.length > 0) {
+      setValidationErrors((prev) => ({
+        ...prev,
+        products: "Please enter a name for each external product.",
+      }));
+      setIsOpen(true);
+      return;
+    }
+
     setValidationErrors({});
     setIsLocalSaving(true);
     try {
-      // Map DTO chuẩn cho Backend
+      // Map DTO for Backend
       const productsDto = safeProducts.map((p) => ({
         productId: p.productId || undefined,
         productName: p.productName,
@@ -267,63 +295,61 @@ export function RoutineDetailEditor({
       {/* 1. HEADER */}
       <div className="flex items-center justify-between p-3">
         <CollapsibleTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="p-0 hover:bg-transparent h-auto flex-1 justify-start"
+          <div
+            role="button"
+            tabIndex={0}
+            className="flex w-full items-center gap-2 rounded-md p-2 text-center cursor-pointer hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
           >
-            <div className="flex items-center gap-2 w-full">
-              {isOpen ? (
-                <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+            {isOpen ? (
+              <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+            )}
+
+            {/* Title Editable */}
+            <div onClick={(e) => e.stopPropagation()} className="flex-1 mr-2 ">
+              {draft.stepType === "other" ? (
+                <input
+                  className="text-sm text-center font-bold bg-transparent border-b border-transparent focus:border-blue-500 outline-none w-full placeholder:text-slate-400"
+                  placeholder="Session Name..."
+                  value={draft.description || ""}
+                  onChange={(e) =>
+                    handleFieldChange("description", e.target.value)
+                  }
+                  onKeyDown={(event) => event.stopPropagation()}
+                  aria-invalid={Boolean(validationErrors.description)}
+                />
               ) : (
-                <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
-              )}
-
-              {/* Title Editable */}
-              <div onClick={(e) => e.stopPropagation()} className="flex-1 mr-2">
-                {draft.stepType === "other" ? (
-                  <input
-                    className="text-sm font-bold bg-transparent border-b border-transparent focus:border-blue-500 outline-none w-full placeholder:text-slate-400"
-                    placeholder="Session Name..."
-                    value={draft.description || ""}
-                    onChange={(e) =>
-                      handleFieldChange("description", e.target.value)
-                    }
-                    aria-invalid={Boolean(validationErrors.description)}
-                  />
-                ) : (
-                  <span className="font-bold text-sm capitalize text-slate-800">
-                    {draft.stepType} Routine
-                  </span>
-                )}
-              </div>
-
-              <Badge
-                variant="secondary"
-                className="text-[10px] h-5 px-1.5 min-w-[20px] justify-center shrink-0"
-              >
-                {safeProducts.length}
-              </Badge>
-
-              {/* Status Badges */}
-              {isDirty && !isNew && (
-                <Badge className="text-[10px] h-5 bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 ml-2">
-                  Modified
-                </Badge>
-              )}
-              {isNew && (
-                <Badge className="text-[10px] h-5 bg-green-100 text-green-700 hover:bg-green-100 border-green-200 ml-2">
-                  New
-                </Badge>
-              )}
-              {draft.stepType === "other" && validationErrors.description && (
-                <span className="text-[10px] text-red-500 ml-2">
-                  {validationErrors.description}
+                <span className="font-bold text-sm capitalize text-slate-800">
+                  {draft.stepType} Routine
                 </span>
               )}
             </div>
-          </Button>
+
+            <Badge
+              variant="secondary"
+              className="text-[10px] h-5 px-1.5 min-w-[20px] justify-center shrink-0"
+            >
+              {safeProducts.length}
+            </Badge>
+
+            {/* Status Badges */}
+            {isDirty && !isNew && (
+              <Badge className="text-[10px] h-5 bg-amber-100 text-amber-700 hover:bg-amber-100 border-amber-200 ml-2">
+                Modified
+              </Badge>
+            )}
+            {isNew && (
+              <Badge className="text-[10px] h-5 bg-green-100 text-green-700 hover:bg-green-100 border-green-200 ml-2">
+                New
+              </Badge>
+            )}
+            {draft.stepType === "other" && validationErrors.description && (
+              <span className="text-[10px] text-red-500 ml-2">
+                {validationErrors.description}
+              </span>
+            )}
+          </div>
         </CollapsibleTrigger>
 
         {/* DELETE ACTION */}
@@ -426,11 +452,22 @@ export function RoutineDetailEditor({
                     item={item}
                     onRemove={() => handleRemoveProduct(index)}
                     onUpdate={(f, v) => handleProductChange(index, f, v)}
+                    showExternalNameError={Boolean(
+                      validationErrors.products &&
+                        item.isExternal &&
+                        !(item.productName || "").trim()
+                    )}
                   />
                 ))}
               </div>
             </SortableContext>
           </div>
+
+          {validationErrors.products && (
+            <p className="text-[11px] text-red-500">
+              {validationErrors.products}
+            </p>
+          )}
 
           {/* Add Manual Button */}
           <div className="pt-2">

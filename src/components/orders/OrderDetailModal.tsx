@@ -41,7 +41,6 @@ interface Order {
       phoneNumber?: string;
     };
     aiUsageAmount?: number;
-    allergicTo?: unknown;
     pastDermatologicalHistory?: unknown;
     purchaseHistory?: unknown[];
     createdAt: string;

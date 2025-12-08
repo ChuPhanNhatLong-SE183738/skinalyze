@@ -20,6 +20,7 @@ import {
   Pill,
   Camera,
   Notebook,
+  Stethoscope,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,8 @@ interface SkinAnalysisCardProps {
 
 export function SkinAnalysisCard({ analysis }: SkinAnalysisCardProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const isAiScan = analysis.source === "AI_SCAN";
+  const sourceLabel = isAiScan ? "AI Scan" : "Manual";
 
   const InfoRow = ({
     icon: Icon,
@@ -65,77 +68,86 @@ export function SkinAnalysisCard({ analysis }: SkinAnalysisCardProps) {
             <FileText className="h-6 w-6 text-primary" />
             <div className="flex-1">
               <CardTitle className="text-2xl">
-                patient&apos;s Skin Analysis
+                Patient&apos;s Skin Analysis
               </CardTitle>
               <CardDescription className="text-blue-500 font-semibold bg-blue-100 inline-block px-2 py-1 rounded-md mt-1">
-                {analysis.source}
+                {sourceLabel}
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <InfoRow
-              icon={User}
-              label="Chief Complaint"
-              value={analysis.chiefComplaint}
-            />
-            <InfoRow
-              icon={Notebook}
-              label="Patient Symptoms"
-              value={analysis.patientSymptoms}
-            />
-            <InfoRow icon={Notebook} label="Notes" value={analysis.notes} />
-          </div>
-          <Separator />
-          <div className="space-y-4">
-            <InfoRow
-              icon={Brain}
-              label="AI Detected Disease"
-              value={
-                <Badge variant="destructive">
-                  {analysis.aiDetectedDisease || "N/A"}
-                </Badge>
-              }
-            />
-            <InfoRow
-              icon={Sparkles}
-              label="AI Detected Condition"
-              value={
-                <Badge variant="warning">
-                  {analysis.aiDetectedCondition || "N/A"}
-                </Badge>
-              }
-            />
-          </div>
-          {/* Products */}
-          <InfoRow
-            icon={Pill}
-            label="AI Recommended Products"
-            value={
-              <div className="flex flex-wrap gap-2">
-                {analysis.aiRecommendedProducts &&
-                analysis.aiRecommendedProducts.length > 0 ? (
-                  analysis.aiRecommendedProducts.map((product, i) => (
-                    <Badge key={i} variant="outline">
-                      {product.name} ({product.brand})
-                    </Badge>
-                  ))
-                ) : (
-                  <p className="text-base text-foreground italic">N/A</p>
-                )}
+          {!isAiScan && (
+            <>
+              <div className="space-y-4">
+                <InfoRow
+                  icon={User}
+                  label="Chief Complaint"
+                  value={analysis.chiefComplaint}
+                />
+                <InfoRow
+                  icon={Stethoscope}
+                  label="Patient Symptoms"
+                  value={analysis.patientSymptoms}
+                />
+                <InfoRow icon={Notebook} label="Notes" value={analysis.notes} />
               </div>
-            }
-          />
-          <Separator />
+              <Separator />
+            </>
+          )}
+
+          {isAiScan && (
+            <>
+              <div className="space-y-4">
+                <InfoRow
+                  icon={Brain}
+                  label="AI Detected Disease"
+                  value={
+                    <Badge variant="destructive">
+                      {analysis.aiDetectedDisease || "N/A"}
+                    </Badge>
+                  }
+                />
+                <InfoRow
+                  icon={Sparkles}
+                  label="AI Detected Condition"
+                  value={
+                    <Badge variant="warning">
+                      {analysis.aiDetectedCondition || "N/A"}
+                    </Badge>
+                  }
+                />
+              </div>
+              <InfoRow
+                icon={Pill}
+                label="AI Recommended Products"
+                value={
+                  <div className="flex flex-wrap gap-2">
+                    {analysis.aiRecommendedProducts &&
+                    analysis.aiRecommendedProducts.length > 0 ? (
+                      analysis.aiRecommendedProducts.map((product, i) => (
+                        <Badge key={i} variant="outline">
+                          {product.name} ({product.brand})
+                        </Badge>
+                      ))
+                    ) : (
+                      <p className="text-base text-foreground italic">N/A</p>
+                    )}
+                  </div>
+                }
+              />
+              <Separator />
+            </>
+          )}
+
           {/* Images*/}
           <InfoRow
             icon={Camera}
             label="Submitted Images"
             value={
               <div className="flex gap-2 overflow-x-auto p-2">
-                {analysis.imageUrls && analysis.imageUrls.length > 0 ? (
-                  analysis.imageUrls.map((url, i) => (
+                {analysis?.imageUrls && analysis?.imageUrls.length > 0 ? (
+                  analysis?.imageUrls.map((url, i) => (
                     <button
                       key={i}
                       onClick={() => setSelectedImage(url)}

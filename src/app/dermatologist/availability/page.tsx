@@ -58,6 +58,9 @@ export default function AvailabilityPage() {
   const [currentView, setCurrentView] = useState<View>(Views.WEEK);
 
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [defaultShift, setDefaultShift] = useState<
+    { startTime: string; endTime: string } | undefined
+  >(undefined);
 
   const localizer = useMemo(
     () =>
@@ -128,6 +131,25 @@ export default function AvailabilityPage() {
     (slotInfo: { start: Date; end: Date }) => {
       const start = slotInfo.start;
       const end = slotInfo.end;
+
+      // BƯỚC 0: Reset defaultShift trước mỗi lần chọn
+      setDefaultShift(undefined);
+
+      // 1. Logic lấy giờ nếu là timed selection (kéo chuột trong Week/Day view)
+      const isTimedSelection =
+        start.getHours() !== 0 ||
+        start.getMinutes() !== 0 ||
+        end.getHours() !== 0 ||
+        end.getMinutes() !== 0;
+
+      // Nếu có chọn giờ và chỉ chọn trong cùng một ngày
+      if (isTimedSelection && start.toDateString() === end.toDateString()) {
+        setDefaultShift({
+          startTime: format(start, "HH:mm"),
+          endTime: format(end, "HH:mm"),
+        });
+      }
+      // 2. Điều chỉnh lựa chọn chéo ngày (Logic gốc: nếu kết thúc lúc 00:00, lùi lại 1 ngày)
       if (end.getHours() === 0 && end.getMinutes() === 0 && end > start) {
         end.setDate(end.getDate() - 1);
       }
@@ -360,6 +382,7 @@ export default function AvailabilityPage() {
         onClose={() => setIsModalOpen(false)}
         selectedDates={selectedDates}
         onSlotsCreated={onSlotsCreated}
+        defaultShift={defaultShift}
       />
 
       <DeleteSlotDialog

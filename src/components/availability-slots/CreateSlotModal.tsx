@@ -125,6 +125,10 @@ interface CreateSlotModalProps {
   onClose: () => void;
   selectedDates: Date[];
   onSlotsCreated: () => void;
+  defaultShift?: {
+    startTime: string;
+    endTime: string;
+  };
 }
 
 export function CreateSlotModal({
@@ -132,6 +136,7 @@ export function CreateSlotModal({
   onClose,
   selectedDates,
   onSlotsCreated,
+  defaultShift,
 }: CreateSlotModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarDisplayMonth, setCalendarDisplayMonth] = useState<Date>(
@@ -143,7 +148,9 @@ export function CreateSlotModal({
     resolver: zodResolver(batchFormSchema) as Resolver<BatchFormValues>,
     defaultValues: {
       selectedDays: selectedDates.length > 0 ? selectedDates : [],
-      shifts: [{ startTime: "08:00", endTime: "11:00" }],
+      shifts: defaultShift
+        ? [defaultShift]
+        : [{ startTime: "08:00", endTime: "11:00" }],
       slotDurationInMinutes: 30,
       repeatWeeks: 0,
       price: undefined,
@@ -156,7 +163,9 @@ export function CreateSlotModal({
 
       form.reset({
         selectedDays: newSelectedDates,
-        shifts: [{ startTime: "08:00", endTime: "11:00" }],
+        shifts: defaultShift
+          ? [defaultShift]
+          : [{ startTime: "08:00", endTime: "11:00" }],
         slotDurationInMinutes: 30,
         repeatWeeks: 0,
         price: undefined,
@@ -169,7 +178,7 @@ export function CreateSlotModal({
         setCalendarDisplayMonth(new Date());
       }
     }
-  }, [isOpen, selectedDates, form]);
+  }, [isOpen, selectedDates, form, defaultShift]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,

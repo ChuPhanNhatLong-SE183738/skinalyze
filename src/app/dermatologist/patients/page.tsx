@@ -40,7 +40,6 @@ export default function PatientManagementPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // State
   const [patients, setPatients] = useState<PatientListItemDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -87,19 +86,17 @@ export default function PatientManagementPage() {
     ];
   }, [patients]);
 
-  // Hàm tải dữ liệu
   const fetchPatients = useCallback(async () => {
     setIsLoading(true);
     try {
       const filters: GetMyPatientsDto = {
         search: debouncedSearch || undefined,
-        // Chỉ gửi status nếu khác ALL
-        page: 1, // (Hiện tại chưa làm phân trang UI, mặc định trang 1)
-        limit: 50, // Lấy nhiều chút
+        page: 1,
+        limit: 50,
       };
 
       const response = await dermatologistService.getMyPatients(filters);
-      setPatients(response.data || []); // (Xử lý trường hợp data null)
+      setPatients(response.data || []); 
     } catch (error: unknown) {
       const description =
         error instanceof Error

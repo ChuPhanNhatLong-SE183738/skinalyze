@@ -24,6 +24,9 @@ export function ProductDisplayCard({
   inventoryProduct,
 }: ProductDisplayCardProps) {
   const isExternal = routineProduct.isExternal;
+  const displayName =
+    routineProduct.productName?.trim() ||
+    (isExternal ? "Custom product" : "Unnamed product");
 
   return (
     <div className="group flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-slate-300 hover:shadow-sm">
@@ -35,7 +38,7 @@ export function ProductDisplayCard({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={inventoryProduct.productImages[0]}
-              alt={routineProduct.productName}
+              alt={displayName}
               className="h-full w-full object-cover"
             />
           ) : (
@@ -48,7 +51,7 @@ export function ProductDisplayCard({
           <div className="flex items-start justify-between gap-2">
             <div>
               <h4 className="font-semibold text-slate-900 leading-tight line-clamp-2">
-                {routineProduct.productName}
+                {displayName}
               </h4>
 
               {/* Brand / Source Info */}
