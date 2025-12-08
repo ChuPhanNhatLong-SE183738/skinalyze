@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOptionsWhere, Repository } from 'typeorm';
+import { EntityManager, FindOptionsWhere, LessThan, Repository } from 'typeorm';
 import { CustomerSubscription } from './entities/customer-subscription.entity';
 import { SubscriptionPlansService } from '../subscription-plans/subscription-plans.service';
 import { PaymentsService } from '../payments/payments.service';
@@ -21,6 +21,7 @@ import { CreateCustomerSubscriptionDto } from './dto/create-customer-subscriptio
 import { Customer } from 'src/customers/entities/customer.entity';
 import { SubscriptionPlan } from 'src/subscription-plans/entities/subscription-plan.entity';
 import { UsersService } from 'src/users/users.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class CustomerSubscriptionService {
@@ -264,5 +265,35 @@ export class CustomerSubscriptionService {
       );
     }
     return subscription;
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleExpiredSubscriptions() {
+    this.logger.log('Running Cron Job: Deactivating expired subscriptions...');
+
+    const now = new Date();
+
+    const expiredSubscriptions = await this.customerSubscriptionRepository.find(
+      {
+        where: {
+          isActive: true,
+          endDate: LessThan(now),
+        },
+      },
+    );
+
+    if (expiredSubscriptions.length === 0) {
+      return;
+    }
+
+    for (const sub of expiredSubscriptions) {
+      sub.isActive = false;
+      await this.customerSubscriptionRepository.save(sub);
+      this.logger.log(`Deactivated expired subscription ${sub.id}`);
+    }
+
+    this.logger.log(
+      `Deactivated ${expiredSubscriptions.length} subscriptions.`,
+    );
   }
 }

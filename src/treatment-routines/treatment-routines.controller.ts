@@ -15,6 +15,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { TreatmentRoutinesService } from './treatment-routines.service';
 import { CreateTreatmentRoutineDto } from './dto/create-treatment-routine.dto';
 import { UpdateTreatmentRoutineDto } from './dto/update-treatment-routine.dto';
+import { GetTreatmentRoutineDto } from './dto/get-treatment-routine.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -22,6 +23,7 @@ import { UserRole } from '../users/entities/user.entity';
 import { ResponseHelper, SuccessResponse } from '../utils/responses';
 import { isUUID } from 'class-validator';
 import { TimelineEventDto } from './dto/treatment-timeline.dto';
+import { RoutineStatus } from './entities/treatment-routine.entity';
 
 @ApiTags('Treatment Routines')
 @ApiBearerAuth()
@@ -61,15 +63,31 @@ export class TreatmentRoutinesController {
   @ApiOperation({ summary: 'Get all Routines by dermatologist' })
   async findByDermatologist(
     @Param('dermatologistId') dermatologistId: string,
-    @Query('customerId') customerId?: string,
+    @Query() query: GetTreatmentRoutineDto,
   ) {
+    const { customerId, status } = query;
+
     if (customerId && !isUUID(customerId)) {
       throw new BadRequestException('customerId must be a valid UUID');
     }
 
+    if (status && !Object.values(RoutineStatus).includes(status)) {
+      throw new BadRequestException('status must be a valid RoutineStatus');
+    }
+
+    const filters: GetTreatmentRoutineDto = {};
+
+    if (customerId) {
+      filters.customerId = customerId;
+    }
+
+    if (status) {
+      filters.status = status;
+    }
+
     const Routines = await this.treatmentRoutinesService.findByDermatologist(
       dermatologistId,
-      customerId,
+      filters,
     );
     return ResponseHelper.success(
       'Dermatologist Routines retrieved successfully',
@@ -82,15 +100,31 @@ export class TreatmentRoutinesController {
   @ApiOperation({ summary: 'Get all Routines by customer' })
   async findByCustomer(
     @Param('customerId') customerId: string,
-    @Query('dermatologistId') dermatologistId?: string,
+    @Query() query: GetTreatmentRoutineDto,
   ) {
+    const { dermatologistId, status } = query;
+
     if (dermatologistId && !isUUID(dermatologistId)) {
       throw new BadRequestException('dermatologistId must be a valid UUID');
     }
 
+    if (status && !Object.values(RoutineStatus).includes(status)) {
+      throw new BadRequestException('status must be a valid RoutineStatus');
+    }
+
+    const filters: GetTreatmentRoutineDto = {};
+
+    if (dermatologistId) {
+      filters.dermatologistId = dermatologistId;
+    }
+
+    if (status) {
+      filters.status = status;
+    }
+
     const Routines = await this.treatmentRoutinesService.findByCustomer(
       customerId,
-      dermatologistId,
+      filters,
     );
     return ResponseHelper.success(
       'Customer Routines retrieved successfully',

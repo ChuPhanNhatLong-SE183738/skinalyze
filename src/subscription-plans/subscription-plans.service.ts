@@ -3,10 +3,12 @@ import {
   NotFoundException,
   InternalServerErrorException,
   HttpException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Between,
+  EntityManager,
   FindOptionsWhere,
   LessThanOrEqual,
   Like,
@@ -21,6 +23,7 @@ import {
   FindSubscriptionPlansDto,
   SubscriptionPlanSortBy,
 } from './dto/find-subscription-plan.dto';
+import { CustomerSubscription } from 'src/customer-subscription/entities/customer-subscription.entity';
 
 @Injectable()
 export class SubscriptionPlansService {
@@ -28,6 +31,7 @@ export class SubscriptionPlansService {
     @InjectRepository(SubscriptionPlan)
     private readonly subscriptionRepository: Repository<SubscriptionPlan>,
     private readonly dermatologistsService: DermatologistsService,
+    private readonly entityManager: EntityManager,
   ) {}
   private handleError(error: unknown, message: string): never {
     if (error instanceof HttpException) {
@@ -198,7 +202,27 @@ export class SubscriptionPlansService {
         userId,
         subscriptionId,
       );
-      await this.subscriptionRepository.remove(subscription);
+
+      // Check if any customers have purchased this plan
+      const subscriberCount = await this.entityManager
+        .getRepository(CustomerSubscription)
+        .count({
+          where: { subscriptionPlan: { planId: subscriptionId } },
+        });
+
+      // CASE A: No customers have purchased this plan -> Hard delete (Clean DB)
+      if (subscriberCount === 0) {
+        await this.subscriptionRepository.remove(subscription);
+        return;
+      }
+
+      // CASE B: Customers have purchased this plan -> Soft delete (Active = false)
+      if (subscription.isActive === false) {
+        throw new BadRequestException('Plan is already inactive/deleted.');
+      }
+
+      subscription.isActive = false;
+      await this.subscriptionRepository.save(subscription);
     } catch (error) {
       this.handleError(error, 'Failed to delete subscription');
     }

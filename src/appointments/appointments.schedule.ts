@@ -6,6 +6,11 @@ import { Appointment } from './entities/appointment.entity';
 import { AppointmentsService } from './appointments.service';
 import { AppointmentStatus } from './types/appointment.types';
 import { addMinutes, subMinutes, subHours } from 'date-fns';
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  NotificationPriority,
+  NotificationType,
+} from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class AppointmentsScheduler {
@@ -18,6 +23,7 @@ export class AppointmentsScheduler {
     private readonly appointmentRepository: Repository<Appointment>,
     private readonly appointmentsService: AppointmentsService,
     private readonly entityManager: EntityManager,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
@@ -35,7 +41,12 @@ export class AppointmentsScheduler {
         meetingUrl: IsNull(),
         startTime: Between(now, targetTime),
       },
-      relations: ['dermatologist', 'customer'],
+      relations: [
+        'dermatologist',
+        'dermatologist.user',
+        'customer',
+        'customer.user',
+      ],
     });
 
     if (appointmentsToProcess.length === 0) return;
@@ -45,9 +56,16 @@ export class AppointmentsScheduler {
     );
 
     for (const appointment of appointmentsToProcess) {
-      await this.appointmentsService.generateMeetLinkForAppointment(
-        appointment,
-      );
+      const meetLink =
+        await this.appointmentsService.generateMeetLinkForAppointment(
+          appointment,
+        );
+
+      if (!meetLink) {
+        continue;
+      }
+
+      await this.notifyMeetLinkReady(appointment, meetLink);
     }
   }
 
@@ -137,6 +155,72 @@ export class AppointmentsScheduler {
           `Failed settlement for ${appt.appointmentId}: ${err.message}`,
         );
       }
+    }
+  }
+
+  private async notifyMeetLinkReady(
+    appointment: Appointment,
+    meetLink: string,
+  ): Promise<void> {
+    const actionUrl = `app://AppointmentDetailScreen?appointmentId=${appointment.appointmentId}`;
+
+    const startTimeLabel = appointment.startTime.toLocaleString('vi-VN');
+    const notificationPayload = {
+      appointmentId: appointment.appointmentId,
+      meetingUrl: meetLink,
+      startTime: appointment.startTime.toISOString(),
+    };
+
+    const customerUserId = appointment.customer?.user?.userId;
+    if (customerUserId) {
+      try {
+        await this.notificationsService.sendToUser(
+          customerUserId,
+          NotificationType.APPOINTMENT,
+          'Your appointment link is ready',
+          `Your appointment scheduled for ${startTimeLabel} now has a Google Meet link available.`,
+          notificationPayload,
+          actionUrl,
+          undefined,
+          NotificationPriority.HIGH,
+        );
+      } catch (error) {
+        const err = error as Error;
+        this.logger.error(
+          `Failed to notify customer ${customerUserId} for appointment ${appointment.appointmentId}: ${err.message}`,
+        );
+      }
+    } else {
+      this.logger.warn(
+        `Skipping customer notification for appointment ${appointment.appointmentId}: customer userId missing`,
+      );
+    }
+
+    const dermatologistUserId = appointment.dermatologist?.user?.userId;
+    const customerName =
+      appointment.customer?.user?.fullName || 'your upcoming client';
+    if (dermatologistUserId) {
+      try {
+        await this.notificationsService.sendToUser(
+          dermatologistUserId,
+          NotificationType.APPOINTMENT,
+          'Consultation link ready',
+          `The Meet link for your consultation with ${customerName} is ready for ${startTimeLabel}.`,
+          notificationPayload,
+          actionUrl,
+          undefined,
+          NotificationPriority.HIGH,
+        );
+      } catch (error) {
+        const err = error as Error;
+        this.logger.error(
+          `Failed to notify dermatologist ${dermatologistUserId} for appointment ${appointment.appointmentId}: ${err.message}`,
+        );
+      }
+    } else {
+      this.logger.warn(
+        `Skipping dermatologist notification for appointment ${appointment.appointmentId}: dermatologist userId missing`,
+      );
     }
   }
 }

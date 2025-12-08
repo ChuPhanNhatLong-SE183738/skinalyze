@@ -4,9 +4,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { FindOptionsWhere, In, Repository } from 'typeorm';
 import { CreateTreatmentRoutineDto } from './dto/create-treatment-routine.dto';
 import { UpdateTreatmentRoutineDto } from './dto/update-treatment-routine.dto';
+import { GetTreatmentRoutineDto } from './dto/get-treatment-routine.dto';
 import {
   TreatmentRoutine,
   RoutineStatus,
@@ -149,14 +150,22 @@ export class TreatmentRoutinesService {
 
   async findByDermatologist(
     dermatologistId: string,
-    customerId?: string,
+    filters?: GetTreatmentRoutineDto,
   ): Promise<TreatmentRoutine[]> {
-    const where = customerId
-      ? {
-          dermatologist: { dermatologistId },
-          customer: { customerId },
-        }
-      : { dermatologist: { dermatologistId } };
+    const where: FindOptionsWhere<TreatmentRoutine> = {
+      dermatologist: { dermatologistId },
+    };
+
+    const customerId = filters?.customerId;
+    const status = filters?.status;
+
+    if (customerId) {
+      where.customer = { customerId };
+    }
+
+    if (status) {
+      where.status = status;
+    }
 
     return this.treatmentRoutineRepository.find({
       where,
@@ -173,14 +182,22 @@ export class TreatmentRoutinesService {
 
   async findByCustomer(
     customerId: string,
-    dermatologistId?: string,
+    filters?: GetTreatmentRoutineDto,
   ): Promise<TreatmentRoutine[]> {
-    const where = dermatologistId
-      ? {
-          customer: { customerId },
-          dermatologist: { dermatologistId },
-        }
-      : { customer: { customerId } };
+    const where: FindOptionsWhere<TreatmentRoutine> = {
+      customer: { customerId },
+    };
+
+    const dermatologistId = filters?.dermatologistId;
+    const status = filters?.status;
+
+    if (dermatologistId) {
+      where.dermatologist = { dermatologistId };
+    }
+
+    if (status) {
+      where.status = status;
+    }
 
     return this.treatmentRoutineRepository.find({
       where,

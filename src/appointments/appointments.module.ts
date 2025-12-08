@@ -14,6 +14,7 @@ import { UsersModule } from 'src/users/users.module';
 import { AppointmentsScheduler } from './appointments.schedule';
 import { AdminAppointmentsController } from './admin-appointments.controller';
 import { AdminAppointmentsService } from './admin-appointment.service';
+import { NotificationsModule } from 'src/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AdminAppointmentsService } from './admin-appointment.service';
     CustomerSubscriptionModule,
     GoogleMeetModule,
     UsersModule,
+    NotificationsModule,
     forwardRef(() => PaymentsModule),
   ],
   controllers: [AppointmentsController, AdminAppointmentsController],
