@@ -1,5 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsUUID,
+  IsNumber,
+} from 'class-validator';
 
 export class CreateAddressDto {
   @ApiProperty({
@@ -59,4 +65,22 @@ export class CreateAddressDto {
   @IsString()
   @IsNotEmpty()
   city: string;
+
+  @ApiProperty({
+    description: 'GHN District ID (optional)',
+    example: 1442,
+    required: false,
+  })
+  @IsOptional()
+  @IsNumber()
+  districtId?: number;
+
+  @ApiProperty({
+    description: 'GHN Ward Code (optional)',
+    example: '21211',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  wardCode?: string;
 }

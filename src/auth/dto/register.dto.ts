@@ -6,6 +6,7 @@ import {
   IsDateString,
   IsUrl,
   IsEnum,
+  IsNumber,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserRole } from '../../users/entities/user.entity';
@@ -118,4 +119,21 @@ export class RegisterDto {
   })
   @IsString()
   city: string;
+
+  @ApiProperty({
+    description: 'GHN District ID (optional)',
+    example: 1442,
+    required: false,
+  })
+  @IsOptional()
+  districtId?: number;
+
+  @ApiProperty({
+    description: 'GHN Ward Code (optional)',
+    example: '21211',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  wardCode?: string;
 }
