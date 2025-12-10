@@ -30,7 +30,7 @@ async function baseRequest(
   }
 
   const defaultHeaders = new Headers(options.headers as HeadersInit);
-  
+
   // Only set Content-Type if body is not FormData
   if (!(options.body instanceof FormData)) {
     defaultHeaders.set("Content-Type", "application/json");
@@ -64,6 +64,7 @@ async function baseRequest(
 interface ApiConfig {
   options?: RequestInit;
   req?: NextRequest;
+  body?: unknown;
 }
 
 export const api = {
@@ -134,8 +135,17 @@ export const api = {
    * @param config
    */
   delete: (endpoint: string, config: ApiConfig = {}) => {
-    const { options = {}, req } = config;
-    return baseRequest(endpoint, { ...options, method: "DELETE" }, req);
+    const { options = {}, req, body } = config;
+    const requestInit: RequestInit = { ...options, method: "DELETE" };
+
+    if (body !== undefined) {
+      requestInit.body =
+        body instanceof FormData || typeof body === "string"
+          ? body
+          : JSON.stringify(body);
+    }
+
+    return baseRequest(endpoint, requestInit, req);
   },
 };
 

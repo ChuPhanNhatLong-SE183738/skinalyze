@@ -48,6 +48,15 @@ class AvailabilityService {
       throw error;
     }
   }
+
+  async deleteBatchSlots(slotIds: string[]): Promise<void> {
+    try {
+      await http.delete(`/api/availability-slots/batch`, { slotIds });
+    } catch (error) {
+      console.error("Lỗi khi xóa nhiều slot (service):", error);
+      throw error;
+    }
+  }
 }
 
 export const availabilityService = new AvailabilityService();

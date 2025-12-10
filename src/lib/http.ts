@@ -153,9 +153,22 @@ export const http = {
 
   delete: <T>(
     endpoint: string,
+    body?: any,
     options: CustomRequestInit = {}
   ): Promise<T> => {
-    return baseRequest<T>(endpoint, { ...options, method: "DELETE" });
+    const init: CustomRequestInit = {
+      ...options,
+      method: "DELETE",
+    };
+
+    if (body !== undefined) {
+      init.body =
+        body instanceof FormData || typeof body === "string"
+          ? body
+          : JSON.stringify(body);
+    }
+
+    return baseRequest<T>(endpoint, init);
   },
 };
 
