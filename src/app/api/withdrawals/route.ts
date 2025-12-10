@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,9 +17,7 @@ export async function GET(request: NextRequest) {
     const queryString = searchParams.toString();
 
     const response = await fetch(
-      `${BACKEND_URL}/api/v1/withdrawals${
-        queryString ? `?${queryString}` : ""
-      }`,
+      `${BACKEND_URL}/withdrawals${queryString ? `?${queryString}` : ""}`,
       {
         method: "GET",
         headers: {
@@ -42,7 +40,11 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     console.error("Error fetching withdrawal requests:", error);
     return NextResponse.json(
-      { error: (error instanceof Error ? error.message : String(error)) || "Internal server error" },
+      {
+        error:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Internal server error",
+      },
       { status: 500 }
     );
   }
