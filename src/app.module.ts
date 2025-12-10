@@ -65,6 +65,7 @@ import { WithdrawalOtpSession } from './withdrawals/entities/withdrawal-otp-sess
 import { GhnModule } from './ghn/ghn.module';
 import { SpecializationsModule } from './specializations/specializations.module';
 import { Specialization } from './specializations/entities/specialization.entity';
+import { ReturnRequestsModule } from './return-requests/return-requests.module';
 
 @Module({
   imports: [
@@ -146,6 +147,7 @@ import { Specialization } from './specializations/entities/specialization.entity
     WithdrawalsModule,
     GhnModule,
     SpecializationsModule,
+    ReturnRequestsModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

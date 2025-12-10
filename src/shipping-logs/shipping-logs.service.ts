@@ -45,6 +45,7 @@ export class ShippingLogsService {
       [ShippingStatus.OUT_FOR_DELIVERY]: OrderStatus.SHIPPING,
       [ShippingStatus.DELIVERED]: OrderStatus.DELIVERED,
       [ShippingStatus.FAILED]: OrderStatus.PROCESSING,
+      [ShippingStatus.RETURNING]: OrderStatus.PROCESSING,
       [ShippingStatus.RETURNED]: OrderStatus.CANCELLED,
     };
     return statusMap[shippingStatus];
