@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000";
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +17,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const response = await fetch(`${BACKEND_URL}/api/v1/withdrawals/${id}`, {
+    const response = await fetch(`${BACKEND_URL}/withdrawals/${id}`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token.value}`,
@@ -38,7 +38,11 @@ export async function GET(
   } catch (error: unknown) {
     console.error("Error fetching withdrawal request:", error);
     return NextResponse.json(
-      { error: (error instanceof Error ? error.message : String(error)) || "Internal server error" },
+      {
+        error:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Internal server error",
+      },
       { status: 500 }
     );
   }

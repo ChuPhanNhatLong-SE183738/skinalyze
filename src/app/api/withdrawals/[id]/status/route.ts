@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000";
 
 export async function PATCH(
   request: NextRequest,
@@ -19,17 +19,14 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const response = await fetch(
-      `${BACKEND_URL}/api/v1/withdrawals/${id}/status`,
-      {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      }
-    );
+    const response = await fetch(`${BACKEND_URL}/withdrawals/${id}/status`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token.value}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
     const data = await response.json();
 
@@ -44,7 +41,11 @@ export async function PATCH(
   } catch (error: unknown) {
     console.error("Error updating withdrawal status:", error);
     return NextResponse.json(
-      { error: (error instanceof Error ? error.message : String(error)) || "Internal server error" },
+      {
+        error:
+          (error instanceof Error ? error.message : String(error)) ||
+          "Internal server error",
+      },
       { status: 500 }
     );
   }
