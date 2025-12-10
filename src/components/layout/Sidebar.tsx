@@ -12,6 +12,7 @@ import {
   Warehouse,
   Bell,
   Truck,
+  PackageX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -34,6 +35,11 @@ const menuItems = [
     title: "Shipping",
     href: "/staff/shipping",
     icon: Truck,
+  },
+  {
+    title: "Return Requests",
+    href: "/staff/return-requests",
+    icon: PackageX,
   },
   {
     title: "Inventory",

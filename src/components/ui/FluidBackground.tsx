@@ -1,9 +1,15 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 
 const StarField = () => {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const stars = useMemo(() => {
     return Array.from({ length: 15 }).map((_, i) => ({
       id: i,
@@ -15,6 +21,10 @@ const StarField = () => {
       opacity: Math.random() * 0.7 + 0.3,
     }));
   }, []);
+
+  if (!isClient) {
+    return <div className="absolute inset-0 z-0 pointer-events-none" />;
+  }
 
   return (
     <div className="absolute inset-0 z-0 pointer-events-none">
