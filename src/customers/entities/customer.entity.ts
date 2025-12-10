@@ -13,6 +13,7 @@ import { User } from '../../users/entities/user.entity';
 import { TreatmentRoutine } from '../../treatment-routines/entities/treatment-routine.entity';
 import { Appointment } from '../../appointments/entities/appointment.entity';
 import { SkinAnalysis } from '../../skin-analysis/entities/skin-analysis.entity';
+import { Rating } from 'src/ratings/entities/rating.entity';
 
 @Entity('customers')
 export class Customer {
@@ -28,12 +29,6 @@ export class Customer {
 
   @Column({ type: 'json', nullable: true })
   pastDermatologicalHistory: string[];
-
-  @Column({
-    type: 'json',
-    nullable: true,
-  })
-  purchaseHistory: any[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
@@ -56,4 +51,7 @@ export class Customer {
 
   @OneToMany(() => SkinAnalysis, (analysis) => analysis.customer)
   skinAnalyses: SkinAnalysis[];
+
+  @OneToMany(() => Rating, (rating) => rating.customer)
+  ratings: Rating[];
 }

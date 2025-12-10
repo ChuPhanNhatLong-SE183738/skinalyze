@@ -65,6 +65,8 @@ import { WithdrawalOtpSession } from './withdrawals/entities/withdrawal-otp-sess
 import { GhnModule } from './ghn/ghn.module';
 import { SpecializationsModule } from './specializations/specializations.module';
 import { Specialization } from './specializations/entities/specialization.entity';
+import { RatingsModule } from './ratings/ratings.module';
+import { Rating } from './ratings/entities/rating.entity';
 
 @Module({
   imports: [
@@ -107,6 +109,7 @@ import { Specialization } from './specializations/entities/specialization.entity
         ChatMessage,
         ChatSession,
         Review,
+        Rating,
         WithdrawalRequest,
         WithdrawalOtpSession,
         Specialization,
@@ -146,6 +149,7 @@ import { Specialization } from './specializations/entities/specialization.entity
     WithdrawalsModule,
     GhnModule,
     SpecializationsModule,
+    RatingsModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],
