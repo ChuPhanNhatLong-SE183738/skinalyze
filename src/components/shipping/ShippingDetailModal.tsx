@@ -49,6 +49,44 @@ const statusOptions = [
   { value: "RETURNED", label: "Returned" },
 ];
 
+// Status progression order (excluding FAILED and RETURNED which can happen anytime)
+const statusOrder = [
+  "PENDING",
+  "PICKED_UP",
+  "IN_TRANSIT",
+  "OUT_FOR_DELIVERY",
+  "DELIVERED",
+];
+
+const getAvailableStatuses = (currentStatus: string) => {
+  // If already FAILED or RETURNED, only allow those two
+  if (currentStatus === "FAILED" || currentStatus === "RETURNED") {
+    return statusOptions.filter(
+      (opt) => opt.value === "FAILED" || opt.value === "RETURNED"
+    );
+  }
+
+  // If DELIVERED, can't change anymore (only show DELIVERED)
+  if (currentStatus === "DELIVERED") {
+    return statusOptions.filter((opt) => opt.value === "DELIVERED");
+  }
+
+  const currentIndex = statusOrder.indexOf(currentStatus);
+
+  // Show current status, next statuses in order, plus FAILED and RETURNED
+  return statusOptions.filter((opt) => {
+    const optIndex = statusOrder.indexOf(opt.value);
+
+    // Always allow FAILED or RETURNED
+    if (opt.value === "FAILED" || opt.value === "RETURNED") {
+      return true;
+    }
+
+    // Allow current status and any status after it in the progression
+    return optIndex >= currentIndex;
+  });
+};
+
 export function ShippingDetailModal({
   shippingLog,
   open,
@@ -82,9 +120,7 @@ export function ShippingDetailModal({
   const fetchStaffList = async () => {
     try {
       const response = await userService.getUsers(1, 100);
-      const staff = response.users.filter(
-        (user: any) => user.role === "staff"
-      );
+      const staff = response.users.filter((user: any) => user.role === "staff");
       setStaffList(staff);
     } catch (error) {
       console.error("Error fetching staff:", error);
@@ -518,7 +554,7 @@ export function ShippingDetailModal({
                   }
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                 >
-                  {statusOptions.map((option) => (
+                  {getAvailableStatuses(shippingLog.status).map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
