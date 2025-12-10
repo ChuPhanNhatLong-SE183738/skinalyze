@@ -544,7 +544,7 @@ export function ShippingDetailModal({
               Update Shipping Status
             </h3>
             <div className="space-y-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <select
                   id="status"
@@ -562,7 +562,7 @@ export function ShippingDetailModal({
                 </select>
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="note">Note</Label>
                 <Textarea
                   id="note"
@@ -573,18 +573,20 @@ export function ShippingDetailModal({
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="codCollected"
-                  checked={isCodCollected}
-                  onChange={(e) => setIsCodCollected(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
-                />
-                <Label htmlFor="codCollected" className="cursor-pointer">
-                  Mark COD as collected
-                </Label>
-              </div>
+              {!shippingLog.isCodCollected && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="codCollected"
+                    checked={isCodCollected}
+                    onChange={(e) => setIsCodCollected(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-green-600 focus:ring-green-500"
+                  />
+                  <Label htmlFor="codCollected" className="cursor-pointer">
+                    Mark COD as collected
+                  </Label>
+                </div>
+              )}
 
               <Button onClick={handleUpdateStatus} disabled={isLoading}>
                 {isLoading ? "Updating..." : "Update Status"}
@@ -593,8 +595,7 @@ export function ShippingDetailModal({
           </div>
 
           {/* Upload Delivery Proof */}
-          {(shippingLog.status === "OUT_FOR_DELIVERY" ||
-            shippingLog.status === "DELIVERED") && (
+          {shippingLog.status === "DELIVERED" && (
             <div className="rounded-lg border border-slate-200 p-4">
               <h3 className="mb-3 flex items-center gap-2 font-semibold">
                 <Upload className="h-4 w-4" />
@@ -621,7 +622,7 @@ export function ShippingDetailModal({
                 )}
 
               <div className="space-y-4">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="pictures">Upload Photos (Max 5)</Label>
                   <Input
                     id="pictures"

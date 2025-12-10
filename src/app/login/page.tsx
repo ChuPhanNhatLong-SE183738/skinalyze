@@ -15,10 +15,12 @@ import {
 import { Eye, EyeOff, Shield, AlertCircle } from "lucide-react";
 import { authService } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { refreshUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,6 +35,9 @@ export default function LoginPage() {
     try {
       // Login using authService (returns user data)
       const user = await authService.login({ email, password });
+
+      // Refresh the AuthContext to pick up the new user immediately
+      refreshUser();
 
       toast({
         variant: "success",
