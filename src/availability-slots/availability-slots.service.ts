@@ -11,6 +11,7 @@ import {
   EntityManager,
   FindOperator,
   FindOptionsWhere,
+  In,
   LessThan,
   MoreThan,
   Repository,
@@ -263,6 +264,39 @@ export class AvailabilitySlotsService {
         startTime: 'ASC',
       },
     });
+  }
+
+  async cancelMySlotsBatch(dermatologistId: string, slotIds: string[]) {
+    const slots = await this.slotRepository.find({
+      where: {
+        slotId: In(slotIds),
+        dermatologistId,
+      },
+    });
+
+    if (slots.length === 0) {
+      throw new NotFoundException('No matching slots found to cancel.');
+    }
+
+    // (If booked slot found, abort the entire batch cancellation)
+    const bookedSlot = slots.find((slot) => slot.status === SlotStatus.BOOKED);
+
+    if (bookedSlot) {
+      throw new BadRequestException(
+        `Cannot cancel batch. Slot with ID ${bookedSlot.slotId} is already BOOKED. Please handle booking cancellations separately.`,
+      );
+    }
+
+    const result = await this.slotRepository.delete({
+      slotId: In(slots.map((s) => s.slotId)),
+      dermatologistId,
+    });
+
+    return {
+      success: true,
+      message: `Successfully cancelled ${result.affected} slot(s).`,
+      deletedCount: result.affected,
+    };
   }
 
   async cancelMySlot(dermatologistId: string, slotId: string) {

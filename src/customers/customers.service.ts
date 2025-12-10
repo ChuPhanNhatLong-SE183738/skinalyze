@@ -20,17 +20,11 @@ export class CustomersService {
   ) {}
 
   async create(createCustomerDto: CreateCustomerDto): Promise<Customer> {
-    const {
-      userId,
-      pastDermatologicalHistory,
-      purchaseHistory,
-      ...rest
-    } = createCustomerDto;
+    const { userId, pastDermatologicalHistory, ...rest } = createCustomerDto;
 
     const customer = this.customerRepository.create({
       ...rest,
       pastDermatologicalHistory: pastDermatologicalHistory ?? [],
-      purchaseHistory: purchaseHistory ?? [],
       user: { userId } as User,
     });
 
@@ -100,18 +94,6 @@ export class CustomersService {
     void _analysisId;
     // Skin analyses are now tracked through the SkinAnalysis entity relation.
     return customer;
-  }
-
-  async addPurchase(userId: string, purchaseData: any): Promise<Customer> {
-    const customer = await this.findByUserId(userId);
-    if (!customer) {
-      throw new NotFoundException(`Customer with userId ${userId} not found`);
-    }
-    if (!customer.purchaseHistory) {
-      customer.purchaseHistory = [];
-    }
-    customer.purchaseHistory.push(purchaseData);
-    return await this.customerRepository.save(customer);
   }
 
   async subscribeToPlan(

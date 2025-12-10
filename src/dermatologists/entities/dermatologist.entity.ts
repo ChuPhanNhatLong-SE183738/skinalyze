@@ -7,6 +7,7 @@ import {
   OneToOne,
   JoinColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { TreatmentRoutine } from '../../treatment-routines/entities/treatment-routine.entity';
@@ -14,17 +15,12 @@ import { Appointment } from '../../appointments/entities/appointment.entity';
 import { SubscriptionPlan } from '../../subscription-plans/entities/subscription-plan.entity';
 import { AvailabilitySlot } from '../../availability-slots/entities/availability-slot.entity';
 import { Specialization } from '../../specializations/entities/specialization.entity';
+import { Rating } from 'src/ratings/entities/rating.entity';
 
 @Entity('dermatologists')
 export class Dermatologist {
   @PrimaryGeneratedColumn('uuid')
   dermatologistId: string;
-
-  @Column({
-    type: 'json',
-    nullable: true,
-  })
-  purchaseHistory: any[];
 
   @Column({ type: 'int', nullable: true })
   yearsOfExp: number;
@@ -36,6 +32,18 @@ export class Dermatologist {
     default: 0,
   })
   defaultSlotPrice: number;
+
+  @Column({
+    type: 'decimal',
+    precision: 3,
+    scale: 2,
+    default: 0,
+  })
+  @Index() // Index for faster sorting/filtering
+  averageRating: number;
+
+  @Column({ type: 'int', default: 0 })
+  totalReviews: number;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -64,4 +72,7 @@ export class Dermatologist {
     (specialization) => specialization.dermatologist,
   )
   specializations: Specialization[];
+
+  @OneToMany(() => Rating, (rating) => rating.dermatologist)
+  ratings: Rating[];
 }

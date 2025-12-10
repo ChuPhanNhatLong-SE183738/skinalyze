@@ -31,6 +31,7 @@ import { CreateAvailabilityDto } from './dto/create-availability.dto';
 import { DermatologistsService } from '../dermatologists/dermatologists.service';
 import { ResponseHelper } from '../utils/responses';
 import { SlotStatus } from './entities/availability-slot.entity';
+import { DeleteBatchSlotsDto } from './dto/delete-batch-availability.dto';
 
 @ApiTags('Availability-slots')
 @ApiBearerAuth()
@@ -101,6 +102,25 @@ export class AvailabilitySlotsController {
     );
 
     return ResponseHelper.success('Slots retrieved successfully', slots);
+  }
+
+  @Delete('batch')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancel multiple availability slots',
+  })
+  @ApiOkResponse({
+    description: 'Availability slots cancelled successfully',
+  })
+  async cancelBatchSlots(
+    @GetUser() user: User,
+    @Body() dto: DeleteBatchSlotsDto,
+  ) {
+    const dermatologistId = await this.getDermatologistId(user.userId);
+    return this.availabilitySlotsService.cancelMySlotsBatch(
+      dermatologistId,
+      dto.slotIds,
+    );
   }
 
   @Delete(':slotId')

@@ -66,6 +66,8 @@ import { GhnModule } from './ghn/ghn.module';
 import { SpecializationsModule } from './specializations/specializations.module';
 import { Specialization } from './specializations/entities/specialization.entity';
 import { ReturnRequestsModule } from './return-requests/return-requests.module';
+import { RatingsModule } from './ratings/ratings.module';
+import { Rating } from './ratings/entities/rating.entity';
 
 @Module({
   imports: [
@@ -108,6 +110,7 @@ import { ReturnRequestsModule } from './return-requests/return-requests.module';
         ChatMessage,
         ChatSession,
         Review,
+        Rating,
         WithdrawalRequest,
         WithdrawalOtpSession,
         Specialization,
@@ -148,6 +151,7 @@ import { ReturnRequestsModule } from './return-requests/return-requests.module';
     GhnModule,
     SpecializationsModule,
     ReturnRequestsModule,
+    RatingsModule,
   ],
   controllers: [AppController, DermatologistsController],
   providers: [AppService],

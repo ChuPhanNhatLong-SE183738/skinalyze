@@ -16,15 +16,10 @@ export class CreateCustomerDto {
   @IsOptional()
   @IsNumber()
   aiUsageAmount?: number;
-  
+
   @ApiProperty({ example: [], required: false })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   pastDermatologicalHistory?: string[];
-
-  @ApiProperty({ example: [], required: false })
-  @IsOptional()
-  @IsArray()
-  purchaseHistory?: any[];
 }

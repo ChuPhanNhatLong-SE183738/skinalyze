@@ -20,6 +20,7 @@ import {
   AppointmentType,
   TerminationReason,
 } from '../types/appointment.types';
+import { Rating } from 'src/ratings/entities/rating.entity';
 
 @Entity('appointments')
 export class Appointment {
@@ -130,6 +131,9 @@ export class Appointment {
 
   @OneToOne(() => TreatmentRoutine, (routine) => routine.createdFromAppointment)
   createdRoutine: TreatmentRoutine;
+
+  @OneToOne(() => Rating, (rating) => rating.appointment)
+  rating: Rating;
 
   // Keep: follow-up relationship remains Many-to-One.
   // "Which routine is this appointment tracking?"
