@@ -40,13 +40,18 @@ export class ReturnRequestsService {
     userId: string,
   ): Promise<ReturnRequest> {
     // Find customer from userId
-    const customer = await this.customerRepository.findOne({
-      where: { user: { userId } },
-    });
+    const customer = await this.customerRepository
+      .createQueryBuilder('customer')
+      .innerJoin('customer.user', 'user')
+      .where('user.userId = :userId', { userId })
+      .getOne();
 
     if (!customer) {
       throw new NotFoundException('Customer profile not found');
     }
+
+    console.log('🔍 Debug - userId:', userId);
+    console.log('🔍 Debug - customer.customerId:', customer.customerId);
 
     // Validate order exists and belongs to customer
     const order = await this.orderRepository.findOne({
@@ -57,6 +62,8 @@ export class ReturnRequestsService {
     if (!order) {
       throw new NotFoundException('Order not found');
     }
+
+    console.log('🔍 Debug - order.customerId:', order.customerId);
 
     if (order.customerId !== customer.customerId) {
       throw new ForbiddenException(
@@ -128,9 +135,11 @@ export class ReturnRequestsService {
 
   async findByCustomer(userId: string): Promise<ReturnRequest[]> {
     // Find customer from userId
-    const customer = await this.customerRepository.findOne({
-      where: { user: { userId } },
-    });
+    const customer = await this.customerRepository
+      .createQueryBuilder('customer')
+      .innerJoin('customer.user', 'user')
+      .where('user.userId = :userId', { userId })
+      .getOne();
 
     if (!customer) {
       throw new NotFoundException('Customer profile not found');
@@ -278,9 +287,11 @@ export class ReturnRequestsService {
   // Customer cancel return request (only if PENDING)
   async cancel(id: string, userId: string): Promise<ReturnRequest> {
     // Find customer from userId
-    const customer = await this.customerRepository.findOne({
-      where: { user: { userId } },
-    });
+    const customer = await this.customerRepository
+      .createQueryBuilder('customer')
+      .innerJoin('customer.user', 'user')
+      .where('user.userId = :userId', { userId })
+      .getOne();
 
     if (!customer) {
       throw new NotFoundException('Customer profile not found');
