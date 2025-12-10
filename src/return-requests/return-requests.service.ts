@@ -24,6 +24,50 @@ import { Customer } from '../customers/entities/customer.entity';
 
 @Injectable()
 export class ReturnRequestsService {
+  /**
+   * 🔒 Valid state transitions for return request workflow
+   * Đảm bảo không bị nhảy cóc trạng thái
+   */
+  private readonly validTransitions: Record<
+    ReturnRequestStatus,
+    ReturnRequestStatus[]
+  > = {
+    [ReturnRequestStatus.PENDING]: [
+      ReturnRequestStatus.APPROVED,
+      ReturnRequestStatus.REJECTED,
+      ReturnRequestStatus.CANCELLED, // Customer cancel
+    ],
+    [ReturnRequestStatus.APPROVED]: [
+      ReturnRequestStatus.IN_PROGRESS, // Staff assign
+    ],
+    [ReturnRequestStatus.REJECTED]: [], // Terminal state
+    [ReturnRequestStatus.IN_PROGRESS]: [
+      ReturnRequestStatus.COMPLETED, // Staff complete
+    ],
+    [ReturnRequestStatus.COMPLETED]: [], // Terminal state
+    [ReturnRequestStatus.CANCELLED]: [], // Terminal state
+  };
+
+  /**
+   * 🔍 Kiểm tra xem có thể chuyển từ currentStatus sang newStatus không
+   */
+  private validateStatusTransition(
+    currentStatus: ReturnRequestStatus,
+    newStatus: ReturnRequestStatus,
+  ): void {
+    if (currentStatus === newStatus) {
+      return; // Same status is allowed
+    }
+
+    const allowedTransitions = this.validTransitions[currentStatus];
+    if (!allowedTransitions.includes(newStatus)) {
+      throw new BadRequestException(
+        `Invalid status transition from ${currentStatus} to ${newStatus}. ` +
+          `Allowed transitions: ${allowedTransitions.join(', ') || 'none'}`,
+      );
+    }
+  }
+
   constructor(
     @InjectRepository(ReturnRequest)
     private returnRequestRepository: Repository<ReturnRequest>,
@@ -50,9 +94,6 @@ export class ReturnRequestsService {
       throw new NotFoundException('Customer profile not found');
     }
 
-    console.log('🔍 Debug - userId:', userId);
-    console.log('🔍 Debug - customer.customerId:', customer.customerId);
-
     // Validate order exists and belongs to customer
     const order = await this.orderRepository.findOne({
       where: { orderId: createReturnRequestDto.orderId },
@@ -63,11 +104,9 @@ export class ReturnRequestsService {
       throw new NotFoundException('Order not found');
     }
 
-    console.log('🔍 Debug - order.customerId:', order.customerId);
-
     if (order.customerId !== customer.customerId) {
       throw new ForbiddenException(
-        'You can only create return request for your own orders',
+        '[CREATE] You can only create return request for your own orders',
       );
     }
 
@@ -126,6 +165,7 @@ export class ReturnRequestsService {
         'order',
         'shippingLog',
         'customer',
+        'customer.user',
         'reviewedByStaff',
         'assignedStaff',
       ],
@@ -134,6 +174,8 @@ export class ReturnRequestsService {
   }
 
   async findByCustomer(userId: string): Promise<ReturnRequest[]> {
+    console.log('🔍 findByCustomer - userId:', userId);
+
     // Find customer from userId
     const customer = await this.customerRepository
       .createQueryBuilder('customer')
@@ -141,21 +183,41 @@ export class ReturnRequestsService {
       .where('user.userId = :userId', { userId })
       .getOne();
 
+    console.log('🔍 findByCustomer - customer:', customer);
+
     if (!customer) {
-      throw new NotFoundException('Customer profile not found');
+      // Return empty array if user doesn't have customer profile
+      console.log('⚠️ Customer not found, returning empty array');
+      return [];
     }
 
-    return this.returnRequestRepository.find({
+    console.log(
+      '🔍 findByCustomer - searching with customerId:',
+      customer.customerId,
+    );
+
+    const requests = await this.returnRequestRepository.find({
       where: { customerId: customer.customerId },
-      relations: ['order', 'shippingLog', 'reviewedByStaff', 'assignedStaff'],
+      relations: [
+        'order',
+        'shippingLog',
+        'customer',
+        'customer.user',
+        'reviewedByStaff',
+        'assignedStaff',
+      ],
       order: { createdAt: 'DESC' },
     });
+
+    console.log('🔍 findByCustomer - found requests:', requests.length);
+
+    return requests;
   }
 
   async findPending(): Promise<ReturnRequest[]> {
     return this.returnRequestRepository.find({
       where: { status: ReturnRequestStatus.PENDING },
-      relations: ['order', 'shippingLog', 'customer'],
+      relations: ['order', 'shippingLog', 'customer', 'customer.user'],
       order: { createdAt: 'ASC' },
     });
   }
@@ -167,6 +229,7 @@ export class ReturnRequestsService {
         'order',
         'shippingLog',
         'customer',
+        'customer.user',
         'reviewedByStaff',
         'assignedStaff',
       ],
@@ -187,9 +250,11 @@ export class ReturnRequestsService {
   ): Promise<ReturnRequest> {
     const returnRequest = await this.findOne(id);
 
-    if (returnRequest.status !== ReturnRequestStatus.PENDING) {
-      throw new BadRequestException('Can only approve pending return requests');
-    }
+    // 🔒 Validate state transition
+    this.validateStatusTransition(
+      returnRequest.status,
+      ReturnRequestStatus.APPROVED,
+    );
 
     returnRequest.status = ReturnRequestStatus.APPROVED;
     returnRequest.reviewedByStaffId = staffId;
@@ -209,9 +274,11 @@ export class ReturnRequestsService {
   ): Promise<ReturnRequest> {
     const returnRequest = await this.findOne(id);
 
-    if (returnRequest.status !== ReturnRequestStatus.PENDING) {
-      throw new BadRequestException('Can only reject pending return requests');
-    }
+    // 🔒 Validate state transition
+    this.validateStatusTransition(
+      returnRequest.status,
+      ReturnRequestStatus.REJECTED,
+    );
 
     returnRequest.status = ReturnRequestStatus.REJECTED;
     returnRequest.reviewedByStaffId = staffId;
@@ -227,11 +294,11 @@ export class ReturnRequestsService {
   async assignStaff(id: string, staffId: string): Promise<ReturnRequest> {
     const returnRequest = await this.findOne(id);
 
-    if (returnRequest.status !== ReturnRequestStatus.APPROVED) {
-      throw new BadRequestException(
-        'Can only assign staff to approved return requests',
-      );
-    }
+    // 🔒 Validate state transition
+    this.validateStatusTransition(
+      returnRequest.status,
+      ReturnRequestStatus.IN_PROGRESS,
+    );
 
     returnRequest.status = ReturnRequestStatus.IN_PROGRESS;
     returnRequest.assignedStaffId = staffId;
@@ -254,11 +321,11 @@ export class ReturnRequestsService {
   ): Promise<ReturnRequest> {
     const returnRequest = await this.findOne(id);
 
-    if (returnRequest.status !== ReturnRequestStatus.IN_PROGRESS) {
-      throw new BadRequestException(
-        'Can only complete in-progress return requests',
-      );
-    }
+    // 🔒 Validate state transition
+    this.validateStatusTransition(
+      returnRequest.status,
+      ReturnRequestStatus.COMPLETED,
+    );
 
     if (returnRequest.assignedStaffId !== staffId) {
       throw new ForbiddenException(
@@ -305,9 +372,11 @@ export class ReturnRequestsService {
       );
     }
 
-    if (returnRequest.status !== ReturnRequestStatus.PENDING) {
-      throw new BadRequestException('Can only cancel pending return requests');
-    }
+    // 🔒 Validate state transition
+    this.validateStatusTransition(
+      returnRequest.status,
+      ReturnRequestStatus.CANCELLED,
+    );
 
     returnRequest.status = ReturnRequestStatus.CANCELLED;
     return this.returnRequestRepository.save(returnRequest);

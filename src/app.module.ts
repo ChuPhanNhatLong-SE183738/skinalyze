@@ -66,6 +66,7 @@ import { GhnModule } from './ghn/ghn.module';
 import { SpecializationsModule } from './specializations/specializations.module';
 import { Specialization } from './specializations/entities/specialization.entity';
 import { ReturnRequestsModule } from './return-requests/return-requests.module';
+import { ReturnRequest } from './return-requests/entities/return-request.entity';
 import { RatingsModule } from './ratings/ratings.module';
 import { Rating } from './ratings/entities/rating.entity';
 
@@ -114,6 +115,7 @@ import { Rating } from './ratings/entities/rating.entity';
         WithdrawalRequest,
         WithdrawalOtpSession,
         Specialization,
+        ReturnRequest,
       ],
       synchronize: process.env.NODE_ENV === 'development',
       logging: process.env.NODE_ENV === 'development',

@@ -35,6 +35,65 @@ export class ShippingLogsService {
     private readonly ghnService: GhnService,
   ) {}
 
+  /**
+   * 🔒 Valid state transitions for shipping workflow
+   * Đảm bảo không bị nhảy cóc trạng thái
+   */
+  private readonly validTransitions: Record<ShippingStatus, ShippingStatus[]> =
+    {
+      [ShippingStatus.PENDING]: [
+        ShippingStatus.PICKED_UP,
+        ShippingStatus.FAILED,
+      ],
+      [ShippingStatus.PICKED_UP]: [
+        ShippingStatus.IN_TRANSIT,
+        ShippingStatus.FAILED,
+        ShippingStatus.RETURNING,
+      ],
+      [ShippingStatus.IN_TRANSIT]: [
+        ShippingStatus.OUT_FOR_DELIVERY,
+        ShippingStatus.FAILED,
+        ShippingStatus.RETURNING,
+      ],
+      [ShippingStatus.OUT_FOR_DELIVERY]: [
+        ShippingStatus.DELIVERED,
+        ShippingStatus.FAILED,
+        ShippingStatus.RETURNING,
+      ],
+      [ShippingStatus.DELIVERED]: [
+        ShippingStatus.RETURNING, // Customer tạo return request
+      ],
+      [ShippingStatus.FAILED]: [
+        ShippingStatus.PENDING, // Retry
+        ShippingStatus.RETURNING,
+      ],
+      [ShippingStatus.RETURNING]: [
+        ShippingStatus.RETURNED,
+        ShippingStatus.FAILED,
+      ],
+      [ShippingStatus.RETURNED]: [], // Terminal state
+    };
+
+  /**
+   * 🔍 Kiểm tra xem có thể chuyển từ currentStatus sang newStatus không
+   */
+  private validateStatusTransition(
+    currentStatus: ShippingStatus,
+    newStatus: ShippingStatus,
+  ): void {
+    if (currentStatus === newStatus) {
+      return; // Same status is allowed
+    }
+
+    const allowedTransitions = this.validTransitions[currentStatus];
+    if (!allowedTransitions.includes(newStatus)) {
+      throw new BadRequestException(
+        `Invalid status transition from ${currentStatus} to ${newStatus}. ` +
+          `Allowed transitions: ${allowedTransitions.join(', ') || 'none'}`,
+      );
+    }
+  }
+
   private mapShippingStatusToOrderStatus(
     shippingStatus: ShippingStatus,
   ): OrderStatus {
@@ -225,6 +284,12 @@ export class ShippingLogsService {
   ): Promise<ShippingLog> {
     const log = await this.findOne(id);
     const oldStatus = log.status;
+
+    // 🔒 Validate state transition nếu có thay đổi status
+    if (updateDto.status && updateDto.status !== oldStatus) {
+      this.validateStatusTransition(oldStatus, updateDto.status);
+    }
+
     Object.assign(log, updateDto);
     const savedLog = await this.shippingLogRepository.save(log);
 

@@ -11,17 +11,24 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ReturnRequestsService } from './return-requests.service';
 import { CreateReturnRequestDto } from './dto/create-return-request.dto';
 import {
   ReviewReturnRequestDto,
   CompleteReturnDto,
 } from './dto/review-return-request.dto';
+import { ReturnRequestResponseDto } from './dto/return-request-response.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
+import { ResponseHelper } from 'src/utils/responses';
 
 @ApiTags('Return Requests')
 @Controller('return-requests')
@@ -31,97 +38,151 @@ export class ReturnRequestsController {
   constructor(private readonly returnRequestsService: ReturnRequestsService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Customer creates return request (CUSTOMER only)' })
-  create(
+  @ApiOperation({ summary: 'Customer creates return request' })
+  @ApiResponse({
+    status: 201,
+    description: 'Return request created successfully',
+    type: ReturnRequestResponseDto,
+  })
+  async create(
     @Body() createReturnRequestDto: CreateReturnRequestDto,
     @Request() req,
   ) {
-    return this.returnRequestsService.create(
+    const data = await this.returnRequestsService.create(
       createReturnRequestDto,
       req.user.userId,
     );
+    return ResponseHelper.success('Return request created successfully', data);
   }
 
   @Get()
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   @ApiOperation({ summary: 'Get all return requests (ADMIN/STAFF only)' })
-  findAll() {
-    return this.returnRequestsService.findAll();
+  @ApiResponse({
+    status: 200,
+    description: 'List of all return requests',
+    type: [ReturnRequestResponseDto],
+  })
+  async findAll() {
+    const data = await this.returnRequestsService.findAll();
+    return ResponseHelper.success('Get all return requests successfully', data);
   }
 
   @Get('pending')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   @ApiOperation({ summary: 'Get pending return requests (ADMIN/STAFF only)' })
-  findPending() {
-    return this.returnRequestsService.findPending();
+  @ApiResponse({
+    status: 200,
+    description: 'List of pending return requests',
+    type: [ReturnRequestResponseDto],
+  })
+  async findPending() {
+    const data = await this.returnRequestsService.findPending();
+    return ResponseHelper.success(
+      'Get pending return requests successfully',
+      data,
+    );
   }
 
   @Get('my-requests')
   @ApiOperation({ summary: 'Get my return requests (CUSTOMER)' })
-  findMyRequests(@Request() req) {
-    return this.returnRequestsService.findByCustomer(req.user.userId);
+  @ApiResponse({
+    status: 200,
+    description: 'List of my return requests',
+    type: [ReturnRequestResponseDto],
+  })
+  async findMyRequests(@Request() req) {
+    const data = await this.returnRequestsService.findByCustomer(
+      req.user.userId,
+    );
+    return ResponseHelper.success('Get my return requests successfully', data);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get return request by ID' })
-  findOne(@Param('id') id: string) {
-    return this.returnRequestsService.findOne(id);
+  @ApiResponse({
+    status: 200,
+    description: 'Return request details',
+    type: ReturnRequestResponseDto,
+  })
+  async findOne(@Param('id') id: string) {
+    const data = await this.returnRequestsService.findOne(id);
+    return ResponseHelper.success('Get return request successfully', data);
   }
 
   @Patch(':id/approve')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   @ApiOperation({ summary: 'Approve return request (STAFF/ADMIN only)' })
-  approve(
+  async approve(
     @Param('id') id: string,
     @Body() reviewDto: ReviewReturnRequestDto,
     @Request() req,
   ) {
-    return this.returnRequestsService.approve(id, req.user.userId, reviewDto);
+    const data = await this.returnRequestsService.approve(
+      id,
+      req.user.userId,
+      reviewDto,
+    );
+    return ResponseHelper.success('Return request approved successfully', data);
   }
 
   @Patch(':id/reject')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STAFF)
   @ApiOperation({ summary: 'Reject return request (STAFF/ADMIN only)' })
-  reject(
+  async reject(
     @Param('id') id: string,
     @Body() reviewDto: ReviewReturnRequestDto,
     @Request() req,
   ) {
-    return this.returnRequestsService.reject(id, req.user.userId, reviewDto);
+    const data = await this.returnRequestsService.reject(
+      id,
+      req.user.userId,
+      reviewDto,
+    );
+    return ResponseHelper.success('Return request rejected successfully', data);
   }
 
   @Patch(':id/assign')
   @UseGuards(RolesGuard)
   @Roles(UserRole.STAFF)
   @ApiOperation({ summary: 'Staff assigns themselves to handle return' })
-  assignStaff(@Param('id') id: string, @Request() req) {
-    return this.returnRequestsService.assignStaff(id, req.user.userId);
+  async assignStaff(@Param('id') id: string, @Request() req) {
+    const data = await this.returnRequestsService.assignStaff(
+      id,
+      req.user.userId,
+    );
+    return ResponseHelper.success('Staff assigned successfully', data);
   }
 
   @Patch(':id/complete')
   @UseGuards(RolesGuard)
   @Roles(UserRole.STAFF)
   @ApiOperation({ summary: 'Staff completes return (arrived at warehouse)' })
-  complete(
+  async complete(
     @Param('id') id: string,
     @Body() completeDto: CompleteReturnDto,
     @Request() req,
   ) {
-    return this.returnRequestsService.complete(
+    const data = await this.returnRequestsService.complete(
       id,
       req.user.userId,
       completeDto,
     );
+    return ResponseHelper.success('Return completed successfully', data);
   }
 
   @Patch(':id/cancel')
   @ApiOperation({ summary: 'Customer cancels return request (PENDING only)' })
-  cancel(@Param('id') id: string, @Request() req) {
-    return this.returnRequestsService.cancel(id, req.user.userId);
+  async cancel(@Param('id') id: string, @Request() req) {
+    const data = await this.returnRequestsService.cancel(id, req.user.userId);
+    return ResponseHelper.success(
+      'Return request cancelled successfully',
+      data,
+    );
   }
 
   @Delete(':id')
