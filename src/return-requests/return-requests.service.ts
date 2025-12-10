@@ -20,6 +20,7 @@ import {
   ShippingLog,
   ShippingStatus,
 } from '../shipping-logs/entities/shipping-log.entity';
+import { Customer } from '../customers/entities/customer.entity';
 
 @Injectable()
 export class ReturnRequestsService {
@@ -30,12 +31,23 @@ export class ReturnRequestsService {
     private orderRepository: Repository<Order>,
     @InjectRepository(ShippingLog)
     private shippingLogRepository: Repository<ShippingLog>,
+    @InjectRepository(Customer)
+    private customerRepository: Repository<Customer>,
   ) {}
 
   async create(
     createReturnRequestDto: CreateReturnRequestDto,
-    customerId: string,
+    userId: string,
   ): Promise<ReturnRequest> {
+    // Find customer from userId
+    const customer = await this.customerRepository.findOne({
+      where: { user: { userId } },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer profile not found');
+    }
+
     // Validate order exists and belongs to customer
     const order = await this.orderRepository.findOne({
       where: { orderId: createReturnRequestDto.orderId },
@@ -46,7 +58,7 @@ export class ReturnRequestsService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.customerId !== customerId) {
+    if (order.customerId !== customer.customerId) {
       throw new ForbiddenException(
         'You can only create return request for your own orders',
       );
@@ -94,7 +106,7 @@ export class ReturnRequestsService {
     // Create return request
     const returnRequest = this.returnRequestRepository.create({
       ...createReturnRequestDto,
-      customerId,
+      customerId: customer.customerId,
       status: ReturnRequestStatus.PENDING,
     });
 
@@ -114,9 +126,18 @@ export class ReturnRequestsService {
     });
   }
 
-  async findByCustomer(customerId: string): Promise<ReturnRequest[]> {
+  async findByCustomer(userId: string): Promise<ReturnRequest[]> {
+    // Find customer from userId
+    const customer = await this.customerRepository.findOne({
+      where: { user: { userId } },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer profile not found');
+    }
+
     return this.returnRequestRepository.find({
-      where: { customerId },
+      where: { customerId: customer.customerId },
       relations: ['order', 'shippingLog', 'reviewedByStaff', 'assignedStaff'],
       order: { createdAt: 'DESC' },
     });
@@ -255,10 +276,19 @@ export class ReturnRequestsService {
   }
 
   // Customer cancel return request (only if PENDING)
-  async cancel(id: string, customerId: string): Promise<ReturnRequest> {
+  async cancel(id: string, userId: string): Promise<ReturnRequest> {
+    // Find customer from userId
+    const customer = await this.customerRepository.findOne({
+      where: { user: { userId } },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer profile not found');
+    }
+
     const returnRequest = await this.findOne(id);
 
-    if (returnRequest.customerId !== customerId) {
+    if (returnRequest.customerId !== customer.customerId) {
       throw new ForbiddenException(
         'You can only cancel your own return requests',
       );

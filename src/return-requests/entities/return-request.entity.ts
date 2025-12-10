@@ -10,6 +10,7 @@ import {
 import { Order } from '../../orders/entities/order.entity';
 import { User } from '../../users/entities/user.entity';
 import { ShippingLog } from '../../shipping-logs/entities/shipping-log.entity';
+import { Customer } from '../../customers/entities/customer.entity';
 
 export enum ReturnRequestStatus {
   PENDING = 'PENDING', // Chờ duyệt
@@ -51,9 +52,9 @@ export class ReturnRequest {
   shippingLogId: string;
 
   // Customer tạo request
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Customer, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'customerId' })
-  customer: User;
+  customer: Customer;
 
   @Column({ type: 'uuid' })
   customerId: string;
