@@ -8,7 +8,6 @@ import {
   Package,
   Users,
   BarChart3,
-  Settings,
   LogOut,
   ShoppingBag,
   FileText,

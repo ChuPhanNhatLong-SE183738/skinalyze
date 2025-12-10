@@ -8,7 +8,6 @@ import {
   Package,
   Users,
   BarChart3,
-  Settings,
   LogOut,
   Warehouse,
   Bell,
@@ -41,11 +40,6 @@ const menuItems = [
     href: "/staff/inventory",
     icon: Warehouse,
   },
-  {
-    title: "Settings",
-    href: "/staff/settings",
-    icon: Settings,
-  },
 ];
 
 export function Sidebar({ onLogout }: SidebarProps) {
@@ -59,12 +53,8 @@ export function Sidebar({ onLogout }: SidebarProps) {
           <ShieldCheck className="h-6 w-6 text-white" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-slate-900">
-            Skinalyze
-          </h1>
-          <p className="text-xs text-slate-500">
-            Staff Portal
-          </p>
+          <h1 className="text-lg font-bold text-slate-900">Skinalyze</h1>
+          <p className="text-xs text-slate-500">Staff Portal</p>
         </div>
       </div>
 

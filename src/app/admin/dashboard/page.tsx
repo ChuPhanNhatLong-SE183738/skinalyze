@@ -11,7 +11,6 @@ import {
   ShoppingBag,
   DollarSign,
   Activity,
-  Settings,
 } from "lucide-react";
 import { authService } from "@/services/authService";
 import { orderService } from "@/services/orderService";
@@ -85,33 +84,41 @@ export default function AdminDashboardPage() {
 
   const calculateRevenueData = (orders: any[]) => {
     const revenueData: Record<string, number> = {};
-    orders.forEach(order => {
-      if (order.status === 'COMPLETED' || order.status === 'DELIVERED') {
+    orders.forEach((order) => {
+      if (order.status === "COMPLETED" || order.status === "DELIVERED") {
         const date = new Date(order.createdAt);
-        const periodKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        
-        const orderTotal = order.orderItems?.reduce(
-          (sum: number, item: any) => sum + (parseFloat(item.priceAtTime) * item.quantity), 
-          0
-        ) || 0;
+        const periodKey = date.toLocaleDateString("en-US", {
+          month: "short",
+          year: "numeric",
+        });
+
+        const orderTotal =
+          order.orderItems?.reduce(
+            (sum: number, item: any) =>
+              sum + parseFloat(item.priceAtTime) * item.quantity,
+            0
+          ) || 0;
         revenueData[periodKey] = (revenueData[periodKey] || 0) + orderTotal;
       }
     });
 
-    const revenueEntries = Object.entries(revenueData)
-      .map(([period, revenue]) => ({ month: period, revenue }));
-    
+    const revenueEntries = Object.entries(revenueData).map(
+      ([period, revenue]) => ({ month: period, revenue })
+    );
+
     return revenueEntries.slice(-6);
   };
 
   const fetchDashboardData = async () => {
     try {
-      setStats(prev => ({ ...prev, isLoading: true }));
+      setStats((prev) => ({ ...prev, isLoading: true }));
 
       // Fetch all data in parallel
       const [ordersData, productsData, usersData] = await Promise.all([
         orderService.getOrders().catch(() => ({ data: [], total: 0 })),
-        productService.getProducts(1, 1000).catch(() => ({ products: [], total: 0 })),
+        productService
+          .getProducts(1, 1000)
+          .catch(() => ({ products: [], total: 0 })),
         userService.getUsers(1, 1000).catch(() => ({ users: [], total: 0 })),
       ]);
 
@@ -124,16 +131,23 @@ export default function AdminDashboardPage() {
       setRawOrders(orders);
 
       const totalRevenue = orders
-        .filter((order: any) => order.status === 'COMPLETED' || order.status === 'DELIVERED')
+        .filter(
+          (order: any) =>
+            order.status === "COMPLETED" || order.status === "DELIVERED"
+        )
         .reduce((sum: number, order: any) => {
-          const orderTotal = order.orderItems?.reduce(
-            (itemSum: number, item: any) => itemSum + (parseFloat(item.priceAtTime) * item.quantity), 
-            0
-          ) || 0;
+          const orderTotal =
+            order.orderItems?.reduce(
+              (itemSum: number, item: any) =>
+                itemSum + parseFloat(item.priceAtTime) * item.quantity,
+              0
+            ) || 0;
           return sum + orderTotal;
         }, 0);
 
-      const pendingOrders = orders.filter((order: any) => order.status === 'PENDING').length;
+      const pendingOrders = orders.filter(
+        (order: any) => order.status === "PENDING"
+      ).length;
       const activeUsers = users.filter((user: any) => user.isActive).length;
 
       setStats({
@@ -152,20 +166,22 @@ export default function AdminDashboardPage() {
       });
 
       const statusColors: Record<string, string> = {
-        PENDING: '#f59e0b',
-        PROCESSING: '#3b82f6',
-        COMPLETED: '#10b981',
-        DELIVERED: '#8b5cf6',
-        CANCELLED: '#ef4444',
-        CONFIRMED: '#06b6d4',
-        SHIPPING: '#f97316',
+        PENDING: "#f59e0b",
+        PROCESSING: "#3b82f6",
+        COMPLETED: "#10b981",
+        DELIVERED: "#8b5cf6",
+        CANCELLED: "#ef4444",
+        CONFIRMED: "#06b6d4",
+        SHIPPING: "#f97316",
       };
 
-      const ordersByStatus = Object.entries(statusCounts).map(([name, value]) => ({
-        name,
-        value,
-        color: statusColors[name] || '#6b7280',
-      }));
+      const ordersByStatus = Object.entries(statusCounts).map(
+        ([name, value]) => ({
+          name,
+          value,
+          color: statusColors[name] || "#6b7280",
+        })
+      );
 
       // Calculate initial revenue data
       const revenueByMonth = calculateRevenueData(orders);
@@ -173,21 +189,21 @@ export default function AdminDashboardPage() {
       // Users by role (excluding admin)
       const roleCounts: Record<string, number> = {};
       users.forEach((user: any) => {
-        if (user.role !== 'admin') {
+        if (user.role !== "admin") {
           roleCounts[user.role] = (roleCounts[user.role] || 0) + 1;
         }
       });
 
       const roleColors: Record<string, string> = {
-        staff: '#3b82f6',
-        customer: '#10b981',
-        dermatologist: '#f59e0b',
+        staff: "#3b82f6",
+        customer: "#10b981",
+        dermatologist: "#f59e0b",
       };
 
       const usersByRole = Object.entries(roleCounts).map(([role, count]) => ({
         role: role.charAt(0).toUpperCase() + role.slice(1),
         count,
-        color: roleColors[role] || '#6b7280',
+        color: roleColors[role] || "#6b7280",
       }));
 
       setChartData({
@@ -196,8 +212,8 @@ export default function AdminDashboardPage() {
         usersByRole,
       });
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
-      setStats(prev => ({ ...prev, isLoading: false }));
+      console.error("Failed to fetch dashboard data:", error);
+      setStats((prev) => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -214,12 +230,8 @@ export default function AdminDashboardPage() {
       <div className="p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">
-            Admin Dashboard
-          </h1>
-          <p className="text-slate-600 mt-1">
-            Welcome back, {user.fullName}
-          </p>
+          <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
+          <p className="text-slate-600 mt-1">Welcome back, {user.fullName}</p>
         </div>
 
         {/* Stats Grid */}
@@ -234,11 +246,14 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {stats.isLoading ? "Loading..." : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(stats.totalRevenue)}
+                {stats.isLoading
+                  ? "Loading..."
+                  : new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    }).format(stats.totalRevenue)}
               </div>
-              <p className="text-xs opacity-75 mt-1">
-                From completed orders
-              </p>
+              <p className="text-xs opacity-75 mt-1">From completed orders</p>
             </CardContent>
           </Card>
 
@@ -252,11 +267,11 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {stats.isLoading ? "Loading..." : stats.totalOrders.toLocaleString()}
+                {stats.isLoading
+                  ? "Loading..."
+                  : stats.totalOrders.toLocaleString()}
               </div>
-              <p className="text-xs opacity-75 mt-1">
-                All time orders
-              </p>
+              <p className="text-xs opacity-75 mt-1">All time orders</p>
             </CardContent>
           </Card>
 
@@ -270,11 +285,11 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {stats.isLoading ? "Loading..." : stats.activeUsers.toLocaleString()}
+                {stats.isLoading
+                  ? "Loading..."
+                  : stats.activeUsers.toLocaleString()}
               </div>
-              <p className="text-xs opacity-75 mt-1">
-                Currently active
-              </p>
+              <p className="text-xs opacity-75 mt-1">Currently active</p>
             </CardContent>
           </Card>
 
@@ -288,9 +303,7 @@ export default function AdminDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">99.9%</div>
-              <p className="text-xs opacity-75 mt-1">
-                All systems operational
-              </p>
+              <p className="text-xs opacity-75 mt-1">All systems operational</p>
             </CardContent>
           </Card>
         </div>
@@ -314,31 +327,38 @@ export default function AdminDashboardPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData.revenueByMonth}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis 
-                      dataKey="month" 
+                    <XAxis
+                      dataKey="month"
                       stroke="#64748b"
-                      style={{ fontSize: '12px' }}
+                      style={{ fontSize: "12px" }}
                     />
-                    <YAxis 
+                    <YAxis
                       stroke="#64748b"
-                      style={{ fontSize: '12px' }}
-                      tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`}
+                      style={{ fontSize: "12px" }}
+                      tickFormatter={(value) =>
+                        `${(value / 1000000).toFixed(1)}M`
+                      }
                     />
-                    <Tooltip 
-                      formatter={(value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)}
-                      contentStyle={{ 
-                        backgroundColor: 'white', 
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
+                    <Tooltip
+                      formatter={(value: number) =>
+                        new Intl.NumberFormat("vi-VN", {
+                          style: "currency",
+                          currency: "VND",
+                        }).format(value)
+                      }
+                      contentStyle={{
+                        backgroundColor: "white",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "8px",
                       }}
                     />
                     <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="revenue" 
-                      stroke="#10b981" 
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#10b981"
                       strokeWidth={2}
-                      dot={{ fill: '#10b981', r: 4 }}
+                      dot={{ fill: "#10b981", r: 4 }}
                       activeDot={{ r: 6 }}
                     />
                   </LineChart>
@@ -368,7 +388,9 @@ export default function AdminDashboardPage() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(0)}%`
+                      }
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -403,20 +425,17 @@ export default function AdminDashboardPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={chartData.usersByRole}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis 
-                      dataKey="role" 
+                    <XAxis
+                      dataKey="role"
                       stroke="#64748b"
-                      style={{ fontSize: '12px' }}
+                      style={{ fontSize: "12px" }}
                     />
-                    <YAxis 
-                      stroke="#64748b"
-                      style={{ fontSize: '12px' }}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'white', 
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
+                    <YAxis stroke="#64748b" style={{ fontSize: "12px" }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "white",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "8px",
                       }}
                     />
                     <Legend />
@@ -445,15 +464,11 @@ export default function AdminDashboardPage() {
             <CardContent className="space-y-3">
               <div>
                 <p className="text-sm text-slate-600">Name</p>
-                <p className="font-medium text-slate-900">
-                  {user.fullName}
-                </p>
+                <p className="font-medium text-slate-900">{user.fullName}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-600">Email</p>
-                <p className="font-medium text-slate-900">
-                  {user.email}
-                </p>
+                <p className="font-medium text-slate-900">{user.email}</p>
               </div>
               <div>
                 <p className="text-sm text-slate-600">Role</p>
@@ -488,14 +503,14 @@ export default function AdminDashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <button 
-                onClick={() => router.push('/admin/orders')}
+              <button
+                onClick={() => router.push("/admin/orders")}
                 className="w-full text-left px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm transition-colors"
               >
                 View All Orders
               </button>
-              <button 
-                onClick={() => router.push('/admin/users')}
+              <button
+                onClick={() => router.push("/admin/users")}
                 className="w-full text-left px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-900 text-sm transition-colors"
               >
                 Manage Users
