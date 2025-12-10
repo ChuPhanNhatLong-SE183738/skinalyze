@@ -137,6 +137,8 @@ export class AuthService {
       wardOrSubDistrict: registerDto.wardOrSubDistrict,
       district: registerDto.district,
       city: registerDto.city,
+      districtId: registerDto.districtId,
+      wardCode: registerDto.wardCode,
     };
 
     const address = await this.addressService.create(addressData);

@@ -70,6 +70,22 @@ export class Address {
   city: string;
 
   @ApiProperty({
+    description: 'GHN District ID (optional)',
+    example: 1442,
+    required: false,
+  })
+  @Column({ nullable: true, type: 'int' })
+  districtId?: number;
+
+  @ApiProperty({
+    description: 'GHN Ward Code (optional)',
+    example: '21211',
+    required: false,
+  })
+  @Column({ nullable: true, length: 20 })
+  wardCode?: string;
+
+  @ApiProperty({
     description: 'Address creation timestamp',
     example: '2025-10-03T10:30:00.000Z',
   })
