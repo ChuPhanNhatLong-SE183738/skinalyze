@@ -17,7 +17,10 @@ const Navbar = () => {
       dropdown: [
         { title: t("nav.skinalyzeApp"), href: "/" },
         { title: t("nav.skinConditionsList"), href: "/" },
-        { title: t("nav.downloadApp"), href: "/app" },
+        {
+          title: t("nav.downloadApp"),
+          href: "https://download-app.nhatlonh.id.vn:6767/skinalyze.apk",
+        },
       ],
     },
     {
@@ -26,7 +29,10 @@ const Navbar = () => {
       dropdown: [
         { title: t("nav.skinalyzeMD"), href: "/staff/login" },
         { title: t("nav.dermatologicalAtlas"), href: "/blog" },
-        { title: t("nav.downloadApp"), href: "/app" },
+        {
+          title: t("nav.downloadApp"),
+          href: "https://download-app.nhatlonh.id.vn:6767/skinalyze.apk",
+        },
       ],
     },
     {
