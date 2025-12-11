@@ -83,10 +83,16 @@ export class InventoryService {
   }
 
   // Adjust stock (+ or -)
-  async adjustStock(productId: string, quantity: number): Promise<void> {
+  async adjustStock(
+    productId: string,
+    quantity: number,
+    adminUserId?: string,
+  ): Promise<void> {
     let inventory = await this.inventoryRepository.findOne({
       where: { productId },
     });
+
+    const previousStock = inventory?.currentStock || 0;
 
     if (!inventory) {
       if (quantity < 0) {
@@ -110,6 +116,24 @@ export class InventoryService {
 
     await this.inventoryRepository.save(inventory);
     await this.syncProductStock(productId);
+
+    // Create adjustment record for tracking
+    if (adminUserId) {
+      const adjustmentRecord = this.adjustmentRepository.create({
+        productId,
+        adjustmentType:
+          quantity > 0 ? AdjustmentType.INCREASE : AdjustmentType.DECREASE,
+        quantity: Math.abs(quantity),
+        previousStock,
+        newStock: inventory.currentStock,
+        reason: 'Direct admin adjustment',
+        status: AdjustmentStatus.APPROVED,
+        requestedBy: adminUserId,
+        reviewedBy: adminUserId,
+        reviewedAt: new Date(),
+      });
+      await this.adjustmentRepository.save(adjustmentRecord);
+    }
   }
 
   // Set absolute stock level
@@ -117,10 +141,13 @@ export class InventoryService {
     productId: string,
     quantity: number,
     originalPrice?: number,
+    adminUserId?: string,
   ): Promise<void> {
     let inventory = await this.inventoryRepository.findOne({
       where: { productId },
     });
+
+    const previousStock = inventory?.currentStock || 0;
 
     if (!inventory) {
       inventory = this.inventoryRepository.create({
@@ -138,6 +165,24 @@ export class InventoryService {
 
     await this.inventoryRepository.save(inventory);
     await this.syncProductStock(productId);
+
+    // Create adjustment record for tracking
+    if (adminUserId) {
+      const adjustmentRecord = this.adjustmentRepository.create({
+        productId,
+        adjustmentType: AdjustmentType.SET,
+        quantity,
+        previousStock,
+        newStock: quantity,
+        reason: 'Direct admin stock set',
+        status: AdjustmentStatus.APPROVED,
+        requestedBy: adminUserId,
+        reviewedBy: adminUserId,
+        reviewedAt: new Date(),
+        originalPrice,
+      });
+      await this.adjustmentRepository.save(adjustmentRecord);
+    }
   }
 
   // Reserve stock (simple version - no batch tracking)

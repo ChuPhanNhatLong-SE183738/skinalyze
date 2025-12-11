@@ -23,7 +23,8 @@ import { InventoryService } from './inventory.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../users/entities/user.entity';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { UserRole, User } from '../users/entities/user.entity';
 import { ResponseHelper } from '../utils/responses';
 
 @ApiTags('Inventory')
@@ -39,6 +40,20 @@ export class InventoryController {
   @ApiResponse({ status: 200, description: 'Returns all inventory' })
   getAllInventory() {
     return this.inventoryService.getAllInventory();
+  }
+
+  @Get('products/:productId/adjustments')
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get adjustment history for a product' })
+  @ApiParam({ name: 'productId', description: 'Product UUID' })
+  @ApiResponse({ status: 200, description: 'Returns adjustment history' })
+  async getProductAdjustmentHistory(@Param('productId') productId: string) {
+    const adjustments =
+      await this.inventoryService.getProductAdjustmentHistory(productId);
+    return ResponseHelper.success(
+      'Adjustment history retrieved successfully',
+      adjustments,
+    );
   }
 
   @Get('product/:productId')
@@ -91,8 +106,15 @@ export class InventoryController {
     },
   })
   @ApiResponse({ status: 200, description: 'Stock adjusted' })
-  async adjustStock(@Body() dto: { productId: string; quantity: number }) {
-    await this.inventoryService.adjustStock(dto.productId, dto.quantity);
+  async adjustStock(
+    @Body() dto: { productId: string; quantity: number },
+    @GetUser() user: User,
+  ) {
+    await this.inventoryService.adjustStock(
+      dto.productId,
+      dto.quantity,
+      user.userId,
+    );
     return ResponseHelper.success('Stock adjusted successfully');
   }
 
@@ -119,11 +141,13 @@ export class InventoryController {
       quantity: number;
       originalPrice?: number;
     },
+    @GetUser() user: User,
   ) {
     await this.inventoryService.setStock(
       dto.productId,
       dto.quantity,
       dto.originalPrice,
+      user.userId,
     );
     return ResponseHelper.success('Stock set successfully');
   }
@@ -343,20 +367,6 @@ export class InventoryController {
     return ResponseHelper.success(
       'Adjustment cancelled successfully',
       adjustment,
-    );
-  }
-
-  @Get('products/:productId/adjustments')
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get adjustment history for a product' })
-  @ApiParam({ name: 'productId', description: 'Product UUID' })
-  @ApiResponse({ status: 200, description: 'Returns adjustment history' })
-  async getProductAdjustmentHistory(@Param('productId') productId: string) {
-    const adjustments =
-      await this.inventoryService.getProductAdjustmentHistory(productId);
-    return ResponseHelper.success(
-      'Adjustment history retrieved successfully',
-      adjustments,
     );
   }
 }
