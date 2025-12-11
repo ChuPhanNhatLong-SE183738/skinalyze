@@ -540,7 +540,7 @@ export default function AppointmentDetailPage() {
               <CardContent className="pt-4">
                 <Textarea
                   placeholder="Start typing your medical notes here..."
-                  className="min-h-[200px] text-base resize-y font-mono bg-white"
+                  className="min-h-[200px] text-base resize-y bg-white"
                   value={medicalNote}
                   onChange={(e) => setMedicalNote(e.target.value)}
                   // Disable the textarea if already completed (read-only)
@@ -741,7 +741,7 @@ export default function AppointmentDetailPage() {
               <Textarea
                 value={medicalNote}
                 onChange={(e) => setMedicalNote(e.target.value)}
-                className="min-h-[120px] bg-blue-50/50 font-mono text-sm"
+                className="min-h-[120px] bg-blue-50/50 text-sm"
                 placeholder="Ensure your medical notes are complete..."
               />
               <p className="text-xs text-muted-foreground">

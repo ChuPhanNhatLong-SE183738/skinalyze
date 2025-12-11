@@ -29,6 +29,16 @@ import { PlusCircle, X, AlertTriangle } from "lucide-react";
 import { CreateSlotModal } from "@/components/availability-slots/CreateSlotModal";
 import { DeleteSlotDialog } from "@/components/availability-slots/DeleteSlotDialog";
 import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export interface CalendarEvent {
   title: string;
@@ -51,9 +61,12 @@ export default function AvailabilityPage() {
   const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(
     null
   );
-  const [slotToDelete, setSlotToDelete] = useState<AvailabilitySlot | null>(
-    null
-  );
+  const [slotsToDelete, setSlotsToDelete] = useState<AvailabilitySlot[]>([]);
+  const [pendingSelection, setPendingSelection] = useState<{
+    slots: AvailabilitySlot[];
+    dates: Date[];
+    defaultShift?: { startTime: string; endTime: string };
+  } | null>(null);
 
   const [currentView, setCurrentView] = useState<View>(Views.WEEK);
 
@@ -117,7 +130,10 @@ export default function AvailabilityPage() {
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
     const slot = event.resource;
     setSelectedSlot(slot);
-    setSlotToDelete(null);
+    setSlotsToDelete([]);
+    setPendingSelection(null);
+    setIsModalOpen(false);
+    setSelectedDates([]);
 
     setTimeout(() => {
       detailCardRef.current?.scrollIntoView({
@@ -129,60 +145,103 @@ export default function AvailabilityPage() {
   // Handle select range to create slots (onSelectSlot by calendar)
   const handleSelectRange = useCallback(
     (slotInfo: { start: Date; end: Date }) => {
-      const start = slotInfo.start;
-      const end = slotInfo.end;
+      const selectionStart = new Date(slotInfo.start);
+      const selectionEnd = new Date(slotInfo.end);
 
-      // BƯỚC 0: Reset defaultShift trước mỗi lần chọn
+      // Reset state before handling a new range
       setDefaultShift(undefined);
+      setSlotsToDelete([]);
+      setSelectedSlot(null);
+      setSelectedDates([]);
+      setPendingSelection(null);
 
-      // 1. Logic lấy giờ nếu là timed selection (kéo chuột trong Week/Day view)
+      // Ensure advanced modal is closed before deciding the next action
+      setIsModalOpen(false);
+
+      // Capture default shift if the user drags within a single day
       const isTimedSelection =
-        start.getHours() !== 0 ||
-        start.getMinutes() !== 0 ||
-        end.getHours() !== 0 ||
-        end.getMinutes() !== 0;
+        selectionStart.getHours() !== 0 ||
+        selectionStart.getMinutes() !== 0 ||
+        selectionEnd.getHours() !== 0 ||
+        selectionEnd.getMinutes() !== 0;
 
-      // Nếu có chọn giờ và chỉ chọn trong cùng một ngày
-      if (isTimedSelection && start.toDateString() === end.toDateString()) {
-        setDefaultShift({
-          startTime: format(start, "HH:mm"),
-          endTime: format(end, "HH:mm"),
-        });
+      const inferredShift =
+        isTimedSelection &&
+        selectionStart.toDateString() === selectionEnd.toDateString()
+          ? {
+              startTime: format(selectionStart, "HH:mm"),
+              endTime: format(selectionEnd, "HH:mm"),
+            }
+          : undefined;
+
+      // Adjust selection that lands on midnight to keep date iteration inclusive
+      const inclusiveEnd = new Date(selectionEnd);
+      if (
+        inclusiveEnd.getHours() === 0 &&
+        inclusiveEnd.getMinutes() === 0 &&
+        inclusiveEnd > selectionStart
+      ) {
+        inclusiveEnd.setDate(inclusiveEnd.getDate() - 1);
       }
-      // 2. Điều chỉnh lựa chọn chéo ngày (Logic gốc: nếu kết thúc lúc 00:00, lùi lại 1 ngày)
-      if (end.getHours() === 0 && end.getMinutes() === 0 && end > start) {
-        end.setDate(end.getDate() - 1);
-      }
-      const dates: Date[] = [];
-      const current = new Date(start);
+
+      const computedDates: Date[] = [];
+      const cursor = new Date(selectionStart);
       const today = new Date(new Date().setHours(0, 0, 0, 0));
 
-      while (current <= end) {
-        if (current >= today) {
-          dates.push(new Date(current));
+      while (cursor <= inclusiveEnd) {
+        if (cursor >= today) {
+          computedDates.push(new Date(cursor));
         }
-        current.setDate(current.getDate() + 1);
+        cursor.setDate(cursor.getDate() + 1);
       }
 
-      if (dates.length > 0) {
-        setSelectedDates(dates);
-        setIsModalOpen(true);
-      } else if (start >= today) {
-        setSelectedDates([new Date(start)]);
+      const effectiveDates =
+        computedDates.length > 0
+          ? computedDates
+          : selectionStart >= today
+          ? [new Date(selectionStart)]
+          : [];
+
+      const existingSlotsInRange = slots
+        .filter((slot) => {
+          const slotStart = new Date(slot.startTime);
+          return slotStart >= selectionStart && slotStart < selectionEnd;
+        })
+        .sort(
+          (a, b) =>
+            new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+        );
+
+      if (existingSlotsInRange.length > 0) {
+        setPendingSelection({
+          slots: existingSlotsInRange,
+          dates: effectiveDates,
+          defaultShift: inferredShift,
+        });
+        return;
+      }
+
+      setDefaultShift(inferredShift);
+
+      if (effectiveDates.length > 0) {
+        setSelectedDates(effectiveDates);
         setIsModalOpen(true);
       }
     },
-    []
+    [slots]
   );
 
   const onSlotDeleted = () => {
-    setSlotToDelete(null);
     setSelectedSlot(null);
+    setSlotsToDelete([]);
+    setDefaultShift(undefined);
     fetchSlots();
   };
 
   const onSlotsCreated = () => {
     setIsModalOpen(false);
+    setSlotsToDelete([]);
+    setDefaultShift(undefined);
     fetchSlots();
   };
 
@@ -249,6 +308,10 @@ export default function AvailabilityPage() {
         <Button
           onClick={() => {
             setSelectedDates([]);
+            setSelectedSlot(null);
+            setSlotsToDelete([]);
+            setDefaultShift(undefined);
+            setPendingSelection(null);
             setIsModalOpen(true);
           }}
           className="mt-2 md:mt-0"
@@ -350,7 +413,11 @@ export default function AvailabilityPage() {
             {selectedSlot.status === "AVAILABLE" ? (
               <Button
                 variant="destructive"
-                onClick={() => setSlotToDelete(selectedSlot)}
+                onClick={() => {
+                  if (selectedSlot) {
+                    setSlotsToDelete([selectedSlot]);
+                  }
+                }}
               >
                 Delete Slot
               </Button>
@@ -386,10 +453,109 @@ export default function AvailabilityPage() {
       />
 
       <DeleteSlotDialog
-        slot={slotToDelete}
-        onClose={() => setSlotToDelete(null)}
+        slots={slotsToDelete}
+        onClose={() => setSlotsToDelete([])}
         onSlotDeleted={onSlotDeleted}
       />
+
+      <AlertDialog
+        open={Boolean(pendingSelection)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingSelection(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Existing availability detected</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingSelection?.slots.length ?? 0} slot(s) already exist in the
+              selected range. Choose whether to delete them or create new
+              availability instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3 text-sm text-muted-foreground">
+            {pendingSelection?.dates.length === 0 && (
+              <p>
+                You cannot create new availability in the past, but you can
+                delete the existing slots.
+              </p>
+            )}
+            {pendingSelection && pendingSelection.slots.length > 0 && (
+              <div className="rounded-md bg-slate-100 p-3 text-slate-700">
+                <p className="font-medium">
+                  First slot:{" "}
+                  {format(
+                    new Date(pendingSelection.slots[0].startTime),
+                    "HH:mm - dd/MM/yyyy"
+                  )}
+                </p>
+                {pendingSelection.slots.length > 1 && (
+                  <p>
+                    Last slot:{" "}
+                    {format(
+                      new Date(
+                        pendingSelection.slots[
+                          pendingSelection.slots.length - 1
+                        ].startTime
+                      ),
+                      "HH:mm - dd/MM/yyyy"
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                variant="outline"
+                disabled={
+                  !pendingSelection || pendingSelection.dates.length === 0
+                }
+                onClick={() => {
+                  if (!pendingSelection) {
+                    return;
+                  }
+                  if (pendingSelection.dates.length === 0) {
+                    toast({
+                      title: "Cannot create availability",
+                      description: "Selected range is entirely in the past.",
+                      variant: "error",
+                    });
+                    setPendingSelection(null);
+                    return;
+                  }
+                  setDefaultShift(pendingSelection.defaultShift);
+                  setSelectedDates(pendingSelection.dates);
+                  setIsModalOpen(true);
+                  setPendingSelection(null);
+                }}
+              >
+                Create new slots
+              </Button>
+            </AlertDialogAction>
+            <AlertDialogAction asChild>
+              <Button
+                variant="warning"
+                onClick={() => {
+                  if (!pendingSelection) {
+                    return;
+                  }
+                  setSlotsToDelete(pendingSelection.slots);
+                  setPendingSelection(null);
+                }}
+              >
+                Delete existing slots
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
