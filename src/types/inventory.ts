@@ -85,3 +85,27 @@ export interface DirectStockAdjustment {
   productId: string;
   quantity: number; // Positive to add, negative to remove
 }
+
+export interface AdjustmentHistory {
+  adjustmentId: string;
+  adjustmentType: "INCREASE" | "DECREASE";
+  quantity: number;
+  previousStock: number;
+  newStock: number;
+  reason?: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  requestedBy: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  requestedByUser?: {
+    userId: string;
+    fullName: string;
+    email: string;
+  };
+  reviewedByUser?: {
+    userId: string;
+    fullName: string;
+    email: string;
+  };
+}

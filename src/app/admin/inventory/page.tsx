@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import ApprovalModal from "@/components/inventory/ApprovalModal";
 import DirectAdjustmentModal from "@/components/inventory/DirectAdjustmentModal";
+import { ProductDetailModal } from "@/components/inventory/ProductDetailModal";
 import { inventoryService } from "@/services/inventoryService";
 import { authService } from "@/services/authService";
 import { Inventory, PendingAdjustment, AdjustmentApprovalRequest, DirectStockAdjustment } from "@/types/inventory";
@@ -21,14 +22,14 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Eye,
 } from "lucide-react";
 
 export default function AdminInventoryPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"inventory" | "requests" | "processed">("inventory");
+  const [activeTab, setActiveTab] = useState<"inventory" | "requests">("inventory");
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [pendingAdjustments, setPendingAdjustments] = useState<PendingAdjustment[]>([]);
-  const [processedAdjustments, setProcessedAdjustments] = useState<PendingAdjustment[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [adminId, setAdminId] = useState<string>("");
@@ -38,6 +39,7 @@ export default function AdminInventoryPage() {
   const [selectedAdjustment, setSelectedAdjustment] = useState<PendingAdjustment | null>(null);
   const [showDirectModal, setShowDirectModal] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const itemsPerPage = 10;
@@ -61,7 +63,7 @@ export default function AdminInventoryPage() {
       }
 
       setAdminId(response.user.userId);
-      await Promise.all([fetchInventory(), fetchPendingAdjustments(), fetchProcessedAdjustments()]);
+      await Promise.all([fetchInventory(), fetchPendingAdjustments()]);
     } catch (error) {
       console.error("Authentication error:", error);
       router.push("/admin/login");
@@ -86,15 +88,6 @@ export default function AdminInventoryPage() {
       setPendingAdjustments(data);
     } catch (error) {
       console.error("Failed to fetch pending adjustments:", error);
-    }
-  };
-
-  const fetchProcessedAdjustments = async () => {
-    try {
-      const data = await inventoryService.getProcessedAdjustments();
-      setProcessedAdjustments(data);
-    } catch (error) {
-      console.error("Failed to fetch processed adjustments:", error);
     }
   };
 
@@ -155,24 +148,14 @@ export default function AdminInventoryPage() {
     return productName.includes(query) || brand.includes(query) || requesterName.includes(query);
   });
 
-  const filteredProcessed = processedAdjustments.filter((adj) => {
-    if (!adj.product) return false;
-    const productName = adj.product.productName.toLowerCase();
-    const brand = adj.product.brand.toLowerCase();
-    const requesterName = adj.requestedByUser?.fullName.toLowerCase() || "";
-    const query = searchQuery.toLowerCase();
-    return productName.includes(query) || brand.includes(query) || requesterName.includes(query);
-  });
-
   // Pagination calculations
-  const currentData = activeTab === "inventory" ? filteredInventory : activeTab === "requests" ? filteredAdjustments : filteredProcessed;
+  const currentData = activeTab === "inventory" ? filteredInventory : filteredAdjustments;
   const totalPages = Math.ceil(currentData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, currentData.length);
   const currentItems = currentData.slice(startIndex, endIndex);
   const currentInventory = activeTab === "inventory" ? currentItems as Inventory[] : [];
   const currentAdjustments = activeTab === "requests" ? currentItems as PendingAdjustment[] : [];
-  const currentProcessed = activeTab === "processed" ? currentItems as PendingAdjustment[] : [];
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -364,19 +347,6 @@ export default function AdminInventoryPage() {
               </span>
             )}
           </button>
-          <button
-            onClick={() => {
-              setActiveTab("processed");
-              setCurrentPage(1);
-            }}
-            className={`pb-3 px-1 font-medium transition-colors ${
-              activeTab === "processed"
-                ? "text-green-600 border-b-2 border-green-600"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Processed Requests
-          </button>
         </div>
 
         {/* Search */}
@@ -471,17 +441,31 @@ export default function AdminInventoryPage() {
                             ₫{item.originalPrice.toLocaleString()}
                           </td>
                           <td className="py-4 px-6">
-                            <Button
-                              size="sm"
-                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-                              onClick={() => {
-                                setSelectedInventory(item);
-                                setShowDirectModal(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Adjust
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                                onClick={() => {
+                                  setSelectedInventory(item);
+                                  setShowDetailModal(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Details
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                                onClick={() => {
+                                  setSelectedInventory(item);
+                                  setShowDirectModal(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Adjust
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -714,176 +698,6 @@ export default function AdminInventoryPage() {
               </div>
             )}
           </Card>
-        ) : activeTab === "processed" ? (
-          <Card className="overflow-hidden bg-white border-slate-200">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-900">
-                      Product
-                    </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-900">
-                      Type
-                    </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-900">
-                      Quantity
-                    </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-900">
-                      Requested By
-                    </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-900">
-                      Status
-                    </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-900">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filteredProcessed.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500">
-                        No processed requests
-                      </td>
-                    </tr>
-                  ) : (
-                    currentProcessed.map((adjustment) => (
-                      <tr key={adjustment.adjustmentId} className="hover:bg-slate-50">
-                        <td className="py-4 px-6">
-                          <div>
-                            <p className="font-medium text-slate-900">
-                              {adjustment.product?.productName || "Unknown"}
-                            </p>
-                            <p className="text-sm text-slate-500">
-                              {adjustment.product?.brand || ""}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              adjustment.adjustmentType === "INCREASE"
-                                ? "bg-green-50 text-green-700"
-                                : "bg-red-50 text-red-700"
-                            }`}
-                          >
-                            {adjustment.adjustmentType === "INCREASE" ? "+" : "-"}
-                            {adjustment.quantity}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className="text-sm text-slate-900">
-                            {adjustment.quantity}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div>
-                            <p className="text-sm font-medium text-slate-900">
-                              {adjustment.requestedByUser?.fullName || "Unknown"}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {adjustment.requestedByUser?.role || ""}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                              adjustment.status === "APPROVED"
-                                ? "bg-green-50 text-green-700"
-                                : "bg-red-50 text-red-700"
-                            }`}
-                          >
-                            {adjustment.status === "APPROVED" ? (
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                            ) : (
-                              <XCircle className="h-3 w-3 mr-1" />
-                            )}
-                            {adjustment.status}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className="text-sm text-slate-600">
-                            {new Date(adjustment.updatedAt).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && activeTab === "processed" && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200">
-                <div className="text-sm text-slate-600">
-                  Showing {startIndex + 1} to {endIndex} of {filteredProcessed.length} requests
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-300"
-                  >
-                    Previous
-                  </Button>
-                  <div className="flex gap-1">
-                    {getPageNumbers().map((page, index) => (
-                      page === '...' ? (
-                        <span key={`ellipsis-${index}`} className="px-2 py-1 text-slate-400">
-                          ...
-                        </span>
-                      ) : (
-                        <Button
-                          key={page}
-                          onClick={() => handlePageChange(page as number)}
-                          variant={currentPage === page ? "default" : "outline"}
-                          size="sm"
-                          className={currentPage === page ? "bg-green-500 hover:bg-green-600" : "border-slate-300"}
-                        >
-                          {page}
-                        </Button>
-                      )
-                    ))}
-                  </div>
-                  <Button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-300"
-                  >
-                    Next
-                  </Button>
-                  <form onSubmit={handlePageInputSubmit} className="flex items-center gap-2 ml-4">
-                    <span className="text-sm text-slate-600">Go to:</span>
-                    <input
-                      type="text"
-                      value={pageInput}
-                      onChange={(e) => setPageInput(e.target.value)}
-                      className="w-16 h-8 text-center border border-slate-300 rounded"
-                    />
-                    <Button
-                      type="submit"
-                      size="sm"
-                      variant="outline"
-                      className="border-slate-300"
-                    >
-                      Go
-                    </Button>
-                  </form>
-                </div>
-              </div>
-            )}
-          </Card>
         ) : null}
       </div>
 
@@ -908,6 +722,15 @@ export default function AdminInventoryPage() {
         onApprove={handleApprove}
         onReject={handleReject}
         reviewerId={adminId}
+      />
+
+      <ProductDetailModal
+        inventory={selectedInventory}
+        open={showDetailModal}
+        onOpenChange={(open) => {
+          setShowDetailModal(open);
+          if (!open) setSelectedInventory(null);
+        }}
       />
     </AdminLayout>
   );
