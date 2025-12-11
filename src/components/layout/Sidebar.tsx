@@ -8,11 +8,11 @@ import {
   Package,
   Users,
   BarChart3,
-  Settings,
   LogOut,
   Warehouse,
   Bell,
   Truck,
+  PackageX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,14 +37,14 @@ const menuItems = [
     icon: Truck,
   },
   {
+    title: "Return Requests",
+    href: "/staff/return-requests",
+    icon: PackageX,
+  },
+  {
     title: "Inventory",
     href: "/staff/inventory",
     icon: Warehouse,
-  },
-  {
-    title: "Settings",
-    href: "/staff/settings",
-    icon: Settings,
   },
 ];
 
@@ -59,12 +59,8 @@ export function Sidebar({ onLogout }: SidebarProps) {
           <ShieldCheck className="h-6 w-6 text-white" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-slate-900">
-            Skinalyze
-          </h1>
-          <p className="text-xs text-slate-500">
-            Staff Portal
-          </p>
+          <h1 className="text-lg font-bold text-slate-900">Skinalyze</h1>
+          <p className="text-xs text-slate-500">Staff Portal</p>
         </div>
       </div>
 

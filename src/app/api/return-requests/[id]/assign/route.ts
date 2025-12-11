@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:3000/api/v1";
 
-export async function GET(request: NextRequest) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("access_token");
@@ -13,13 +16,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const searchParams = request.nextUrl.searchParams;
-    const queryString = searchParams.toString();
+    const { id } = await params;
 
     const response = await fetch(
-      `${BACKEND_URL}/withdrawals${queryString ? `?${queryString}` : ""}`,
+      `${API_BASE_URL}/return-requests/${id}/assign`,
       {
-        method: "GET",
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${token.value}`,
           "Content-Type": "application/json",
@@ -31,20 +33,16 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.message || "Failed to fetch withdrawal requests" },
+        { error: data.message || "Failed to assign return request" },
         { status: response.status }
       );
     }
 
     return NextResponse.json(data);
-  } catch (error: unknown) {
-    console.error("Error fetching withdrawal requests:", error);
+  } catch (error) {
+    console.error("Error assigning return request:", error);
     return NextResponse.json(
-      {
-        error:
-          (error instanceof Error ? error.message : String(error)) ||
-          "Internal server error",
-      },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

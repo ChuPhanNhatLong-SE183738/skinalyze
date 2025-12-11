@@ -11,6 +11,7 @@ import { authService } from "@/services/authService";
 import type { Category } from "@/types/product";
 import { Plus, Search, Edit, Trash2, Package, Calendar } from "lucide-react";
 import { CategoryFormModal } from "@/components/categories/CategoryFormModal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Toast {
   variant: "success" | "error";
@@ -32,6 +33,8 @@ export default function CategoriesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const itemsPerPage = 9; // 3x3 grid
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuthAndLoadCategories();
@@ -93,13 +96,16 @@ export default function CategoriesPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm("Are you sure you want to delete this category?")) {
-      return;
-    }
+  const handleDeleteCategory = (categoryId: string) => {
+    setCategoryToDelete(categoryId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
 
     try {
-      await categoryService.deleteCategory(categoryId);
+      await categoryService.deleteCategory(categoryToDelete);
       await loadCategories();
       setToast({
         variant: "success",
@@ -112,6 +118,9 @@ export default function CategoriesPage() {
         title: "Error",
         description: (error instanceof Error ? error.message : String(error)) || "Failed to delete category",
       });
+    } finally {
+      setCategoryToDelete(null);
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -437,6 +446,18 @@ export default function CategoriesPage() {
         onSubmit={handleFormSubmit}
         category={selectedCategory}
         mode={modalMode}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Category"
+        description="Are you sure you want to delete this category? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={confirmDeleteCategory}
+        variant="destructive"
       />
     </AdminLayout>
   );
