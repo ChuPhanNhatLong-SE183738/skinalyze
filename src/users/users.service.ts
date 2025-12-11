@@ -3,16 +3,19 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { TopupBalanceDto } from './dto/topup-balance.dto';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { ResponseHelper } from '../utils/responses';
 import { EmailService } from '../email/email.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { DermatologistsService } from '../dermatologists/dermatologists.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -23,6 +26,8 @@ export class UsersService {
     private readonly userRepository: Repository<User>,
     private readonly emailService: EmailService,
     private readonly cloudinaryService: CloudinaryService,
+    @Inject(forwardRef(() => DermatologistsService))
+    private readonly dermatologistsService: DermatologistsService,
   ) {}
   private getRepository(manager?: EntityManager): Repository<User> {
     return manager ? manager.getRepository(User) : this.userRepository;
@@ -47,7 +52,25 @@ export class UsersService {
       password: hashedPassword,
     });
 
-    return await this.userRepository.save(user);
+    const savedUser = await this.userRepository.save(user);
+
+    // If user role is dermatologist, automatically create dermatologist profile
+    if (savedUser.role === UserRole.DERMATOLOGIST) {
+      try {
+        await this.dermatologistsService.create(savedUser.userId, {
+          yearsOfExp: 0,
+          defaultSlotPrice: 0,
+        });
+        this.logger.log(`Dermatologist profile created for user ${savedUser.userId}`);
+      } catch (error) {
+        this.logger.error(
+          `Failed to create dermatologist profile for user ${savedUser.userId}: ${error.message}`,
+        );
+        // Don't throw error to avoid blocking user creation
+      }
+    }
+
+    return savedUser;
   }
 
   async findAll(): Promise<User[]> {

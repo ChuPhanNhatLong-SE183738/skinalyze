@@ -4,6 +4,8 @@ import {
   InternalServerErrorException,
   HttpException,
   ConflictException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, MoreThanOrEqual, Repository } from 'typeorm';
@@ -30,6 +32,7 @@ export class DermatologistsService {
     private readonly dermatologistRepository: Repository<Dermatologist>,
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
+    @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
   ) {}
 

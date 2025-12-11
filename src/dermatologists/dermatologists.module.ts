@@ -13,7 +13,7 @@ import { Customer } from 'src/customers/entities/customer.entity';
     TypeOrmModule.forFeature([Dermatologist, Customer]),
     forwardRef(() => AvailabilitySlotsModule),
     forwardRef(() => AuthModule),
-    UsersModule,
+    forwardRef(() => UsersModule),
   ],
   controllers: [DermatologistsController],
   providers: [DermatologistsService],
