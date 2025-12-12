@@ -17,6 +17,7 @@ import {
   FolderTree,
   Wallet,
   AlertTriangle,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -39,6 +40,11 @@ const menuItems = [
     title: "Reports",
     href: "/admin/reports",
     icon: AlertTriangle,
+  },
+  {
+    title: "Payments",
+    href: "/admin/payments",
+    icon: CreditCard,
   },
   {
     title: "Withdrawals",

@@ -320,23 +320,21 @@ export default function WithdrawalsPage() {
   return (
     <AdminLayout>
       <div className="p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-900">Withdrawal Management</h1>
+          <p className="text-slate-600 mt-1">
+            Manage and process customer withdrawal requests
+          </p>
+        </div>
+
         <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-                <Wallet className="h-8 w-8 text-blue-600" />
-                Withdrawal Requests
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Manage and process customer withdrawal requests
-              </p>
-            </div>
+          {/* Header Actions */}
+          <div className="flex items-center justify-end">
             <Button
               onClick={fetchWithdrawals}
               variant="outline"
               disabled={loading}
-              className="border-green-300 text-green-600 hover:bg-green-50 hover:text-green-700 bg-white"
+              className="border-slate-300"
             >
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
@@ -347,93 +345,105 @@ export default function WithdrawalsPage() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-sm font-medium text-slate-600">
                     Total
                   </p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  <p className="text-2xl font-bold text-slate-900 mt-1">
                     {stats.total}
                   </p>
                 </div>
-                <Wallet className="h-8 w-8 text-slate-400" />
+                <div className="p-3 bg-gradient-to-r from-slate-400 to-slate-500 rounded-lg">
+                  <Wallet className="h-6 w-6 text-white" />
+                </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-sm font-medium text-slate-600">
                     Pending
                   </p>
-                  <p className="text-2xl font-bold text-yellow-600">
+                  <p className="text-2xl font-bold text-yellow-600 mt-1">
                     {stats.pending}
                   </p>
                 </div>
-                <Clock className="h-8 w-8 text-yellow-400" />
+                <div className="p-3 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-lg">
+                  <Clock className="h-6 w-6 text-white" />
+                </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-sm font-medium text-slate-600">
                     Verified
                   </p>
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-blue-600 mt-1">
                     {stats.verified}
                   </p>
                 </div>
-                <Clock className="h-8 w-8 text-blue-400" />
+                <div className="p-3 bg-gradient-to-r from-blue-400 to-blue-500 rounded-lg">
+                  <Clock className="h-6 w-6 text-white" />
+                </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-sm font-medium text-slate-600">
                     Approved
                   </p>
-                  <p className="text-2xl font-bold text-purple-600">
+                  <p className="text-2xl font-bold text-purple-600 mt-1">
                     {stats.approved}
                   </p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-purple-400" />
+                <div className="p-3 bg-gradient-to-r from-purple-400 to-purple-500 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-sm font-medium text-slate-600">
                     Completed
                   </p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-green-600 mt-1">
                     {stats.completed}
                   </p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-400" />
+                <div className="p-3 bg-gradient-to-r from-green-400 to-emerald-500 rounded-lg">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+            <div className="bg-white rounded-lg border border-slate-200 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                  <p className="text-sm font-medium text-slate-600">
                     Rejected
                   </p>
-                  <p className="text-2xl font-bold text-red-600">
+                  <p className="text-2xl font-bold text-red-600 mt-1">
                     {stats.rejected}
                   </p>
                 </div>
-                <XCircle className="h-8 w-8 text-red-400" />
+                <div className="p-3 bg-gradient-to-r from-red-400 to-red-500 rounded-lg">
+                  <XCircle className="h-6 w-6 text-white" />
+                </div>
               </div>
             </div>
           </div>
 
           {/* Filters */}
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-4">
+          <div className="bg-white rounded-lg border border-slate-200 p-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -452,8 +462,11 @@ export default function WithdrawalsPage() {
                 <Filter className="h-5 w-5 text-slate-400" />
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-slate-900"
                 >
                   <option value="all">All Status</option>
                   <option value={WithdrawalStatus.PENDING}>Pending</option>
