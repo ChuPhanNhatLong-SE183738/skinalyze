@@ -42,3 +42,51 @@ export interface UpdateWithdrawalStatusRequest {
   rejectionReason?: string;
   note?: string;
 }
+
+export interface RequestOTPRequest {
+  amount: number;
+}
+
+export interface RequestOTPResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface CreateWithdrawalRequest {
+  otpCode: string;
+  fullName: string;
+  amount: number;
+  type: "withdraw";
+  bankName: string;
+  accountNumber: string;
+  notes?: string;
+}
+
+export interface CreateWithdrawalResponse {
+  success: boolean;
+  message: string;
+  data: WithdrawalRequest;
+}
+
+export interface WalletTransaction {
+  paymentId: number;
+  paymentCode: string;
+  paymentType: "topup" | "withdraw";
+  amount: string;
+  paidAmount: string;
+  paymentMethod: string;
+  status: string;
+  transferContent: string | null;
+  createdAt: string;
+  paidAt: string | null;
+  withdrawalRequestId: string | null;
+}
+
+export interface WalletTransactionsResponse {
+  success: boolean;
+  data: WalletTransaction[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
