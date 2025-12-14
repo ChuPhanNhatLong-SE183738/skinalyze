@@ -66,6 +66,7 @@ export default function AppointmentDetailPage() {
     null
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
 
   const [isJoining, setIsJoining] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -124,6 +125,11 @@ export default function AppointmentDetailPage() {
   useEffect(() => {
     fetchAppointment();
   }, [fetchAppointment]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => setCurrentTimeMs(Date.now()), 15000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const handleSaveDraft = async () => {
     if (!appointment) return;
@@ -339,6 +345,10 @@ export default function AppointmentDetailPage() {
       </div>
     );
   }
+
+  const joinOpensAtMs =
+    new Date(appointment.startTime).getTime() - 10 * 60 * 1000;
+  const isJoinWindowOpen = currentTimeMs >= joinOpensAtMs;
 
   const canJoinMeet =
     appointment.appointmentStatus === AppointmentStatus.SCHEDULED ||
@@ -563,6 +573,7 @@ export default function AppointmentDetailPage() {
           <AppointmentActionsCard
             appointment={appointment}
             isJoining={isJoining}
+            isJoinWindowOpen={isJoinWindowOpen}
             isCompletable={isCompletable}
             isCancellable={isCancellable}
             canJoinMeet={canJoinMeet}
