@@ -489,6 +489,7 @@ export default function AppointmentDetailPage() {
               )}
 
               <Separator />
+              {renderList("Allergies", appointment.customer.user.allergies)}
               {renderList(
                 "Dermatological History",
                 appointment.customer.pastDermatologicalHistory

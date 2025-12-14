@@ -22,6 +22,7 @@ export interface User {
   isVerified?: boolean;
   emailVerificationToken?: string | null;
   emailVerificationTokenExpiry?: string | null;
+  allergies: string[] | null;
 }
 
 export interface UsersResponse {
