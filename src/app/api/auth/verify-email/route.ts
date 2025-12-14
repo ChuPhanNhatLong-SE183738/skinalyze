@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     console.log("URL endpoint: ", API_BASE_URL);
     const response = await fetch(
-      `${API_BASE_URL}/api/v1/auth/verify-email?token=${token}`,
+      `${API_BASE_URL}/auth/verify-email?token=${token}`,
       {
         method: "POST",
         headers: {
