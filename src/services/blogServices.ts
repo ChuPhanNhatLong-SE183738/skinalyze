@@ -50,7 +50,7 @@ class APIError extends Error {
 }
 
 const initializeClient = () => {
-  return new GraphQLClient(process.env.NEXT_HYGRAPH_API_ENDPOINT as string);
+  return new GraphQLClient(process.env.NEXT_PUBLIC_HYGRAPH_API_ENDPOINT as string);
 };
 
 const getAllPosts = async (): Promise<BlogPost[]> => {
