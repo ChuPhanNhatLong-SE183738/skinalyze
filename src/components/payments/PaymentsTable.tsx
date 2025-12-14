@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { Payment, PaymentStatus, PaymentType } from "@/types/payment";
 import { paymentService } from "@/services/paymentService";
 import {
@@ -670,11 +671,23 @@ export default function PaymentsTable() {
                   </div>
                   <div className="col-span-2">
                     <label className="text-sm font-medium text-slate-700">
-                      Photo URL
+                      Photo
                     </label>
-                    <p className="text-sm text-slate-900 break-all">
-                      {selectedPayment.user.photoUrl || "-"}
-                    </p>
+                    <div className="mt-1">
+                      {selectedPayment.user.photoUrl ? (
+                        <Image
+                          src={selectedPayment.user.photoUrl}
+                          alt="User Photo"
+                          width={80}
+                          height={80}
+                          className="rounded-lg object-cover border border-slate-200"
+                        />
+                      ) : (
+                        <p className="text-sm text-slate-500">
+                          No photo available
+                        </p>
+                      )}
+                    </div>
                   </div>
                   {selectedPayment.user.allergies && (
                     <div className="col-span-2">
