@@ -42,19 +42,23 @@ export default function DermatologistDashboardPage() {
     // Calculate appointments by status
     const statusCounts: { [key: string]: number } = {};
     appointmentsData.forEach((apt) => {
-      statusCounts[apt.status] = (statusCounts[apt.status] || 0) + 1;
+      statusCounts[apt.appointmentStatus] = (statusCounts[apt.appointmentStatus] || 0) + 1;
     });
 
     const statusColors: { [key: string]: string } = {
-      PENDING: "#f59e0b",
-      CONFIRMED: "#3b82f6",
-      COMPLETED: "#10b981",
-      CANCELLED: "#ef4444",
-      NO_SHOW: "#6b7280",
+      PENDING_PAYMENT: "#f59e0b", // amber
+      SCHEDULED: "#3b82f6", // blue
+      IN_PROGRESS: "#8b5cf6", // violet
+      COMPLETED: "#10b981", // green
+      CANCELLED: "#ef4444", // red
+      NO_SHOW: "#6b7280", // gray
+      INTERRUPTED: "#f97316", // orange
+      DISPUTED: "#dc2626", // dark red
+      SETTLED: "#059669", // emerald
     };
 
     const appointmentsByStatus = Object.entries(statusCounts).map(([status, count]) => ({
-      name: status.replace("_", " "),
+      name: status.replace(/_/g, " "),
       value: count,
       color: statusColors[status] || "#64748b",
     }));
@@ -330,7 +334,7 @@ export default function DermatologistDashboardPage() {
                 <LineChart data={chartData.monthlyAppointments}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
-                  <YAxis />
+                  <YAxis allowDecimals={false} />
                   <Tooltip />
                   <Legend />
                   <Line
