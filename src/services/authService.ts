@@ -139,8 +139,12 @@ export class AuthService {
     token: string
   ): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`/api/auth/verify-email?token=${token}`, {
-        method: "GET",
+      const response = await fetch(`/api/auth/verify-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token }),
         credentials: "include",
       });
 

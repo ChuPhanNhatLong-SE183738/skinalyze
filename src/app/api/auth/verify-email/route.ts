@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_ENDPOINT || "http://localhost:8080";
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const token = searchParams.get("token");
+    const body = await request.json();
+    const { token } = body;
 
     if (!token) {
       return NextResponse.json(
@@ -17,12 +17,13 @@ export async function GET(request: NextRequest) {
 
     console.log("URL endpoint: ", API_BASE_URL);
     const response = await fetch(
-      `${API_BASE_URL}/api/v1/auth/verify-email?token=${token}`,
+      `${API_BASE_URL}/auth/verify-email`,
       {
-        method: "GET",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ token }),
       }
     );
 
