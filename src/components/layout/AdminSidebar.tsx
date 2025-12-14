@@ -18,8 +18,11 @@ import {
   Wallet,
   AlertTriangle,
   CreditCard,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface AdminSidebarProps {
   onLogout: () => void;
@@ -85,6 +88,39 @@ const menuItems = [
 
 export function AdminSidebar({ onLogout }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { toast } = useToast();
+  const [syncing, setSyncing] = useState(false);
+
+  const handleGHNSync = async () => {
+    try {
+      setSyncing(true);
+      const response = await fetch("/api/shipping-logs/ghn/sync", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to sync GHN orders");
+      }
+
+      toast({
+        title: "Success",
+        description: data.message || `GHN sync completed: ${data.data?.synced || 0} synced, ${data.data?.failed || 0} failed`,
+        variant: "success",
+      });
+    } catch (error: any) {
+      console.error("GHN sync error:", error);
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to sync GHN orders",
+        variant: "error",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   return (
     <div className="flex h-screen w-64 flex-col border-r border-slate-200 bg-white">
@@ -123,8 +159,17 @@ export function AdminSidebar({ onLogout }: AdminSidebarProps) {
         })}
       </nav>
 
-      {/* Logout Button */}
-      <div className="border-t border-slate-200 p-4">
+      {/* Footer Actions */}
+      <div className="border-t border-slate-200 p-4 space-y-2">
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-3 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+          onClick={handleGHNSync}
+          disabled={syncing}
+        >
+          <RefreshCw className={`h-5 w-5 ${syncing ? "animate-spin" : ""}`} />
+          {syncing ? "Syncing..." : "Sync GHN Orders"}
+        </Button>
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 text-slate-600 hover:text-slate-900 hover:bg-slate-100"

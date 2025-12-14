@@ -1,12 +1,88 @@
 import type {
   WithdrawalsResponse,
   UpdateWithdrawalStatusRequest,
+  RequestOTPRequest,
+  RequestOTPResponse,
+  CreateWithdrawalRequest,
+  CreateWithdrawalResponse,
+  WalletTransactionsResponse,
 } from "@/types/withdrawal";
 
 export class WithdrawalService {
-  /**
-   * Get all withdrawal requests (admin only)
-   */
+  async getWalletTransactions(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<WalletTransactionsResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append("page", params.page.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+
+    const response = await fetch(
+      `/api/payments/wallet/transactions${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`,
+      {
+        method: "GET",
+        credentials: "include",
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      const error: any = new Error(data.message || data.error || "Failed to fetch wallet transactions");
+      error.response = { status: response.status, data };
+      throw error;
+    }
+
+    return data;
+  }
+
+  async requestOTP(data: RequestOTPRequest): Promise<RequestOTPResponse> {
+    const response = await fetch("/api/withdrawals/request-otp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      const error: any = new Error(responseData.message || responseData.error || "Failed to request OTP");
+      error.response = { status: response.status, data: responseData };
+      throw error;
+    }
+
+    return responseData;
+  }
+
+  async createWithdrawal(
+    data: CreateWithdrawalRequest
+  ): Promise<CreateWithdrawalResponse> {
+    const response = await fetch("/api/withdrawals", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      const error: any = new Error(responseData.message || responseData.error || "Failed to create withdrawal request");
+      error.response = { status: response.status, data: responseData };
+      throw error;
+    }
+
+    return responseData;
+  }
+
+
   async getWithdrawals(params?: {
     page?: number;
     limit?: number;
@@ -43,9 +119,6 @@ export class WithdrawalService {
     }
   }
 
-  /**
-   * Get withdrawal request by ID
-   */
   async getWithdrawalById(
     requestId: string
   ): Promise<{ data: import("@/types/withdrawal").WithdrawalRequest }> {
@@ -70,9 +143,6 @@ export class WithdrawalService {
     }
   }
 
-  /**
-   * Update withdrawal request status
-   */
   async updateWithdrawalStatus(
     requestId: string,
     data: UpdateWithdrawalStatusRequest

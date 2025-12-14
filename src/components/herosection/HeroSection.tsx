@@ -126,7 +126,7 @@ const HeroSection = () => {
                   </svg>
                 </div>
                 <div>
-                  <div className="font-bold text-white">95% Accuracy</div>
+                  <div className="font-bold text-white">90% Accuracy</div>
                   <div className="text-xs text-gray-400 font-mono uppercase tracking-wider">
                     High Reliability
                   </div>

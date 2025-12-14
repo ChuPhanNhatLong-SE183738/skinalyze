@@ -22,6 +22,7 @@ export interface DermatologistProfile {
     email: string;
     fullName: string;
     dob: string | null;
+    balance: number;
     photoUrl: string | null;
     phone: string | null;
     gender: boolean | null; // true: Male, false: Female, null: Not specified

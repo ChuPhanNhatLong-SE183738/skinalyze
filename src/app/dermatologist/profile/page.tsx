@@ -71,21 +71,24 @@ export default function DermatologistProfilePage() {
   const [loadingSpecializations, setLoadingSpecializations] = useState(false);
   const [showAddSpecialization, setShowAddSpecialization] = useState(false);
   const [savingSpecialization, setSavingSpecialization] = useState(false);
-  const [specializationForm, setSpecializationForm] = useState<CreateSpecializationRequest>({
-    dermatologistId: "",
-    specializationName: "",
-    specialty: "",
-  });
+  const [specializationForm, setSpecializationForm] =
+    useState<CreateSpecializationRequest>({
+      dermatologistId: "",
+      specializationName: "",
+      specialty: "",
+    });
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const certificateInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Detail modal states
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedSpecialization, setSelectedSpecialization] = useState<Specialization | null>(null);
+  const [selectedSpecialization, setSelectedSpecialization] =
+    useState<Specialization | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
   const [updateForm, setUpdateForm] = useState<UpdateSpecializationRequest>({});
-  const [updateCertificateFile, setUpdateCertificateFile] = useState<File | null>(null);
+  const [updateCertificateFile, setUpdateCertificateFile] =
+    useState<File | null>(null);
   const [updatingSpecialization, setUpdatingSpecialization] = useState(false);
   const [deletingSpecialization, setDeletingSpecialization] = useState(false);
   const updateCertificateInputRef = useRef<HTMLInputElement>(null);
@@ -144,7 +147,9 @@ export default function DermatologistProfilePage() {
   const loadSpecializations = async (dermatologistId: string) => {
     try {
       setLoadingSpecializations(true);
-      const data = await dermatologistService.getSpecializations(dermatologistId);
+      const data = await dermatologistService.getSpecializations(
+        dermatologistId
+      );
       setSpecializations(data);
     } catch (error) {
       console.error("Error loading specializations:", error);
@@ -159,7 +164,10 @@ export default function DermatologistProfilePage() {
   };
 
   const handleAddSpecialization = async () => {
-    if (!specializationForm.specializationName || !specializationForm.specialty) {
+    if (
+      !specializationForm.specializationName ||
+      !specializationForm.specialty
+    ) {
       toast({
         variant: "error",
         title: "Validation Error",
@@ -177,7 +185,7 @@ export default function DermatologistProfilePage() {
       };
 
       await dermatologistService.createSpecialization(requestData);
-      
+
       toast({
         variant: "success",
         title: "Success",
@@ -214,7 +222,9 @@ export default function DermatologistProfilePage() {
     }
   };
 
-  const handleCertificateUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCertificateUpload = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -248,7 +258,7 @@ export default function DermatologistProfilePage() {
     try {
       setLoadingDetail(true);
       setShowDetailModal(true);
-      
+
       const data = await dermatologistService.getSpecializationById(id);
       setSelectedSpecialization(data);
       setUpdateForm({
@@ -297,7 +307,7 @@ export default function DermatologistProfilePage() {
         selectedSpecialization.specializationId,
         requestData
       );
-      
+
       setSelectedSpecialization(updated);
       setEditingDetail(false);
       setUpdateCertificateFile(null);
@@ -327,7 +337,11 @@ export default function DermatologistProfilePage() {
   const handleDeleteSpecialization = async () => {
     if (!selectedSpecialization) return;
 
-    if (!confirm("Are you sure you want to delete this specialization? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to delete this specialization? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -364,7 +378,9 @@ export default function DermatologistProfilePage() {
     }
   };
 
-  const handleUpdateCertificateUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpdateCertificateUpload = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -858,6 +874,13 @@ export default function DermatologistProfilePage() {
                     )}
                   </div>
                   <div>
+                    <Label htmlFor="balance">Balance</Label>
+                    <div className="mt-1 p-2 bg-slate-50 rounded-md text-slate-900 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-slate-600" />
+                      {formatCurrency(profile.user.balance.toString())}
+                    </div>
+                  </div>
+                  <div>
                     <Label htmlFor="gender">Gender</Label>
                     {editing ? (
                       <select
@@ -1007,7 +1030,9 @@ export default function DermatologistProfilePage() {
                     Specializations & Certifications
                   </CardTitle>
                   <Button
-                    onClick={() => setShowAddSpecialization(!showAddSpecialization)}
+                    onClick={() =>
+                      setShowAddSpecialization(!showAddSpecialization)
+                    }
                     className="bg-blue-600 hover:bg-blue-700"
                     size="sm"
                   >
@@ -1023,7 +1048,8 @@ export default function DermatologistProfilePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="specializationName">
-                          Specialization Name <span className="text-red-500">*</span>
+                          Specialization Name{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <Input
                           id="specializationName"
@@ -1076,7 +1102,9 @@ export default function DermatologistProfilePage() {
                         </select>
                       </div>
                       <div>
-                        <Label htmlFor="issuingAuthority">Issuing Authority</Label>
+                        <Label htmlFor="issuingAuthority">
+                          Issuing Authority
+                        </Label>
                         <Input
                           id="issuingAuthority"
                           value={specializationForm.issuingAuthority || ""}
@@ -1137,7 +1165,9 @@ export default function DermatologistProfilePage() {
                         />
                       </div>
                       <div className="md:col-span-2">
-                        <Label htmlFor="certificate">Certificate Image (Optional)</Label>
+                        <Label htmlFor="certificate">
+                          Certificate Image (Optional)
+                        </Label>
                         <div className="mt-1 flex items-center gap-2">
                           <Input
                             ref={certificateInputRef}
@@ -1174,7 +1204,9 @@ export default function DermatologistProfilePage() {
                         className="bg-green-600 hover:bg-green-700"
                       >
                         <Save className="w-4 h-4 mr-2" />
-                        {savingSpecialization ? "Saving..." : "Add Specialization"}
+                        {savingSpecialization
+                          ? "Saving..."
+                          : "Add Specialization"}
                       </Button>
                     </div>
                   </div>
@@ -1189,7 +1221,9 @@ export default function DermatologistProfilePage() {
                   <div className="text-center py-8 text-slate-600">
                     <Award className="w-12 h-12 mx-auto mb-3 text-slate-400" />
                     <p>No specializations added yet.</p>
-                    <p className="text-sm mt-1">Click "Add Specialization" to get started.</p>
+                    <p className="text-sm mt-1">
+                      Click "Add Specialization" to get started.
+                    </p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
@@ -1197,7 +1231,9 @@ export default function DermatologistProfilePage() {
                       <div
                         key={spec.specializationId}
                         className="p-4 border border-slate-200 rounded-lg hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
-                        onClick={() => handleViewSpecialization(spec.specializationId)}
+                        onClick={() =>
+                          handleViewSpecialization(spec.specializationId)
+                        }
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
@@ -1232,7 +1268,10 @@ export default function DermatologistProfilePage() {
                                 className="w-16 h-16 object-cover rounded border border-slate-200"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  window.open(spec.certificateImageUrl, '_blank');
+                                  window.open(
+                                    spec.certificateImageUrl,
+                                    "_blank"
+                                  );
                                 }}
                               />
                             )}
@@ -1249,14 +1288,17 @@ export default function DermatologistProfilePage() {
         </div>
 
         {/* Specialization Detail Modal */}
-        <Dialog open={showDetailModal} onOpenChange={(open) => {
-          if (!open) {
-            setShowDetailModal(false);
-            setSelectedSpecialization(null);
-            setEditingDetail(false);
-            setUpdateCertificateFile(null);
-          }
-        }}>
+        <Dialog
+          open={showDetailModal}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowDetailModal(false);
+              setSelectedSpecialization(null);
+              setEditingDetail(false);
+              setUpdateCertificateFile(null);
+            }
+          }}
+        >
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -1292,7 +1334,8 @@ export default function DermatologistProfilePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="detailSpecializationName">
-                      Specialization Name <span className="text-red-500">*</span>
+                      Specialization Name{" "}
+                      <span className="text-red-500">*</span>
                     </Label>
                     {editingDetail ? (
                       <Input
@@ -1364,7 +1407,9 @@ export default function DermatologistProfilePage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="detailIssuingAuthority">Issuing Authority</Label>
+                    <Label htmlFor="detailIssuingAuthority">
+                      Issuing Authority
+                    </Label>
                     {editingDetail ? (
                       <Input
                         id="detailIssuingAuthority"
@@ -1379,7 +1424,8 @@ export default function DermatologistProfilePage() {
                       />
                     ) : (
                       <p className="mt-1 p-2 bg-slate-50 rounded-md text-slate-900">
-                        {selectedSpecialization.issuingAuthority || "Not specified"}
+                        {selectedSpecialization.issuingAuthority ||
+                          "Not specified"}
                       </p>
                     )}
                   </div>
@@ -1449,14 +1495,17 @@ export default function DermatologistProfilePage() {
                       />
                     ) : (
                       <p className="mt-1 p-2 bg-slate-50 rounded-md text-slate-900">
-                        {selectedSpecialization.description || "No description provided"}
+                        {selectedSpecialization.description ||
+                          "No description provided"}
                       </p>
                     )}
                   </div>
 
                   {editingDetail && (
                     <div className="md:col-span-2">
-                      <Label htmlFor="updateCertificate">Update Certificate Image</Label>
+                      <Label htmlFor="updateCertificate">
+                        Update Certificate Image
+                      </Label>
                       <div className="mt-1 flex items-center gap-2">
                         <Input
                           ref={updateCertificateInputRef}
@@ -1479,8 +1528,12 @@ export default function DermatologistProfilePage() {
                 {/* Timestamps */}
                 <div className="pt-4 border-t border-slate-200 text-sm text-slate-600">
                   <div className="flex justify-between">
-                    <span>Created: {formatDate(selectedSpecialization.createdAt)}</span>
-                    <span>Updated: {formatDate(selectedSpecialization.updatedAt)}</span>
+                    <span>
+                      Created: {formatDate(selectedSpecialization.createdAt)}
+                    </span>
+                    <span>
+                      Updated: {formatDate(selectedSpecialization.updatedAt)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1526,11 +1579,14 @@ export default function DermatologistProfilePage() {
                         setUpdateCertificateFile(null);
                         if (selectedSpecialization) {
                           setUpdateForm({
-                            specializationName: selectedSpecialization.specializationName,
+                            specializationName:
+                              selectedSpecialization.specializationName,
                             specialty: selectedSpecialization.specialty,
-                            description: selectedSpecialization.description || "",
+                            description:
+                              selectedSpecialization.description || "",
                             level: selectedSpecialization.level || "",
-                            issuingAuthority: selectedSpecialization.issuingAuthority || "",
+                            issuingAuthority:
+                              selectedSpecialization.issuingAuthority || "",
                             issueDate: selectedSpecialization.issueDate || "",
                             expiryDate: selectedSpecialization.expiryDate || "",
                           });
