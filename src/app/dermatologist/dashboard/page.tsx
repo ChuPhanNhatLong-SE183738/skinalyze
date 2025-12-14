@@ -1,18 +1,43 @@
 "use client";
 
 import { useDermatologist } from "@/contexts/DermatologistContext";
-import { Loader2, User, Clock, DollarSign, Calendar, Award, Mail, Phone } from "lucide-react";
+import {
+  Loader2,
+  User,
+  Clock,
+  DollarSign,
+  Calendar,
+  Award,
+  Mail,
+  Phone,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { appointmentService } from "@/services/appointmentService";
-import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function DermatologistDashboardPage() {
   const { profile, isLoading } = useDermatologist();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [chartData, setChartData] = useState({
-    appointmentsByStatus: [] as { name: string; value: number; color: string }[],
+    appointmentsByStatus: [] as {
+      name: string;
+      value: number;
+      color: string;
+    }[],
     monthlyAppointments: [] as { month: string; appointments: number }[],
     monthlyRevenue: [] as { month: string; revenue: number }[],
   });
@@ -26,11 +51,11 @@ export default function DermatologistDashboardPage() {
   const loadAppointments = async () => {
     try {
       if (!profile?.dermatologistId) return;
-      
+
       const data = await appointmentService.getAppointments({
         dermatologistId: profile.dermatologistId,
       });
-      
+
       setAppointments(data);
       calculateChartData(data);
     } catch (error) {
@@ -42,7 +67,8 @@ export default function DermatologistDashboardPage() {
     // Calculate appointments by status
     const statusCounts: { [key: string]: number } = {};
     appointmentsData.forEach((apt) => {
-      statusCounts[apt.appointmentStatus] = (statusCounts[apt.appointmentStatus] || 0) + 1;
+      statusCounts[apt.appointmentStatus] =
+        (statusCounts[apt.appointmentStatus] || 0) + 1;
     });
 
     const statusColors: { [key: string]: string } = {
@@ -57,26 +83,36 @@ export default function DermatologistDashboardPage() {
       SETTLED: "#059669", // emerald
     };
 
-    const appointmentsByStatus = Object.entries(statusCounts).map(([status, count]) => ({
-      name: status.replace(/_/g, " "),
-      value: count,
-      color: statusColors[status] || "#64748b",
-    }));
+    const appointmentsByStatus = Object.entries(statusCounts)
+      .filter(([status]) => status !== "PENDING_PAYMENT")
+      .map(([status, count]) => ({
+        name: status.replace(/_/g, " "),
+        value: count,
+        color: statusColors[status] || "#64748b",
+      }));
 
     // Calculate monthly appointments (last 6 months)
-    const monthlyData: { [key: string]: { appointments: number; revenue: number } } = {};
+    const monthlyData: {
+      [key: string]: { appointments: number; revenue: number };
+    } = {};
     const now = new Date();
-    
+
     for (let i = 5; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthKey = date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      const monthKey = date.toLocaleDateString("en-US", {
+        month: "short",
+        year: "2-digit",
+      });
       monthlyData[monthKey] = { appointments: 0, revenue: 0 };
     }
 
     appointmentsData.forEach((apt) => {
       const aptDate = new Date(apt.createdAt);
-      const monthKey = aptDate.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
-      
+      const monthKey = aptDate.toLocaleDateString("en-US", {
+        month: "short",
+        year: "2-digit",
+      });
+
       if (monthlyData[monthKey]) {
         monthlyData[monthKey].appointments++;
         if (apt.status === "COMPLETED" && apt.totalCost) {
@@ -85,10 +121,12 @@ export default function DermatologistDashboardPage() {
       }
     });
 
-    const monthlyAppointments = Object.entries(monthlyData).map(([month, data]) => ({
-      month,
-      appointments: data.appointments,
-    }));
+    const monthlyAppointments = Object.entries(monthlyData).map(
+      ([month, data]) => ({
+        month,
+        appointments: data.appointments,
+      })
+    );
 
     const monthlyRevenue = Object.entries(monthlyData).map(([month, data]) => ({
       month,
@@ -114,8 +152,12 @@ export default function DermatologistDashboardPage() {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-slate-900">Profile Not Found</h2>
-          <p className="text-slate-600 mt-2">Unable to load your profile information.</p>
+          <h2 className="text-xl font-semibold text-slate-900">
+            Profile Not Found
+          </h2>
+          <p className="text-slate-600 mt-2">
+            Unable to load your profile information.
+          </p>
         </div>
       </div>
     );
@@ -184,7 +226,9 @@ export default function DermatologistDashboardPage() {
                       : "bg-yellow-100 text-yellow-700 border-yellow-200"
                   }`}
                 >
-                  {profile.user.isVerified ? "Verified" : "Pending Verification"}
+                  {profile.user.isVerified
+                    ? "Verified"
+                    : "Pending Verification"}
                 </Badge>
               </div>
             </div>
@@ -201,7 +245,9 @@ export default function DermatologistDashboardPage() {
               <Clock className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-900">{profile.yearsOfExp} years</div>
+              <div className="text-2xl font-bold text-slate-900">
+                {profile.yearsOfExp} years
+              </div>
               <p className="text-xs text-slate-600">Professional experience</p>
             </CardContent>
           </Card>
@@ -267,7 +313,9 @@ export default function DermatologistDashboardPage() {
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-slate-600" />
                 <div>
-                  <p className="text-sm font-medium text-slate-900">{profile.user.email}</p>
+                  <p className="text-sm font-medium text-slate-900">
+                    {profile.user.email}
+                  </p>
                   <p className="text-xs text-slate-600">Email address</p>
                 </div>
               </div>
