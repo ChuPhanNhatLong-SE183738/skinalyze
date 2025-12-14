@@ -99,7 +99,8 @@ export default function DermatologistWalletPage() {
       console.error("Error fetching banks:", error);
       toast({
         title: "Warning",
-        description: "Failed to load bank list. You can still enter bank name manually.",
+        description:
+          "Failed to load bank list. You can still enter bank name manually.",
         variant: "warning",
       });
     } finally {
@@ -117,7 +118,10 @@ export default function DermatologistWalletPage() {
       setTransactions(response.data || []);
     } catch (error: any) {
       console.error("Error fetching transactions:", error);
-      const errorMessage = error?.response?.data?.message || error?.message || "Failed to fetch wallet transactions";
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to fetch wallet transactions";
       toast({
         title: "Error",
         description: errorMessage,
@@ -151,7 +155,10 @@ export default function DermatologistWalletPage() {
       });
     } catch (error: any) {
       console.error("OTP request error:", error);
-      const errorMessage = error?.response?.data?.message || error?.message || "Failed to request OTP";
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to request OTP";
 
       toast({
         title: "Error",
@@ -207,7 +214,10 @@ export default function DermatologistWalletPage() {
       fetchTransactions();
     } catch (error: any) {
       console.error("Withdrawal submission error:", error);
-      const errorMessage = error?.response?.data?.message || error?.message || "Failed to submit withdrawal request";
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to submit withdrawal request";
 
       toast({
         title: "Error",
@@ -250,14 +260,38 @@ export default function DermatologistWalletPage() {
     }
   };
 
+  const isAppointmentSettlement = (transaction: WalletTransaction) =>
+    transaction.paymentCode?.startsWith("SKWSTAPP");
+
+  const handleTransactionClick = (transaction: WalletTransaction) => {
+    if (!isAppointmentSettlement(transaction)) return;
+
+    const appointmentId = transaction.transferContent;
+
+    if (!appointmentId) {
+      toast({
+        title: "Appointment not found",
+        description:
+          "This settlement does not include an appointment reference.",
+        variant: "warning",
+      });
+      return;
+    }
+
+    router.push(`/dermatologist/appointment/${appointmentId}`);
+  };
+
   // Filter transactions based on search query
   const filteredTransactions = transactions.filter((transaction) => {
     if (!searchQuery) return true;
 
     const query = searchQuery.toLowerCase();
+    const displayType = isAppointmentSettlement(transaction)
+      ? "settled"
+      : transaction.paymentType;
     return (
       transaction.paymentCode.toLowerCase().includes(query) ||
-      transaction.paymentType.toLowerCase().includes(query) ||
+      displayType.toLowerCase().includes(query) ||
       transaction.status.toLowerCase().includes(query) ||
       transaction.paymentMethod.toLowerCase().includes(query) ||
       transaction.transferContent?.toLowerCase().includes(query)
@@ -431,7 +465,11 @@ export default function DermatologistWalletPage() {
                   required
                 >
                   <SelectTrigger className="border-slate-300">
-                    <SelectValue placeholder={loadingBanks ? "Loading banks..." : "Select a bank"} />
+                    <SelectValue
+                      placeholder={
+                        loadingBanks ? "Loading banks..." : "Select a bank"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {loadingBanks ? (
@@ -451,7 +489,9 @@ export default function DermatologistWalletPage() {
                               alt={bank.shortName}
                               className="w-6 h-6 object-contain"
                             />
-                            <span>{bank.shortName} - {bank.name}</span>
+                            <span>
+                              {bank.shortName} - {bank.name}
+                            </span>
                           </div>
                         </SelectItem>
                       ))
@@ -578,7 +618,9 @@ export default function DermatologistWalletPage() {
         ) : filteredTransactions.length === 0 ? (
           <div className="text-center py-12">
             <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-            <p className="text-slate-600">No transactions found matching "{searchQuery}"</p>
+            <p className="text-slate-600">
+              No transactions found matching "{searchQuery}"
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -606,60 +648,78 @@ export default function DermatologistWalletPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {filteredTransactions.map((transaction) => (
-                  <tr
-                    key={transaction.paymentId}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-mono text-slate-900">
-                        {transaction.paymentCode}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {transaction.paymentType === "topup" ? (
-                          <>
-                            <ArrowDownCircle className="h-4 w-4 text-green-600" />
-                            <span className="text-sm font-medium text-green-600">
-                              Top-up
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <ArrowUpCircle className="h-4 w-4 text-red-600" />
-                            <span className="text-sm font-medium text-red-600">
-                              Withdrawal
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-semibold text-slate-900">
-                        {formatCurrency(transaction.amount)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm capitalize text-slate-900">
-                        {transaction.paymentMethod}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(transaction.status)}
-                        <span className="text-sm capitalize text-slate-900">
-                          {transaction.status}
+                {filteredTransactions.map((transaction) => {
+                  const appointmentSettlement =
+                    isAppointmentSettlement(transaction);
+                  const appointmentId = appointmentSettlement
+                    ? transaction.transferContent
+                    : null;
+
+                  return (
+                    <tr
+                      key={transaction.paymentId}
+                      onClick={() => handleTransactionClick(transaction)}
+                      className={`hover:bg-slate-50 transition-colors ${
+                        appointmentSettlement ? "cursor-pointer" : ""
+                      }`}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm font-mono text-slate-900">
+                          {transaction.paymentCode}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-slate-600">
-                        {formatDate(transaction.createdAt)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {appointmentSettlement ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 text-emerald-600" />
+                              <span className="text-sm font-medium text-emerald-700">
+                                Settled
+                              </span>
+                            </>
+                          ) : transaction.paymentType === "topup" ? (
+                            <>
+                              <ArrowDownCircle className="h-4 w-4 text-green-600" />
+                              <span className="text-sm font-medium text-green-600">
+                                Top-up
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <ArrowUpCircle className="h-4 w-4 text-red-600" />
+                              <span className="text-sm font-medium text-red-600">
+                                Withdrawal
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm font-semibold text-slate-900">
+                          {formatCurrency(transaction.amount)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm capitalize text-slate-900">
+                          {transaction.paymentMethod}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          {getStatusIcon(transaction.status)}
+                          <span className="text-sm capitalize text-slate-900">
+                            {transaction.status}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-slate-600">
+                          {formatDate(transaction.createdAt)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

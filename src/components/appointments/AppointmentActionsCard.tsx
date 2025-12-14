@@ -99,7 +99,6 @@ const InfoRow = ({
 interface AppointmentActionsCardProps {
   appointment: AppointmentDetailDto;
   isJoining: boolean;
-  isJoinWindowOpen: boolean;
   isCompletable: boolean;
   isCancellable: boolean;
   canJoinMeet: boolean;
@@ -115,7 +114,6 @@ interface AppointmentActionsCardProps {
 export function AppointmentActionsCard({
   appointment,
   isJoining,
-  isJoinWindowOpen,
   isCompletable,
   isCancellable,
   canJoinMeet,
@@ -175,28 +173,21 @@ export function AppointmentActionsCard({
       <CardContent className="space-y-4">
         {/* Join Meeting */}
         {canJoinMeet && (
-          <div className="space-y-2">
-            <Button
-              size="lg"
-              className="w-full bg-green-600 hover:bg-green-700"
-              onClick={onJoinMeet}
-              disabled={isJoining || !isJoinWindowOpen}
-            >
-              {isJoining ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <Video className="mr-2 h-5 w-5" />
-              )}
-              {appointment.dermatologistJoinedAt
-                ? "Re-join Meeting"
-                : "Join Meeting & Check-in"}
-            </Button>
-            {!isJoinWindowOpen && (
-              <p className="text-center text-sm text-muted-foreground">
-                Join opens 10 minutes before the start time
-              </p>
+          <Button
+            size="lg"
+            className="w-full bg-green-600 hover:bg-green-700"
+            onClick={onJoinMeet}
+            disabled={isJoining}
+          >
+            {isJoining ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <Video className="mr-2 h-5 w-5" />
             )}
-          </div>
+            {appointment.dermatologistJoinedAt
+              ? "Re-join Meeting"
+              : "Join Meeting & Check-in"}
+          </Button>
         )}
 
         {routineButton}

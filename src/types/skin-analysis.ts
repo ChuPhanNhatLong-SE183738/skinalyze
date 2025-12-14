@@ -1,8 +1,3 @@
-export interface AiRecommendedProduct {
-  name: string;
-  brand: string;
-}
-
 export interface SkinAnalysis {
   analysisId: string;
   customerId: string;
@@ -13,7 +8,7 @@ export interface SkinAnalysis {
   notes: string | null;
   aiDetectedDisease: string | null;
   aiDetectedCondition: string | null;
-  aiRecommendedProducts: AiRecommendedProduct[];
+  aiRecommendedProducts: string[];
   mask: string[] | null;
   createdAt: string;
   updatedAt: string;
