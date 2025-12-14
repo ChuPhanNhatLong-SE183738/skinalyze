@@ -99,13 +99,6 @@ const Navbar = () => {
           <div className="flex items-center flex-shrink-0">
             <Link href="/" className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
-                <div className="w-10 h-10 flex items-center justify-center mr-4">
-                  <img
-                    src="/logo.png"
-                    alt="Logo"
-                    className="w-10 h-10 object-contain"
-                  />
-                </div>
                 <span className="text-xl font-bold bg-gradient-to-r from-[#a8fbd3] to-[#4fb7b3] bg-clip-text text-transparent tracking-tight whitespace-nowrap">
                   Skinalyze
                 </span>
@@ -257,7 +250,7 @@ const Navbar = () => {
               <div className="pt-4">
                 {" "}
                 <Link
-                  href="/app"
+                  href="http://download-app.nhatlonh.id.vn:6767/skinalyze.apk"
                   className="bg-gradient-to-r from-[#4fb7b3] to-[#a8fbd3] hover:from-[#a8fbd3] hover:to-[#4fb7b3] text-black block px-4 py-3 rounded-xl text-base font-semibold text-center transition-all duration-200 shadow-lg"
                   onClick={() => setIsMenuOpen(false)}
                 >

@@ -18,7 +18,7 @@ const DownloadCTASection = () => {
 
   const handleDownload = () => {
     setDownloading(true);
-    const downloadUrl = "http://api.nhatlonh.id.vn/files/Skinalyze.apk";
+    const downloadUrl = "http://download-app.nhatlonh.id.vn:6767/skinalyze.apk";
     const link = document.createElement("a");
     link.href = downloadUrl;
     link.download = "Skinalyze.apk";

@@ -566,7 +566,7 @@ const FeaturesSection = () => {
               <div className="grid grid-cols-2 gap-6">
                 <div className="text-center p-4 glass-card rounded-2xl border border-emerald-400/30">
                   <div className="text-3xl font-black gradient-text mb-2">
-                    95%
+                    90%
                   </div>
                   <div className="text-sm text-gray-400 uppercase tracking-wider font-mono">
                     Accuracy
@@ -587,7 +587,7 @@ const FeaturesSection = () => {
                 <motion.a
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  href="http://api.nhatlonh.id.vn/files/Skinalyze.apk"
+                  href="http://download-app.nhatlonh.id.vn:6767/skinalyze.apk"
                   className="group flex items-center justify-center glass-card text-white border border-white/20 px-8 py-4 rounded-2xl font-bold hover:border-emerald-400/50 transition-all duration-300 glow-emerald uppercase tracking-widest text-sm"
                   data-hover="true"
                 >
