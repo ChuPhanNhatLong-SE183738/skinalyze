@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(
       `${API_BASE_URL}/api/v1/auth/verify-email?token=${token}`,
       {
-        method: "GET",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
