@@ -15,6 +15,7 @@ export interface DermatologistProfile {
   purchaseHistory: any;
   yearsOfExp: number;
   defaultSlotPrice: string;
+  about?: string;
   createdAt: string;
   updatedAt: string;
   user: {
@@ -52,6 +53,7 @@ export interface UpdatePersonalInfoRequest {
 export interface UpdateProfessionalInfoRequest {
   yearsOfExp: number;
   defaultSlotPrice: number;
+  about?: string;
 }
 
 export interface DermatologistProfileResponse {

@@ -66,6 +66,7 @@ export default function DermatologistProfilePage() {
     useState<UpdateProfessionalInfoRequest>({
       yearsOfExp: 0,
       defaultSlotPrice: 0,
+      about: "",
     });
   const [specializations, setSpecializations] = useState<Specialization[]>([]);
   const [loadingSpecializations, setLoadingSpecializations] = useState(false);
@@ -120,6 +121,7 @@ export default function DermatologistProfilePage() {
         setProfessionalData({
           yearsOfExp: profileData.yearsOfExp,
           defaultSlotPrice: parseInt(profileData.defaultSlotPrice),
+          about: profileData.about || "",
         });
         setSpecializationForm({
           ...specializationForm,
@@ -433,6 +435,7 @@ export default function DermatologistProfilePage() {
       setProfessionalData({
         yearsOfExp: profile.yearsOfExp,
         defaultSlotPrice: parseInt(profile.defaultSlotPrice),
+        about: profile.about || "",
       });
     }
     setEditingProfessional(false);
@@ -1017,6 +1020,25 @@ export default function DermatologistProfilePage() {
                       </p>
                     )}
                   </div>
+                </div>
+                <div>
+                  <Label htmlFor="about">About Me</Label>
+                  {editingProfessional ? (
+                    <textarea
+                      id="about"
+                      value={professionalData.about || ""}
+                      onChange={(e) =>
+                        handleProfessionalInputChange("about", e.target.value)
+                      }
+                      placeholder="Tell patients about yourself, your expertise, and approach to dermatology..."
+                      rows={5}
+                      className="mt-1 w-full p-2 bg-white border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                    />
+                  ) : (
+                    <p className="mt-1 p-2 bg-slate-50 rounded-md text-slate-900 whitespace-pre-wrap">
+                      {profile.about || "No information provided"}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
