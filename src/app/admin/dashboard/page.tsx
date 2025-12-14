@@ -430,7 +430,7 @@ export default function AdminDashboardPage() {
                       stroke="#64748b"
                       style={{ fontSize: "12px" }}
                     />
-                    <YAxis stroke="#64748b" style={{ fontSize: "12px" }} />
+                    <YAxis allowDecimals={false} stroke="#64748b" style={{ fontSize: "12px" }} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "white",
