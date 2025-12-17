@@ -566,7 +566,7 @@ const FeaturesSection = () => {
               <div className="grid grid-cols-2 gap-6">
                 <div className="text-center p-4 glass-card rounded-2xl border border-emerald-400/30">
                   <div className="text-3xl font-black gradient-text mb-2">
-                    90%
+                    85%
                   </div>
                   <div className="text-sm text-gray-400 uppercase tracking-wider font-mono">
                     Accuracy
@@ -574,7 +574,7 @@ const FeaturesSection = () => {
                 </div>
                 <div className="text-center p-4 glass-card rounded-2xl border border-teal-400/30">
                   <div className="text-3xl font-black gradient-text mb-2">
-                    2s
+                    4s
                   </div>
                   <div className="text-sm text-gray-400 uppercase tracking-wider font-mono">
                     Analysis

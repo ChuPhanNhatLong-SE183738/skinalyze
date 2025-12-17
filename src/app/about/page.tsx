@@ -29,7 +29,7 @@ const About = () => {
     {
       year: "2026",
       title: "Beta Version Launch",
-      description: "Tested with 1000+ users and improved accuracy to 90%",
+      description: "Tested with 1000+ users and improved accuracy to 85%",
     },
     {
       year: "2027",
