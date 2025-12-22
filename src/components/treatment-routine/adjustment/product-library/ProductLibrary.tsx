@@ -3,9 +3,17 @@
 import { useState, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { productService } from "@/services/productService";
+import { categoryService } from "@/services/categoryService";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Loader2, Filter, ArrowRight } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  Filter,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -16,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LibraryProductCard } from "./LibraryProductCard";
 import { PendingCart } from "./PendingCart";
-import type { Product, ProductQueryParams } from "@/types/product";
+import type { Product, ProductQueryParams, Category } from "@/types/product";
 import { Badge } from "@/components/ui/badge";
 import { useTreatment } from "@/contexts/TreatmentContext";
 
@@ -33,6 +41,19 @@ export function ProductLibrary() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const itemsPerPage = 12;
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  // Fetch categories on mount
+  useEffect(() => {
+    categoryService
+      .getCategories()
+      .then((data) => setCategories(data))
+      .catch((err) => console.error("Failed to fetch categories:", err));
+  }, []);
 
   // --- API Search Logic ---
   useEffect(() => {
@@ -42,11 +63,16 @@ export function ProductLibrary() {
     productService
       .getProducts({
         search: debouncedSearch,
-        limit: 20,
+        page: currentPage,
+        limit: itemsPerPage,
         ...filters,
       })
       .then((res) => {
-        if (active) setProducts(res.products);
+        if (active) {
+          setProducts(res.products);
+          setTotalPages(res.totalPages);
+          setTotal(res.total);
+        }
       })
       .catch((err) => console.error(err))
       .finally(() => {
@@ -56,12 +82,19 @@ export function ProductLibrary() {
     return () => {
       active = false;
     };
+  }, [debouncedSearch, filters, currentPage]);
+
+  // Reset to page 1 when search or filters change
+  useEffect(() => {
+    setCurrentPage(1);
   }, [debouncedSearch, filters]);
 
   // Helper reset filter
-  const clearFilters = () => setFilters({ inStock: true });
+  const clearFilters = () =>
+    setFilters({ inStock: true, categoryId: undefined });
 
   const hasActiveFilters =
+    filters.categoryId !== undefined ||
     filters.minPrice !== undefined ||
     filters.maxPrice !== undefined ||
     filters.inStock === false;
@@ -114,6 +147,57 @@ export function ProductLibrary() {
                 <PopoverContent className="w-72 p-4" align="end">
                   <div className="space-y-4">
                     <h4 className="font-medium leading-none">Filters</h4>
+
+                    {/* Filter: Category */}
+                    <div className="space-y-2">
+                      <Label className="text-sm">Category</Label>
+                      <ScrollArea className="h-32 rounded-md border">
+                        <div className="p-2 space-y-1">
+                          {categories.map((category) => (
+                            <div
+                              key={category.categoryId}
+                              className="flex items-center space-x-2 py-1 px-2 hover:bg-slate-50 rounded cursor-pointer"
+                              onClick={() =>
+                                setFilters((prev) => ({
+                                  ...prev,
+                                  categoryId:
+                                    prev.categoryId === category.categoryId
+                                      ? undefined
+                                      : category.categoryId,
+                                }))
+                              }
+                            >
+                              <div
+                                className="flex gap-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Checkbox
+                                  id={category.categoryId}
+                                  className="cursor-pointer"
+                                  checked={
+                                    filters.categoryId === category.categoryId
+                                  }
+                                  onCheckedChange={(checked) =>
+                                    setFilters((prev) => ({
+                                      ...prev,
+                                      categoryId: checked
+                                        ? category.categoryId
+                                        : undefined,
+                                    }))
+                                  }
+                                />
+                                <Label
+                                  htmlFor={category.categoryId}
+                                  className="text-xs cursor-pointer flex-1"
+                                >
+                                  {category.categoryName}
+                                </Label>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
 
                     {/* Filter: Stock */}
                     <div className="flex items-center space-x-2">
@@ -188,7 +272,13 @@ export function ProductLibrary() {
 
           {/* Active Filter Chips */}
           {hasActiveFilters && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              {filters.categoryId && (
+                <Badge variant="secondary" className="text-[10px]">
+                  {categories.find((c) => c.categoryId === filters.categoryId)
+                    ?.categoryName || "Category"}
+                </Badge>
+              )}
               {filters.maxPrice === 500000 && (
                 <Badge variant="secondary" className="text-[10px]">
                   {"< 500k"}
@@ -208,15 +298,85 @@ export function ProductLibrary() {
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="p-4 space-y-3 pb-24">
+            {/* Results Summary */}
+            {!isLoading && products.length > 0 && (
+              <div className="text-xs text-slate-500 pb-2">
+                Showing {(currentPage - 1) * itemsPerPage + 1} -{" "}
+                {Math.min(currentPage * itemsPerPage, total)} of {total}{" "}
+                products
+              </div>
+            )}
+
             {isLoading ? (
               <div className="py-10 text-center text-slate-400 flex flex-col items-center">
                 <Loader2 className="w-6 h-6 animate-spin mb-2" />
                 <span className="text-xs">Finding products...</span>
               </div>
             ) : products.length > 0 ? (
-              products.map((product) => (
-                <LibraryProductCard key={product.productId} product={product} />
-              ))
+              <>
+                {products.map((product) => (
+                  <LibraryProductCard
+                    key={product.productId}
+                    product={product}
+                  />
+                ))}
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-4 pb-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((page) => {
+                          // Show first, last, current, and adjacent pages
+                          return (
+                            page === 1 ||
+                            page === totalPages ||
+                            Math.abs(page - currentPage) <= 1
+                          );
+                        })
+                        .map((page, index, array) => (
+                          <div key={page} className="flex items-center">
+                            {index > 0 && array[index - 1] !== page - 1 && (
+                              <span className="px-2 text-slate-400">...</span>
+                            )}
+                            <Button
+                              variant={
+                                currentPage === page ? "default" : "outline"
+                              }
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className="h-8 w-8 p-0 text-xs"
+                            >
+                              {page}
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="py-10 text-center text-slate-400">
                 <p className="text-sm">No products found.</p>

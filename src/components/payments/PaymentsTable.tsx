@@ -681,6 +681,7 @@ export default function PaymentsTable() {
                           width={80}
                           height={80}
                           className="rounded-lg object-cover border border-slate-200"
+                          unoptimized
                         />
                       ) : (
                         <p className="text-sm text-slate-500">
