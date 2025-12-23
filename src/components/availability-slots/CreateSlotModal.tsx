@@ -451,7 +451,7 @@ export function CreateSlotModal({
                         min="0"
                         max="4"
                         disabled={!allowRepeat}
-                        value={(field.value as string) ?? ""}
+                        value={field.value?.toString() ?? ""}
                         onChange={(e) =>
                           field.onChange(Math.max(0, Number(e.target.value)))
                         }

@@ -9,7 +9,6 @@ export interface User {
   photoUrl?: string | null;
   phone: string | null;
   role: "admin" | "staff" | "customer" | "dermatologist";
-  allergies?: string[] | null;
   addresses?: {
     addressId: string;
     street: string;

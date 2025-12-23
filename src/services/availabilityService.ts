@@ -18,7 +18,7 @@ class AvailabilityService {
         "/api/availability-slots",
         dto
       );
-      return response.data;
+      return response;
     } catch (error) {
       console.error("Lỗi khi tạo lịch rảnh (service):", error);
       throw error;

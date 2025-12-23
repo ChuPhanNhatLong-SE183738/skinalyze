@@ -332,6 +332,7 @@ export default function AvailabilityPage() {
           endAccessor="end"
           defaultView={Views.WEEK}
           views={[Views.WEEK, Views.MONTH, Views.DAY]}
+          step={15}
           culture="en-US"
           selectable
           onSelectEvent={handleSelectEvent}

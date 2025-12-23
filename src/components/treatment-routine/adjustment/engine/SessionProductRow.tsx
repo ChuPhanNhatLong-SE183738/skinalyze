@@ -217,7 +217,7 @@ export function SessionProductRow({
             </Label>
             <Textarea
               className="h-14 min-h-[56px] text-xs bg-white resize-none"
-              placeholder="Lưu ý đặc biệt..."
+              placeholder="Special notes..."
               value={item.note || ""}
               onChange={(e) => onUpdate("note", e.target.value)}
             />
