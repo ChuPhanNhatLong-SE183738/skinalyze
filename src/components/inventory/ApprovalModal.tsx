@@ -96,7 +96,7 @@ export default function ApprovalModal({
               <div className="pt-2 border-t border-slate-200">
                 <p className="text-xs text-slate-500">Selling Price</p>
                 <p className="text-lg font-semibold text-slate-900">
-                  Rp {adjustment.product.sellingPrice.toLocaleString()}
+                  ₫{adjustment.product.sellingPrice.toLocaleString('vi-VN')}
                 </p>
               </div>
             )}
@@ -145,7 +145,7 @@ export default function ApprovalModal({
               <div>
                 <p className="text-sm text-slate-500">Original Price</p>
                 <p className="text-slate-900">
-                  ₫{adjustment.originalPrice.toLocaleString()}
+                  ₫{adjustment.originalPrice.toLocaleString('vi-VN')}
                 </p>
               </div>
             )}

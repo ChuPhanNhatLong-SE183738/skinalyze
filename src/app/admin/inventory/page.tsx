@@ -546,7 +546,7 @@ export default function AdminInventoryPage() {
                             </span>
                           </td>
                           <td className="py-4 px-6 text-slate-900">
-                            ₫{item.originalPrice.toLocaleString()}
+                            ₫{item.originalPrice.toLocaleString('vi-VN')}
                           </td>
                           <td className="py-4 px-6">
                             <div className="flex gap-2">
