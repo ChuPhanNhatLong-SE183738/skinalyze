@@ -68,6 +68,13 @@ const getInitials = (fullName: string) => {
 };
 
 const getScheduleAlert = (appointment: Appointment) => {
+  if (appointment.appointmentStatus === AppointmentStatus.IN_PROGRESS) {
+    return {
+      tone: "urgent" as const,
+      label: "Started",
+    };
+  }
+
   if (appointment.appointmentStatus !== AppointmentStatus.SCHEDULED) {
     return null;
   }
@@ -102,18 +109,18 @@ const getStatusBadgeVariant = (
 ): BadgeProps["variant"] => {
   switch (status) {
     case AppointmentStatus.SCHEDULED:
-      return "warning"; 
+      return "warning";
     case AppointmentStatus.IN_PROGRESS:
-      return "info"; 
+      return "info";
     case AppointmentStatus.COMPLETED:
     case AppointmentStatus.SETTLED:
-      return "success"; 
+      return "success";
     case AppointmentStatus.CANCELLED:
-      return "secondary"; 
+      return "secondary";
     case AppointmentStatus.NO_SHOW:
       return "yellow";
     case AppointmentStatus.DISPUTED:
-      return "destructive"; 
+      return "destructive";
     case AppointmentStatus.INTERRUPTED:
       return "signal";
     default:
@@ -272,7 +279,9 @@ export default function MyAppointmentsPage() {
                   <TableHead className="w-[200px]">Customer</TableHead>
                   <TableHead>Time</TableHead>
                   <TableHead>Appointment Type</TableHead>
-                  <TableHead>Start Alert</TableHead>
+                  {activeTab === "upcoming" && (
+                    <TableHead>Start Alert</TableHead>
+                  )}
                   <TableHead className="text-right">Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -354,22 +363,24 @@ export default function MyAppointmentsPage() {
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {scheduleAlert ? (
-                          <Badge
-                            variant={
-                              scheduleAlert.tone === "urgent"
-                                ? "warning"
-                                : "default"
-                            }
-                            className="pointer-events-none"
-                          >
-                            {scheduleAlert.label}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
+                      {activeTab === "upcoming" && (
+                        <TableCell>
+                          {scheduleAlert ? (
+                            <Badge
+                              variant={
+                                scheduleAlert.tone === "urgent"
+                                  ? "warning"
+                                  : "default"
+                              }
+                              className="pointer-events-none"
+                            >
+                              {scheduleAlert.label}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           {showDoctorIndicator && (

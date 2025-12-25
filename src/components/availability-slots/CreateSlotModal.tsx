@@ -45,6 +45,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { PlusCircle, Trash2 } from "lucide-react";
+import { useDermatologist } from "@/contexts/DermatologistContext";
 
 const toMinutes = (time: string) => {
   const [hour, minute] = time.split(":").map(Number);
@@ -143,6 +144,7 @@ export function CreateSlotModal({
     new Date()
   );
   const { toast } = useToast();
+  const { profile } = useDermatologist();
 
   const form = useForm<BatchFormValues>({
     resolver: zodResolver(batchFormSchema) as Resolver<BatchFormValues>,
@@ -403,7 +405,11 @@ export function CreateSlotModal({
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Default (e.g. 300000)"
+                          placeholder={
+                            profile?.defaultSlotPrice
+                              ? `Default (${profile.defaultSlotPrice})`
+                              : "Default (free)"
+                          }
                           {...field}
                           onChange={(e) =>
                             field.onChange(
