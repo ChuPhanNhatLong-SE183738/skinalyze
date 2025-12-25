@@ -82,7 +82,7 @@ export class InventoryService {
     request: StockAdjustmentRequest
   ): Promise<StockAdjustmentResponse> {
     try {
-      const response = await fetch("/api/inventory/adjustment", {
+      const response = await fetch("/api/inventory/adjustments/request", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

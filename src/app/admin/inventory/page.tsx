@@ -23,6 +23,8 @@ import {
   XCircle,
   Clock,
   Eye,
+  ArrowUpDown,
+  Filter,
 } from "lucide-react";
 
 export default function AdminInventoryPage() {
@@ -31,6 +33,9 @@ export default function AdminInventoryPage() {
   const [inventory, setInventory] = useState<Inventory[]>([]);
   const [pendingAdjustments, setPendingAdjustments] = useState<PendingAdjustment[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "stock" | "price" | "status">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [filterStatus, setFilterStatus] = useState<"all" | "instock" | "lowstock" | "outofstock">("all");
   const [isLoading, setIsLoading] = useState(true);
   const [adminId, setAdminId] = useState<string>("");
   
@@ -136,7 +141,43 @@ export default function AdminInventoryPage() {
     const productName = item.product.productName.toLowerCase();
     const brand = item.product.brand.toLowerCase();
     const query = searchQuery.toLowerCase();
-    return productName.includes(query) || brand.includes(query);
+    const matchesSearch = productName.includes(query) || brand.includes(query);
+    
+    // Apply status filter
+    if (filterStatus !== "all") {
+      const availableStock = item.currentStock - item.reservedStock;
+      if (filterStatus === "outofstock" && availableStock > 0) return false;
+      if (filterStatus === "lowstock" && (availableStock <= 0 || availableStock >= 10)) return false;
+      if (filterStatus === "instock" && availableStock < 10) return false;
+    }
+    
+    return matchesSearch;
+  });
+
+  // Sort inventory
+  const sortedInventory = [...filteredInventory].sort((a, b) => {
+    let comparison = 0;
+    
+    switch (sortBy) {
+      case "name":
+        comparison = a.product.productName.localeCompare(b.product.productName);
+        break;
+      case "stock":
+        const availableA = a.currentStock - a.reservedStock;
+        const availableB = b.currentStock - b.reservedStock;
+        comparison = availableA - availableB;
+        break;
+      case "price":
+        comparison = a.originalPrice - b.originalPrice;
+        break;
+      case "status":
+        const statusA = getStockStatus(a.currentStock, a.reservedStock).label;
+        const statusB = getStockStatus(b.currentStock, b.reservedStock).label;
+        comparison = statusA.localeCompare(statusB);
+        break;
+    }
+    
+    return sortOrder === "asc" ? comparison : -comparison;
   });
 
   const filteredAdjustments = pendingAdjustments.filter((adj) => {
@@ -149,7 +190,7 @@ export default function AdminInventoryPage() {
   });
 
   // Pagination calculations
-  const currentData = activeTab === "inventory" ? filteredInventory : filteredAdjustments;
+  const currentData = activeTab === "inventory" ? sortedInventory : filteredAdjustments;
   const totalPages = Math.ceil(currentData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, currentData.length);
@@ -349,9 +390,10 @@ export default function AdminInventoryPage() {
           </button>
         </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
+        {/* Search and Controls Bar */}
+        <div className="mb-6 flex items-center justify-between gap-4">
+          {/* Search - Left Side */}
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <Input
               type="text"
@@ -360,14 +402,78 @@ export default function AdminInventoryPage() {
                   ? "Search products by name or brand..."
                   : "Search by product or requester..."
               }
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-10 bg-white border-slate-300 text-slate-900 placeholder:text-slate-500"
             />
           </div>
+
+          {/* Sort and Filter Controls - Right Side - Only for Inventory Tab */}
+          {activeTab === "inventory" && (
+            <div className="flex items-center gap-3">
+              {/* Sort Controls */}
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4 text-slate-600" />
+                <span className="text-sm font-medium text-slate-700">Sort:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="name">Name</option>
+                  <option value="stock">Stock</option>
+                  <option value="price">Price</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  className="px-3 py-2 border border-slate-300 rounded-md bg-white hover:bg-slate-50 transition-colors"
+                  title={sortOrder === "asc" ? "Ascending" : "Descending"}
+                >
+                  {sortOrder === "asc" ? "↑" : "↓"}
+                </button>
+              </div>
+
+              {/* Filter Controls */}
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-slate-600" />
+                <span className="text-sm font-medium text-slate-700">Filter:</span>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => {
+                    setFilterStatus(e.target.value as typeof filterStatus);
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="all">All</option>
+                  <option value="instock">In Stock</option>
+                  <option value="lowstock">Low Stock</option>
+                  <option value="outofstock">Out of Stock</option>
+                </select>
+              </div>
+
+              {/* Reset Button */}
+              {(sortBy !== "name" || sortOrder !== "asc" || filterStatus !== "all" || searchQuery) && (
+                <Button
+                  onClick={() => {
+                    setSortBy("name");
+                    setSortOrder("asc");
+                    setFilterStatus("all");
+                    setSearchQuery("");
+                    setCurrentPage(1);
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                >
+                  Reset
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -410,7 +516,9 @@ export default function AdminInventoryPage() {
                   ) : filteredInventory.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-slate-500">
-                        No products found
+                        {searchQuery || filterStatus !== "all" 
+                          ? "No products match your filters" 
+                          : "No products found"}
                       </td>
                     </tr>
                   ) : (
@@ -438,7 +546,7 @@ export default function AdminInventoryPage() {
                             </span>
                           </td>
                           <td className="py-4 px-6 text-slate-900">
-                            ₫{item.originalPrice.toLocaleString()}
+                            ₫{item.originalPrice.toLocaleString('vi-VN')}
                           </td>
                           <td className="py-4 px-6">
                             <div className="flex gap-2">
@@ -479,7 +587,7 @@ export default function AdminInventoryPage() {
             {totalPages > 1 && activeTab === "inventory" && (
               <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200">
                 <div className="text-sm text-slate-600">
-                  Showing {startIndex + 1} to {endIndex} of {filteredInventory.length} products
+                  Showing {startIndex + 1} to {endIndex} of {sortedInventory.length} products
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
